@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Dec 22, 2024 at 08:18 PM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Servidor: 127.0.0.1
+-- Tiempo de generación: 30-12-2024 a las 09:23:54
+-- Versión del servidor: 10.4.32-MariaDB
+-- Versión de PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `et20plataforma`
+-- Base de datos: `et20plataforma`
 --
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `usuarios`
+-- Estructura de tabla para la tabla `usuarios`
 --
 
 CREATE TABLE `usuarios` (
@@ -48,24 +48,24 @@ CREATE TABLE `usuarios` (
   `local_password` varchar(255) DEFAULT NULL,
   `modified_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `anio` int(255) DEFAULT NULL,
-  `division` int(255) DEFAULT NULL
+  `division` int(255) DEFAULT NULL,
+  `foto_url` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `usuarios`
+-- Volcado de datos para la tabla `usuarios`
 --
 
-INSERT INTO `usuarios` (`id`, `nombre`, `apellido`, `mail`, `rol`, `contrasena`, `id_admin`, `id_preceptor`, `id_docente`, `id_alumno`, `alumno_dni`, `status`, `dni`, `telefono`, `direccion`, `fecha_nacimiento`, `created_at`, `local_password`, `modified_at`, `anio`, `division`) VALUES
-(1, 'User Test', 'Test', 'test@google.com', 1, '', 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0, '0000-00-00', '2024-12-22 17:37:55', '', '2024-12-22 17:37:55', 0, 0),
-(2, 'Usuario de Google', 'Test', 'nicola.fernandez@bue.edu.ar', 1, '', 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0, '0000-00-00', '2024-12-22 17:45:02', '', '2024-12-22 17:45:02', 0, 0),
-(3, 'Usuario', 'constantino.dinisio1@gmail.com', 'constantino.dinisio1@gmail.com', 1, 'default_password', NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, '2024-12-22 18:51:42', NULL, '2024-12-22 18:51:42', NULL, NULL);
+INSERT INTO `usuarios` (`id`, `nombre`, `apellido`, `mail`, `rol`, `contrasena`, `id_admin`, `id_preceptor`, `id_docente`, `id_alumno`, `alumno_dni`, `status`, `dni`, `telefono`, `direccion`, `fecha_nacimiento`, `created_at`, `local_password`, `modified_at`, `anio`, `division`, `foto_url`) VALUES
+(1, 'User Test', 'Test', 'test@google.com', 1, '', 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0, '0000-00-00', '2024-12-22 20:37:55', '', '2024-12-22 20:37:55', 0, 0, NULL),
+(8, 'Nicolas Nahuel', 'Fernandez Bogarin', 'nicola.fernandez@bue.edu.ar', 4, 'default_password', NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, '2024-12-30 08:21:10', NULL, '2024-12-30 08:21:10', 1, 6, 'https://lh3.googleusercontent.com/a/ACg8ocJbGKkb3dnspfrTpcmGzAP5wVwnbqteV9-oG8uzMQ0l2mYyFCc=s96-c');
 
 --
--- Indexes for dumped tables
+-- Índices para tablas volcadas
 --
 
 --
--- Indexes for table `usuarios`
+-- Indices de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id`),
@@ -84,25 +84,14 @@ ALTER TABLE `usuarios`
   ADD KEY `usuarios_id_preceptor_foreign` (`id_preceptor`);
 
 --
--- AUTO_INCREMENT for dumped tables
+-- AUTO_INCREMENT de las tablas volcadas
 --
 
 --
--- AUTO_INCREMENT for table `usuarios`
+-- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- Constraints for dumped tables
---
-
---
--- Constraints for table `usuarios`
---
-ALTER TABLE `usuarios`
-  ADD CONSTRAINT `usuarios_id_docente_foreign` FOREIGN KEY (`id_docente`) REFERENCES `evaluaciones` (`docente_id`),
-  ADD CONSTRAINT `usuarios_id_preceptor_foreign` FOREIGN KEY (`id_preceptor`) REFERENCES `preceptor_curso` (`id`);
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
