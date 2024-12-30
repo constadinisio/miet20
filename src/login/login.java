@@ -1,22 +1,22 @@
 package login;
 
-
 import conexion.conexionMysql;
 import java.sql.*;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import users.Alumnos.alumnos;
 
+
 public class login extends javax.swing.JFrame {
 
     Connection conect;
 
     private void probar_conexion() {
-    // Obtener la conexión desde el Singleton
-    conect = Conexion.getInstancia().getConexion();
-    if (conect == null) {
-        JOptionPane.showMessageDialog(this, "Error de conexión.");
-    }
+        // Obtener la conexión desde el Singleton
+        conect = Conexion.getInstancia().getConexion();
+        if (conect == null) {
+            JOptionPane.showMessageDialog(this, "Error de conexión.");
+        }
     }
 
     public login() {
@@ -273,18 +273,27 @@ public class login extends javax.swing.JFrame {
     private void campoContraseñaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_campoContraseñaActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_campoContraseñaActionPerformed
+
     /*
     private void botonLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonLoginActionPerformed
         ClaseLogin objetoClaseLogin = new ClaseLogin();
         objetoClaseLogin.comprobarUsuario(campoNombre, campoContraseña, this);
     }//GEN-LAST:event_botonLoginActionPerformed
-*/
+
+    /*
+    private void botonLoginActionPerformed(java.awt.event.ActionEvent evt) {                                           
+        ClaseLogin objetoClaseLogin = new ClaseLogin();
+        objetoClaseLogin.comprobarUsuario(campoNombre, campoContraseña, this);
+    }                                          
+     */
     private void botonGoogleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonGoogleActionPerformed
         try {
             GoogleAuthenticator authenticator = new GoogleAuthenticator();
             UserSession session = authenticator.authenticateUser();
 
-            if (!validarConexion()) return;
+            if (!validarConexion()) {
+                return;
+            }
 
             switch (session.getRol()) {
                 case 4: // Alumno
@@ -311,118 +320,121 @@ public class login extends javax.swing.JFrame {
         }
     }
 
-   private boolean validarConexion() {
-    // Obtener una conexión fresca
-    conect = Conexion.getInstancia().getConexion();
-    if (conect == null) {
-        JOptionPane.showMessageDialog(null,
-            "No se pudo establecer conexión con la base de datos",
-            "Error de Conexión",
-            JOptionPane.ERROR_MESSAGE);
-        return false;
+    private boolean validarConexion() {
+        // Obtener una conexión fresca
+        conect = Conexion.getInstancia().getConexion();
+        if (conect == null) {
+            JOptionPane.showMessageDialog(null,
+                    "No se pudo establecer conexión con la base de datos",
+                    "Error de Conexión",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        return true;
     }
-    return true;
-}
 
     private void manejarLoginAlumno(UserSession session) {
-    alumnos alumnoForm = new alumnos();
-    updateUserInterface(alumnoForm, session);
-    alumnoForm.setVisible(true);
-    this.dispose();
-}
+        alumnos alumnoForm = new alumnos();
+        updateUserInterface(alumnoForm, session);
+        alumnoForm.setVisible(true);
+        this.dispose();
+    }
 
     private void manejarLoginProfesor(UserSession session) {
         // TODO: Implementar cuando esté lista la interfaz de profesor
         JOptionPane.showMessageDialog(null,
-            "Acceso de profesor en desarrollo",
-            "Próximamente",
-            JOptionPane.INFORMATION_MESSAGE);
+                "Acceso de profesor en desarrollo",
+                "Próximamente",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void manejarLoginPreceptor(UserSession session) {
         // TODO: Implementar cuando esté lista la interfaz de preceptor
         JOptionPane.showMessageDialog(null,
-            "Acceso de preceptor en desarrollo",
-            "Próximamente",
-            JOptionPane.INFORMATION_MESSAGE);
+                "Acceso de preceptor en desarrollo",
+                "Próximamente",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void manejarLoginAdmin(UserSession session) {
         // TODO: Implementar cuando esté lista la interfaz de admin
         JOptionPane.showMessageDialog(null,
-            "Acceso de administrador en desarrollo",
-            "Próximamente",
-            JOptionPane.INFORMATION_MESSAGE);
+                "Acceso de administrador en desarrollo",
+                "Próximamente",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void mostrarMensajePendiente() {
         JOptionPane.showMessageDialog(null,
-            "Tu cuenta está pendiente de aprobación por el administrador.",
-            "Cuenta Pendiente",
-            JOptionPane.INFORMATION_MESSAGE);
+                "Tu cuenta está pendiente de aprobación por el administrador.",
+                "Cuenta Pendiente",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void mostrarMensajeAccesoDenegado() {
         JOptionPane.showMessageDialog(null,
-            "No tienes permisos para acceder al sistema.",
-            "Acceso Denegado",
-            JOptionPane.WARNING_MESSAGE);
+                "No tienes permisos para acceder al sistema.",
+                "Acceso Denegado",
+                JOptionPane.WARNING_MESSAGE);
     }
 
     private void manejarErrorAutenticacion(Exception ex) {
         JOptionPane.showMessageDialog(null,
-            "Error durante la autenticación: " + ex.getMessage(),
-            "Error de Autenticación",
-            JOptionPane.ERROR_MESSAGE);
+                "Error durante la autenticación: " + ex.getMessage(),
+                "Error de Autenticación",
+                JOptionPane.ERROR_MESSAGE);
         System.out.println(ex.getMessage());
     }
 
     private void updateUserInterface(JFrame form, UserSession session) {
         try {
-        PreparedStatement stmt = conect.prepareStatement(
-            "SELECT nombre, apellido, anio, division FROM usuarios WHERE mail = ?"
-        );
-        stmt.setString(1, session.getEmail());
-        ResultSet rs = stmt.executeQuery();
+            PreparedStatement stmt = conect.prepareStatement(
+                    "SELECT nombre, apellido, anio, division, foto_url FROM usuarios WHERE mail = ?"
+            );
+            stmt.setString(1, session.getEmail());
+            ResultSet rs = stmt.executeQuery();
 
-        if (rs.next()) {
-            // Obtener nombre y apellido por separado
-            String nombreCompleto = rs.getString("nombre") + " " + rs.getString("apellido");
-            
-            // Convertir rol numérico a texto
-            String rolTexto;
-            switch (session.getRol()) {
-                case 4:
-                    rolTexto = "Estudiante";
-                    break;
-                case 3:
-                    rolTexto = "Profesor";
-                    break;
-                case 2:
-                    rolTexto = "Preceptor";
-                    break;
-                case 1:
-                    rolTexto = "Administrador";
-                    break;
-                default:
-                    rolTexto = "Sin asignar";
+            if (rs.next()) {
+                // Obtener nombre y apellido
+                String nombreCompleto = rs.getString("nombre") + " " + rs.getString("apellido");
+
+                // Convertir rol numérico a texto
+                String rolTexto;
+                switch (session.getRol()) {
+                    case 4:
+                        rolTexto = "Estudiante";
+                        break;
+                    case 3:
+                        rolTexto = "Profesor";
+                        break;
+                    case 2:
+                        rolTexto = "Preceptor";
+                        break;
+                    case 1:
+                        rolTexto = "Administrador";
+                        break;
+                    default:
+                        rolTexto = "Sin asignar";
+                }
+
+                // Obtener curso y división
+                String cursoDiv = rs.getString("anio") + "°" + rs.getString("division");
+
+                // Actualizar la interfaz
+                if (form instanceof alumnos) {
+                    alumnos alumnoForm = (alumnos) form;
+                    alumnoForm.updateLabels(nombreCompleto, rolTexto, cursoDiv);
+                    alumnoForm.updateFotoPerfil(session.getFotoUrl());  // Usar el nuevo método
+                }
             }
-            
-            // Obtener curso y división
-            String cursoDiv = rs.getString("anio") + "°" + rs.getString("division");
-            
-            // Actualizar la interfaz
-            if (form instanceof alumnos) {
-                ((alumnos) form).updateLabels(nombreCompleto, rolTexto, cursoDiv);
-            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null,
+                    "Error al cargar datos del usuario: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
-    } catch (SQLException e) {
-        e.printStackTrace();
-        JOptionPane.showMessageDialog(null,
-            "Error al cargar datos del usuario: " + e.getMessage(),
-            "Error",
-            JOptionPane.ERROR_MESSAGE);
-    }
+
     }//GEN-LAST:event_botonGoogleActionPerformed
 
     public static void main(String args[]) {

@@ -9,6 +9,11 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.imageio.ImageIO;
+import java.awt.Image;
+import java.net.URL;
+import javax.swing.ImageIcon;
+import java.io.IOException;
 
 public class alumnos extends javax.swing.JFrame {
 
@@ -51,7 +56,7 @@ public class alumnos extends javax.swing.JFrame {
         jPanel4 = new javax.swing.JPanel();
         botpre = new javax.swing.JButton();
         botnot = new javax.swing.JButton();
-        jLabel2 = new javax.swing.JLabel();
+        labelFotoPerfil = new javax.swing.JLabel();
         labelNomApe = new javax.swing.JLabel();
         labelRol = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
@@ -121,7 +126,7 @@ public class alumnos extends javax.swing.JFrame {
             }
         });
 
-        jLabel2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/icons8-user-96.png"))); // NOI18N
+        labelFotoPerfil.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/icons8-user-96.png"))); // NOI18N
 
         labelNomApe.setFont(new java.awt.Font("Arial", 1, 14)); // NOI18N
         labelNomApe.setForeground(new java.awt.Color(255, 255, 255));
@@ -157,7 +162,7 @@ public class alumnos extends javax.swing.JFrame {
                         .addComponent(jButton1)
                         .addGap(22, 22, 22))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                        .addComponent(jLabel2)
+                        .addComponent(labelFotoPerfil)
                         .addGap(92, 92, 92))))
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addGap(73, 73, 73)
@@ -177,7 +182,7 @@ public class alumnos extends javax.swing.JFrame {
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 102, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(labelFotoPerfil, javax.swing.GroupLayout.PREFERRED_SIZE, 102, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(labelNomApe)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -248,6 +253,21 @@ public class alumnos extends javax.swing.JFrame {
         this.setVisible(false);
     }//GEN-LAST:event_botnotActionPerformed
 
+    public void updateFotoPerfil(String fotoUrl) {
+    if (fotoUrl != null && !fotoUrl.isEmpty()) {
+        try {
+            URL url = new URL(fotoUrl);
+            Image imagen = ImageIO.read(url);
+            Image imagenRedimensionada = imagen.getScaledInstance(96, 96, Image.SCALE_SMOOTH);
+            labelFotoPerfil.setIcon(new ImageIcon(imagenRedimensionada));  // asumiendo que jLabel2 es tu label de foto de perfil
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Si hay error, mantener una imagen por defecto
+            labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource("/images/icons8-user-96.png")));
+        }
+    }
+}
+    
     private void botpreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botpreActionPerformed
         verasisten veras = new verasisten();
         veras.setVisible(true);
@@ -303,7 +323,6 @@ public class alumnos extends javax.swing.JFrame {
     private javax.swing.JLabel fondoHome;
     private javax.swing.JLabel imagenLogo;
     private javax.swing.JButton jButton1;
-    private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
@@ -314,6 +333,7 @@ public class alumnos extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel4;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JLabel labelCursoDiv;
+    private javax.swing.JLabel labelFotoPerfil;
     private javax.swing.JLabel labelNomApe;
     private javax.swing.JLabel labelRol;
     // End of variables declaration//GEN-END:variables
