@@ -4,6 +4,7 @@ import conexion.conexionMysql;
 import java.sql.*;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import users.Admin.admin;
 import users.Alumnos.alumnos;
 
 
@@ -358,10 +359,11 @@ public class login extends javax.swing.JFrame {
 
     private void manejarLoginAdmin(UserSession session) {
         // TODO: Implementar cuando esté lista la interfaz de admin
-        JOptionPane.showMessageDialog(null,
-                "Acceso de administrador en desarrollo",
-                "Próximamente",
-                JOptionPane.INFORMATION_MESSAGE);
+         
+    
+     admin adminForm = new admin(session.getNombre(), session.getApellido(), "Administrador");
+    adminForm.setVisible(true);
+    this.dispose();
     }
 
     private void mostrarMensajePendiente() {
@@ -421,10 +423,13 @@ public class login extends javax.swing.JFrame {
                 String cursoDiv = rs.getString("anio") + "°" + rs.getString("division");
 
                 // Actualizar la interfaz
-                if (form instanceof alumnos) {
-                    alumnos alumnoForm = (alumnos) form;
+                if (form instanceof alumnos alumnoForm) {
                     alumnoForm.updateLabels(nombreCompleto, rolTexto, cursoDiv);
                     alumnoForm.updateFotoPerfil(session.getFotoUrl());  // Usar el nuevo método
+                }
+                else if (form instanceof admin adminForm) {
+                    adminForm.updateLabels(nombreCompleto, rolTexto);
+                    adminForm.updateFotoPerfil(session.getFotoUrl());  // Usar el nuevo método
                 }
             }
         } catch (SQLException e) {
