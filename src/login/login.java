@@ -6,6 +6,8 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import users.Admin.admin;
 import users.Alumnos.alumnos;
+import users.Preceptor.preceptor;
+import users.Profesor.profesor;
 
 
 public class login extends javax.swing.JFrame {
@@ -275,18 +277,79 @@ public class login extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_campoContraseñaActionPerformed
 
-    /*
+    
     private void botonLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonLoginActionPerformed
-        ClaseLogin objetoClaseLogin = new ClaseLogin();
-        objetoClaseLogin.comprobarUsuario(campoNombre, campoContraseña, this);
+         try {
+        String mail = campoNombre.getText();
+        String contrasena = new String(campoContraseña.getPassword());
+        
+        if (mail.equals("Nombre") || contrasena.equals("Contraseña")) {
+            JOptionPane.showMessageDialog(this, 
+                "Por favor ingrese usuario y contraseña",
+                "Error de login",
+                JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (!validarConexion()) {
+            return;
+        }
+
+        String query = "SELECT id, nombre, apellido, rol, foto_url FROM usuarios " +
+                      "WHERE mail = ? AND contrasena = ?";
+        
+        PreparedStatement ps = conect.prepareStatement(query);
+        ps.setString(1, mail);
+        ps.setString(2, contrasena);
+        
+        ResultSet rs = ps.executeQuery();
+        
+        if (rs.next()) {
+            String nombre = rs.getString("nombre");
+            String apellido = rs.getString("apellido");
+            int rol = rs.getInt("rol");
+            String fotoUrl = rs.getString("foto_url");
+            
+            // Crear sesión de usuario
+            UserSession session = new UserSession(nombre, apellido, mail, rol, fotoUrl);
+            
+            // Manejar el login según el rol
+            switch (rol) {
+                case 4: // Alumno
+                    manejarLoginAlumno(session);
+                    break;
+                case 3: // Profesor
+                    manejarLoginProfesor(session);
+                    break;
+                case 2: // Preceptor
+                    manejarLoginPreceptor(session);
+                    break;
+                case 1: // Admin
+                    manejarLoginAdmin(session);
+                    break;
+                case 0: // Pendiente
+                    mostrarMensajePendiente();
+                    break;
+                default:
+                    mostrarMensajeAccesoDenegado();
+                    break;
+            }
+        } else {
+            JOptionPane.showMessageDialog(this,
+                "Usuario o contraseña incorrectos",
+                "Error de login",
+                JOptionPane.ERROR_MESSAGE);
+        }
+        
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this,
+            "Error al intentar iniciar sesión: " + ex.getMessage(),
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+    }
     }//GEN-LAST:event_botonLoginActionPerformed
 
-    /*
-    private void botonLoginActionPerformed(java.awt.event.ActionEvent evt) {                                           
-        ClaseLogin objetoClaseLogin = new ClaseLogin();
-        objetoClaseLogin.comprobarUsuario(campoNombre, campoContraseña, this);
-    }                                          
-     */
+    
     private void botonGoogleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonGoogleActionPerformed
         try {
             GoogleAuthenticator authenticator = new GoogleAuthenticator();
@@ -342,19 +405,49 @@ public class login extends javax.swing.JFrame {
     }
 
     private void manejarLoginProfesor(UserSession session) {
-        // TODO: Implementar cuando esté lista la interfaz de profesor
+    try {
+        // Obtener el ID del profesor
+        int profesorId = obtenerUsuarioId(session.getEmail());
+        if (profesorId != -1) {
+            profesor profesorForm = new profesor(profesorId);
+            profesorForm.updateLabels(session.getNombre() + " " + session.getApellido());
+            profesorForm.setVisible(true);
+            this.dispose();
+        } else {
+            JOptionPane.showMessageDialog(null,
+                "Error al obtener el ID del profesor",
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    } catch (SQLException ex) {
         JOptionPane.showMessageDialog(null,
-                "Acceso de profesor en desarrollo",
-                "Próximamente",
-                JOptionPane.INFORMATION_MESSAGE);
+            "Error al cargar la interfaz del profesor: " + ex.getMessage(),
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+    }
     }
 
     private void manejarLoginPreceptor(UserSession session) {
-        // TODO: Implementar cuando esté lista la interfaz de preceptor
+        try {
+        // Obtener el ID del preceptor
+        int preceptorId = obtenerUsuarioId(session.getEmail());
+        if (preceptorId != -1) {
+            preceptor preceptorForm = new preceptor(preceptorId);
+            preceptorForm.updateLabels(session.getNombre() + " " + session.getApellido());
+            preceptorForm.setVisible(true);
+            this.dispose();
+        } else {
+            JOptionPane.showMessageDialog(null,
+                "Error al obtener el ID del preceptor",
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    } catch (SQLException ex) {
         JOptionPane.showMessageDialog(null,
-                "Acceso de preceptor en desarrollo",
-                "Próximamente",
-                JOptionPane.INFORMATION_MESSAGE);
+            "Error al cargar la interfaz del preceptor: " + ex.getMessage(),
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+    }
     }
 
     private void manejarLoginAdmin(UserSession session) {
@@ -388,6 +481,17 @@ public class login extends javax.swing.JFrame {
         System.out.println(ex.getMessage());
     }
 
+    private int obtenerUsuarioId(String mail) throws SQLException {
+     String query = "SELECT id FROM usuarios WHERE mail = ?";
+    PreparedStatement ps = conect.prepareStatement(query);
+    ps.setString(1, mail);
+    ResultSet rs = ps.executeQuery();
+    if (rs.next()) {
+        return rs.getInt("id");
+    }
+    return -1;
+}
+    
     private void updateUserInterface(JFrame form, UserSession session) {
         try {
             PreparedStatement stmt = conect.prepareStatement(

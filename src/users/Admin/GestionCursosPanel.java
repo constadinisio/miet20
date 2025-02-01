@@ -365,8 +365,18 @@ private void limpiarFiltros() {
         jScrollPane1.setViewportView(tablaCursos);
 
         btnAsignarAlumnos.setText("Asignar Alumnos");
+        btnAsignarAlumnos.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAsignarAlumnosActionPerformed(evt);
+            }
+        });
 
         btnAsignarProfesores.setText("Asignar Profesor");
+        btnAsignarProfesores.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAsignarProfesoresActionPerformed(evt);
+            }
+        });
 
         btnEliminarCurso.setText("Eliminar Curso");
         btnEliminarCurso.addActionListener(new java.awt.event.ActionListener() {
@@ -495,6 +505,40 @@ private void limpiarFiltros() {
     private void comboFiltroDivisionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_comboFiltroDivisionActionPerformed
         cargarCursos();
     }//GEN-LAST:event_comboFiltroDivisionActionPerformed
+
+    private void btnAsignarAlumnosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAsignarAlumnosActionPerformed
+        int fila = tablaCursos.getSelectedRow();
+    if (fila != -1) {
+        int cursoId = (int) tablaCursos.getValueAt(fila, 0);
+        AsignarAlumnosDialog dialog = new AsignarAlumnosDialog(
+            javax.swing.SwingUtilities.getWindowAncestor(this), 
+            true, 
+            cursoId);
+        dialog.setVisible(true);
+        if (dialog.seCambiaronAsignaciones()) {
+            cargarCursos();
+        }
+    } else {
+        JOptionPane.showMessageDialog(this, "Por favor, seleccione un curso");
+    }
+    }//GEN-LAST:event_btnAsignarAlumnosActionPerformed
+
+    private void btnAsignarProfesoresActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAsignarProfesoresActionPerformed
+         int fila = tablaCursos.getSelectedRow();
+    if (fila != -1) {
+        int cursoId = (int) tablaCursos.getValueAt(fila, 0);
+        AsignarProfesoresDialog dialog = new AsignarProfesoresDialog(
+            javax.swing.SwingUtilities.getWindowAncestor(this), 
+            true, 
+            cursoId);
+        dialog.setVisible(true);
+        if (dialog.seCambiaronAsignaciones()) {
+            cargarCursos();
+        }
+    } else {
+        JOptionPane.showMessageDialog(this, "Por favor, seleccione un curso");
+    }
+    }//GEN-LAST:event_btnAsignarProfesoresActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

@@ -304,11 +304,17 @@
           <Properties>
             <Property name="text" type="java.lang.String" value="Asignar Alumnos"/>
           </Properties>
+          <Events>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnAsignarAlumnosActionPerformed"/>
+          </Events>
         </Component>
         <Component class="javax.swing.JButton" name="btnAsignarProfesores">
           <Properties>
             <Property name="text" type="java.lang.String" value="Asignar Profesor"/>
           </Properties>
+          <Events>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnAsignarProfesoresActionPerformed"/>
+          </Events>
         </Component>
         <Component class="javax.swing.JButton" name="btnEliminarCurso">
           <Properties>

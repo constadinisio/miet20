@@ -1,5 +1,6 @@
 package login; // O el paquete que prefieras
 
+import javax.swing.JFrame;
 import login.login; // Ajusta según tu paquete de login
 
 public class Main {
@@ -31,8 +32,11 @@ public class Main {
         // Iniciar la aplicación mostrando el login
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new login().setVisible(true);
+                JFrame loginFrame = new login();
+                loginFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+                loginFrame.setVisible(true);
             }
         });
+    
     }
 }
