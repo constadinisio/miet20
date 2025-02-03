@@ -15,6 +15,7 @@ import java.util.Map;
 import javax.swing.JComboBox;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.time.LocalDate;
 
 public class profesor extends javax.swing.JFrame {
@@ -327,56 +328,75 @@ public class profesor extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void botpreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botpreActionPerformed
-        try {
-            String query
-                    = "SELECT DISTINCT c.id as curso_id, CONCAT(c.anio, '°', c.division) as curso, "
-                    + "m.id as materia_id, m.nombre as materia "
-                    + "FROM cursos c "
-                    + "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id "
-                    + "JOIN materias m ON pcm.materia_id = m.id "
-                    + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
-                    + "ORDER BY c.anio, c.division, m.nombre";
+      try {
+        // Panel superior para selección
+        JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
+        JComboBox<String> comboMaterias = new JComboBox<>();
+        Map<String, int[]> materiaIds = new HashMap<>();
 
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, profesorId);
-            ResultSet rs = ps.executeQuery();
-
-            JComboBox<String> comboMaterias = new JComboBox<>();
-            Map<String, int[]> materiaIds = new HashMap<>();
-
-            while (rs.next()) {
-                String item = rs.getString("curso") + " - " + rs.getString("materia");
-                comboMaterias.addItem(item);
-                materiaIds.put(item, new int[]{rs.getInt("curso_id"), rs.getInt("materia_id")});
-            }
-
-            int result = JOptionPane.showConfirmDialog(this, comboMaterias,
-                    "Seleccione Curso y Materia",
-                    JOptionPane.OK_CANCEL_OPTION,
-                    JOptionPane.QUESTION_MESSAGE);
-
-            if (result == JOptionPane.OK_OPTION && comboMaterias.getSelectedItem() != null) {
-                String seleccion = comboMaterias.getSelectedItem().toString();
-                int[] ids = materiaIds.get(seleccion);
-
-                AsistenciaProfesorPanel panelAsistencia = new AsistenciaProfesorPanel(
-                        profesorId,
-                        ids[0], // cursoId
-                        ids[1] // materiaId
-                );
-
-                panelPrincipal.removeAll();
-                panelAsistencia.setPreferredSize(new Dimension(panelPrincipal.getWidth(), panelPrincipal.getHeight()));
-                panelPrincipal.add(panelAsistencia, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, panelPrincipal.getWidth(), panelPrincipal.getHeight()));
-                panelPrincipal.revalidate();
-                panelPrincipal.repaint();
-            }
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al cargar los cursos: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+        String query = 
+            "SELECT DISTINCT c.id as curso_id, CONCAT(c.anio, '°', c.division) as curso, " +
+            "m.id as materia_id, m.nombre as materia " +
+            "FROM cursos c " +
+            "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id " +
+            "JOIN materias m ON pcm.materia_id = m.id " +
+            "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' " +
+            "ORDER BY c.anio, c.division, m.nombre";
+            
+        PreparedStatement ps = conect.prepareStatement(query);
+        ps.setInt(1, profesorId);
+        ResultSet rs = ps.executeQuery();
+        
+        while (rs.next()) {
+            String item = rs.getString("curso") + " - " + rs.getString("materia");
+            comboMaterias.addItem(item);
+            materiaIds.put(item, new int[]{rs.getInt("curso_id"), rs.getInt("materia_id")});
         }
+
+        comboMaterias.setPreferredSize(new Dimension(300, 30));
+        panelSeleccion.add(lblSeleccion);
+        panelSeleccion.add(comboMaterias);
+
+        // Listener para el combo
+        comboMaterias.addActionListener(e -> {
+    String seleccion = (String)comboMaterias.getSelectedItem();
+    System.out.println("Selección: " + seleccion); // Debug
+
+    if (seleccion != null) {
+        try {
+            int[] ids = materiaIds.get(seleccion);
+            System.out.println("CursoId: " + ids[0] + ", MateriaId: " + ids[1]); // Debug
+            
+            AsistenciaProfesorPanel panelAsistencia = new AsistenciaProfesorPanel(
+                profesorId,
+                ids[0], // cursoId
+                ids[1]  // materiaId
+            );
+            
+            panelPrincipal.removeAll();
+            panelPrincipal.setLayout(new BorderLayout()); // Importante: establecer el layout
+            panelPrincipal.add(panelAsistencia, BorderLayout.CENTER);
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
+        } catch (Exception ex) {
+            System.out.println("Error completo: "); // Debug
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al cargar panel: " + ex.getMessage());
+        }
+    }
+});
+
+        panelPrincipal.removeAll();
+        panelPrincipal.add(panelSeleccion, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, panelPrincipal.getWidth(), 50));
+        panelPrincipal.revalidate();
+        panelPrincipal.repaint();
+
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this,
+            "Error al cargar los cursos: " + ex.getMessage(),
+            "Error", JOptionPane.ERROR_MESSAGE);
+    }
 
     }//GEN-LAST:event_botpreActionPerformed
 

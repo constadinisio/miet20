@@ -62,13 +62,13 @@ private void cargarDatosUsuario() {
 
 private void guardarCambios() {
     try {
-        String query = "UPDATE usuarios SET nombre = ?, apellido = ?, mail = ?, rol = ? WHERE id = ?";
+        String query = "UPDATE usuarios SET nombre = ?, apellido = ?, mail = ?, rol = ? WHERE mail = ?";
         PreparedStatement ps = conect.prepareStatement(query);
         ps.setString(1, txtNombre.getText().trim());
         ps.setString(2, txtApellido.getText().trim());
         ps.setString(3, txtEmail.getText().trim());
         ps.setInt(4, comboRol.getSelectedIndex());
-        ps.setInt(5, userId);
+        ps.setString(5, txtEmail.getText().trim());
         
         ps.executeUpdate();
         

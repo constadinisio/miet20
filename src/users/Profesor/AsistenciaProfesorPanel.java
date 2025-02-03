@@ -25,43 +25,42 @@ import javax.swing.table.DefaultTableModel;
 import login.Conexion;
 import java.util.List;
 import java.util.Collections;
-
-
-
+import java.util.Map;
 
 public class AsistenciaProfesorPanel extends AsistenciaPanel {
+
     private int cursoId;
     private int materiaId;
     private Set<LocalDate> diasClase;
     private String nombreMateria;
     private String nombreCurso;
-    
+
     public AsistenciaProfesorPanel(int profesorId, int cursoId, int materiaId) {
-    super();
-    conect = Conexion.getInstancia().getConexion();
-    if (conect == null) {
-        JOptionPane.showMessageDialog(this, "Error de conexión.");
-        return;
+        super();
+        conect = Conexion.getInstancia().getConexion();
+        if (conect == null) {
+            JOptionPane.showMessageDialog(this, "Error de conexión.");
+            return;
+        }
+
+        System.out.println("Creando panel con:");
+        System.out.println("Profesor ID: " + profesorId);
+        System.out.println("Curso ID: " + cursoId);
+        System.out.println("Materia ID: " + materiaId);
+
+        initComponents();
+        this.usuarioId = profesorId;
+        this.cursoId = cursoId;
+        this.materiaId = materiaId;
+        this.fecha = LocalDate.now();
+
+        inicializarBase();
+        this.diasClase = obtenerDiasClase();
+        cargarDatosMateriaCurso();
+        cargarAsistencias();
+        configurarEventos();
     }
-    
-    System.out.println("Creando panel con:");
-    System.out.println("Profesor ID: " + profesorId);
-    System.out.println("Curso ID: " + cursoId);
-    System.out.println("Materia ID: " + materiaId);
-    
-    initComponents();
-    this.usuarioId = profesorId;
-    this.cursoId = cursoId;
-    this.materiaId = materiaId;
-    this.fecha = LocalDate.now();
-    
-    inicializarBase();
-    this.diasClase = obtenerDiasClase();
-    cargarDatosMateriaCurso();
-    cargarAsistencias();
-    configurarEventos();
-}
-    
+
     private void inicializarBase() {
         this.tableModel = new DefaultTableModel();
         if (tablaAsistencia != null) {
@@ -70,20 +69,20 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
         inicializarColores();
         configurarTabla();
     }
-    
+
     private void configurarEventos() {
         dateChooser.addPropertyChangeListener("date", evt -> {
             if (dateChooser.getDate() != null) {
                 fecha = dateChooser.getDate().toInstant()
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDate();
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate();
                 cargarAsistencias();
             }
         });
-        
-        btnGuardar.addActionListener(e -> guardarAsistencias());
+
         btnCancelar.addActionListener(e -> cargarAsistencias());
     }
+
     private void inicializarColores() {
         colorEstados = new HashMap<>();
         colorEstados.put("P", new Color(144, 238, 144));  // Verde claro
@@ -94,221 +93,277 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
     }
 
     private Set<LocalDate> obtenerDiasClase() {
-    Set<LocalDate> dias = new HashSet<>();
-    try {
-        // Obtener el lunes de la semana actual
-        LocalDate inicioDeSemana = fecha;
-        while (inicioDeSemana.getDayOfWeek() != DayOfWeek.MONDAY) {
-            inicioDeSemana = inicioDeSemana.minusDays(1);
-        }
-        
-        String query = "SELECT dia_semana FROM horarios_materia " +
-                      "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ?";
-        
-        System.out.println("Buscando horarios para:");
-        System.out.println("Profesor ID: " + usuarioId);
-        System.out.println("Curso ID: " + cursoId);
-        System.out.println("Materia ID: " + materiaId);
-        
-        PreparedStatement ps = conect.prepareStatement(query);
-        ps.setInt(1, usuarioId);
-        ps.setInt(2, cursoId);
-        ps.setInt(3, materiaId);
-        
-        System.out.println("Ejecutando query: " + query);
-        ResultSet rs = ps.executeQuery();
-        
-        System.out.println("ResultSet obtenido, buscando días...");
-        
-        while (rs.next()) {
-            int diaSemana = rs.getInt("dia_semana");
-            System.out.println("Encontrado día de semana: " + diaSemana);
-            
-            // diaSemana es 1 para Lunes, 2 para Martes, etc.
-            LocalDate fechaClase = inicioDeSemana.plusDays(diaSemana - 1);
-            dias.add(fechaClase);
-            System.out.println("Agregada fecha: " + fechaClase.format(DateTimeFormatter.ofPattern("dd/MM (EEE)")));
-        }
-        
-    } catch (SQLException ex) {
-        System.out.println("Error SQL: " + ex.getMessage());
-        ex.printStackTrace();
-        JOptionPane.showMessageDialog(this, "Error al obtener días de clase: " + ex.getMessage());
-    }
-    
-    System.out.println("Total días encontrados: " + dias.size());
-    return dias;
-}
-    
-    private void cargarDatosMateriaCurso() {
-         try {
-        // Cargar datos de materia y curso
-        String query = "SELECT m.nombre as materia, CONCAT(c.anio, '°', c.division) as curso " +
-                      "FROM materias m " +
-                      "JOIN cursos c ON c.id = ? " +
-                      "WHERE m.id = ?";
-        PreparedStatement ps = conect.prepareStatement(query);
-        ps.setInt(1, cursoId);
-        ps.setInt(2, materiaId);
-        
-        ResultSet rs = ps.executeQuery();
-        if (rs.next()) {
-            nombreMateria = rs.getString("materia");
-            nombreCurso = rs.getString("curso");
-            lblMateria.setText("Materia: " + nombreMateria);
-            lblCurso.setText("Curso: " + nombreCurso);
-        }
-
-        // Cargar y mostrar días de clase
-        String diasQuery = "SELECT dia_semana, hora_inicio, hora_fin FROM horarios_materia " +
-                          "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ?";
-        ps = conect.prepareStatement(diasQuery);
-        ps.setInt(1, usuarioId);
-        ps.setInt(2, cursoId);
-        ps.setInt(3, materiaId);
-        
-        rs = ps.executeQuery();
-        StringBuilder horarios = new StringBuilder("Horarios: ");
-        while (rs.next()) {
-            String dia = getDiaSemana(rs.getInt("dia_semana"));
-            String horaInicio = rs.getTime("hora_inicio").toString();
-            String horaFin = rs.getTime("hora_fin").toString();
-            horarios.append(dia).append(" (").append(horaInicio).append(" - ").append(horaFin).append(") ");
-        }
-        lblHorario.setText(horarios.toString());
-        
-    } catch (SQLException ex) {
-        JOptionPane.showMessageDialog(this, "Error al cargar datos: " + ex.getMessage());
-    }
-}
-
-private String getDiaSemana(int dia) {
-    switch(dia) {
-        case 1: return "Lunes";
-        case 2: return "Martes";
-        case 3: return "Miércoles";
-        case 4: return "Jueves";
-        case 5: return "Viernes";
-        default: return "";
-    }
-}
-    
-    protected void cargarAsistencias() {
-    try {
-        System.out.println("Iniciando carga de asistencias..."); // Debug
-        
-        // Limpiar tabla actual
-        tableModel.setRowCount(0);
-        tableModel.setColumnCount(0);
-        
-        // Configurar columnas fijas
-        tableModel.addColumn("Alumno");
-        tableModel.addColumn("DNI");
-        
-        // Agregar columnas para los días de clase
-        List<LocalDate> diasOrdenados = new ArrayList<>(diasClase);
-        Collections.sort(diasOrdenados); // Ordenar días cronológicamente
-        
-        System.out.println("Días de clase a mostrar: " + diasOrdenados.size()); // Debug
-        
-        for (LocalDate dia : diasOrdenados) {
-            String columnName = dia.format(DateTimeFormatter.ofPattern("dd/MM (EEE)"));
-            tableModel.addColumn(columnName);
-            System.out.println("Agregando columna: " + columnName); // Debug
-        }
-        
-        // Cargar alumnos
-        String queryAlumnos = 
-            "SELECT DISTINCT u.id, u.nombre, u.apellido, u.dni " +
-            "FROM usuarios u " +
-            "JOIN alumno_curso ac ON u.id = ac.alumno_id " +
-            "WHERE ac.curso_id = ? AND ac.estado = 'activo' AND u.rol = 4 " +
-            "ORDER BY u.apellido, u.nombre";
-            
-        PreparedStatement psAlumnos = conect.prepareStatement(queryAlumnos);
-        psAlumnos.setInt(1, cursoId);
-        ResultSet rsAlumnos = psAlumnos.executeQuery();
-        
-        while (rsAlumnos.next()) {
-            Object[] rowData = new Object[2 + diasOrdenados.size()];
-            rowData[0] = rsAlumnos.getString("apellido") + ", " + rsAlumnos.getString("nombre");
-            rowData[1] = rsAlumnos.getString("dni");
-            
-            // Inicializar estados como NC
-            for (int i = 2; i < rowData.length; i++) {
-                rowData[i] = "NC";
+        Set<LocalDate> dias = new HashSet<>();
+        try {
+            // Obtener el lunes de la semana actual
+            LocalDate inicioDeSemana = fecha;
+            while (inicioDeSemana.getDayOfWeek() != DayOfWeek.MONDAY) {
+                inicioDeSemana = inicioDeSemana.minusDays(1);
             }
-            tableModel.addRow(rowData);
+
+            String query = "SELECT dia_semana, hora_inicio, hora_fin FROM horarios_materia "
+                    + "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ?";
+
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, usuarioId);
+            ps.setInt(2, cursoId);
+            ps.setInt(3, materiaId);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                int diaSemana = rs.getInt("dia_semana");
+                // Calcular la fecha para este día de la semana
+                LocalDate fechaClase = inicioDeSemana.plusDays(diaSemana - 1);
+                dias.add(fechaClase);
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("Error SQL: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al obtener días de clase: " + ex.getMessage());
         }
-        
-        // Cargar asistencias existentes
-        for (int diaIndex = 0; diaIndex < diasOrdenados.size(); diaIndex++) {
-            LocalDate dia = diasOrdenados.get(diaIndex);
-            String queryAsistencias = 
-                "SELECT alumno_id, estado " +
-                "FROM asistencia_materia " +
-                "WHERE curso_id = ? AND materia_id = ? AND fecha = ?";
-                
+
+        return dias;
+    }
+
+    private boolean esDiaClaseValido(LocalDate fecha) {
+        try {
+            String query = "SELECT COUNT(*) FROM horarios_materia "
+                    + "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ? "
+                    + "AND dia_semana = ?";
+
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, usuarioId);
+            ps.setInt(2, cursoId);
+            ps.setInt(3, materiaId);
+            ps.setInt(4, fecha.getDayOfWeek().getValue()); // getValue() retorna 1 para Lunes, ... 7 para Domingo
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return false;
+    }
+
+    private void cargarDatosMateriaCurso() {
+        try {
+            // Cargar datos de materia y curso
+            String query = "SELECT m.nombre as materia, CONCAT(c.anio, '°', c.division) as curso "
+                    + "FROM materias m "
+                    + "JOIN cursos c ON c.id = ? "
+                    + "WHERE m.id = ?";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, cursoId);
+            ps.setInt(2, materiaId);
+
+            System.out.println("Cargando datos de materia y curso...");
+            System.out.println("CursoID: " + cursoId);
+            System.out.println("MateriaID: " + materiaId);
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                nombreMateria = rs.getString("materia");
+                nombreCurso = rs.getString("curso");
+                lblMateria.setText("Materia: " + nombreMateria);
+                lblCurso.setText("Curso: " + nombreCurso);
+
+                System.out.println("Materia: " + nombreMateria);
+                System.out.println("Curso: " + nombreCurso);
+            }
+
+            // Cargar y mostrar días de clase con horarios
+            String diasQuery = "SELECT dia_semana, hora_inicio, hora_fin "
+                    + "FROM horarios_materia "
+                    + "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ? "
+                    + "ORDER BY dia_semana, hora_inicio";
+            ps = conect.prepareStatement(diasQuery);
+            ps.setInt(1, usuarioId);
+            ps.setInt(2, cursoId);
+            ps.setInt(3, materiaId);
+
+            System.out.println("Consultando horarios para Profesor: " + usuarioId
+                    + ", Curso: " + cursoId + ", Materia: " + materiaId);
+
+            rs = ps.executeQuery();
+            StringBuilder horarios = new StringBuilder("Horarios: ");
+            boolean tieneHorarios = false;
+
+            while (rs.next()) {
+                tieneHorarios = true;
+                String dia = getDiaSemana(rs.getInt("dia_semana"));
+                String horaInicio = rs.getTime("hora_inicio").toString().substring(0, 5);
+                String horaFin = rs.getTime("hora_fin").toString().substring(0, 5);
+                horarios.append(dia).append(" (").append(horaInicio)
+                        .append(" - ").append(horaFin).append(") ");
+
+                System.out.println("Horario encontrado: " + dia + " de "
+                        + horaInicio + " a " + horaFin);
+            }
+
+            if (!tieneHorarios) {
+                horarios.append("No hay horarios configurados");
+                System.out.println("¡ADVERTENCIA! No se encontraron horarios");
+            }
+
+            lblHorario.setText(horarios.toString());
+            System.out.println("Texto final de horarios: " + horarios.toString());
+
+        } catch (SQLException ex) {
+            System.out.println("Error SQL: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al cargar datos: " + ex.getMessage());
+        }
+    }
+
+    private String getDiaSemana(int dia) {
+        switch (dia) {
+            case 1:
+                return "Lunes";
+            case 2:
+                return "Martes";
+            case 3:
+                return "Miércoles";
+            case 4:
+                return "Jueves";
+            case 5:
+                return "Viernes";
+            default:
+                return "";
+        }
+    }
+
+    protected void cargarAsistencias() {
+        try {
+            // Limpiar tabla actual
+            tableModel.setRowCount(0);
+            tableModel.setColumnCount(0);
+
+            // Configurar columnas fijas
+            tableModel.addColumn("Alumno");
+            tableModel.addColumn("DNI");
+            // Mostrar la fecha formateada como título de la columna
+            tableModel.addColumn(fecha.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+
+            // Verificar si es día de clase usando el nuevo método
+            if (!esDiaClaseValido(fecha)) {
+                JOptionPane.showMessageDialog(this,
+                        "La fecha seleccionada no es un día de clase para esta materia.",
+                        "Aviso", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            // Cargar alumnos
+            String queryAlumnos
+                    = "SELECT DISTINCT u.id as usuario_id, u.nombre, u.apellido, u.dni "
+                    + "FROM usuarios u "
+                    + "JOIN alumno_curso ac ON u.id = ac.alumno_id "
+                    + "WHERE ac.curso_id = ? AND ac.estado = 'activo' AND u.rol = 4 "
+                    + "ORDER BY u.apellido, u.nombre";
+
+            PreparedStatement psAlumnos = conect.prepareStatement(queryAlumnos);
+            psAlumnos.setInt(1, cursoId);
+            ResultSet rsAlumnos = psAlumnos.executeQuery();
+
+            // Crear un mapa para almacenar el ID del usuario junto con sus datos
+            Map<String, Integer> dniToIdMap = new HashMap<>();
+
+            while (rsAlumnos.next()) {
+                Object[] rowData = new Object[3];
+                rowData[0] = rsAlumnos.getString("apellido") + ", " + rsAlumnos.getString("nombre");
+                String dni = rsAlumnos.getString("dni");
+                rowData[1] = dni;
+                rowData[2] = "NC";  // Estado inicial
+                tableModel.addRow(rowData);
+
+                // Guardar la relación DNI -> ID
+                dniToIdMap.put(dni, rsAlumnos.getInt("usuario_id"));
+            }
+
+            // Guardar el mapa como una propiedad de la tabla para usarlo al guardar
+            tablaAsistencia.putClientProperty("dniToIdMap", dniToIdMap);
+
+            // Cargar asistencias existentes
+            String queryAsistencias
+                    = "SELECT alumno_id, estado "
+                    + "FROM asistencia_materia "
+                    + "WHERE curso_id = ? AND materia_id = ? AND fecha = ?";
+
             PreparedStatement psAsistencias = conect.prepareStatement(queryAsistencias);
             psAsistencias.setInt(1, cursoId);
             psAsistencias.setInt(2, materiaId);
-            psAsistencias.setDate(3, java.sql.Date.valueOf(dia));
-            
-            final int columnIndex = diaIndex + 2; // +2 por las columnas Alumno y DNI
-            
+            psAsistencias.setDate(3, java.sql.Date.valueOf(fecha));
+
             ResultSet rsAsistencias = psAsistencias.executeQuery();
             while (rsAsistencias.next()) {
-                String dni = rsAsistencias.getString("alumno_id");
+                int usuarioId = rsAsistencias.getInt("alumno_id");
                 String estado = rsAsistencias.getString("estado");
-                
-                // Buscar al alumno y actualizar su estado
+
+                // Buscar el DNI correspondiente al ID y actualizar su estado
                 for (int i = 0; i < tableModel.getRowCount(); i++) {
-                    if (tableModel.getValueAt(i, 1).toString().equals(dni)) {
-                        tableModel.setValueAt(estado, i, columnIndex);
+                    String dni = (String) tableModel.getValueAt(i, 1);
+                    if (dniToIdMap.get(dni) == usuarioId) {
+                        tableModel.setValueAt(estado, i, 2);
                         break;
                     }
                 }
             }
-        }
-        
-        // Configurar el editor para las columnas de estado
-        for (int i = 2; i < tableModel.getColumnCount(); i++) {
-            TableColumn column = tablaAsistencia.getColumnModel().getColumn(i);
+
+            // Configurar el editor para la columna de estado
+            TableColumn column = tablaAsistencia.getColumnModel().getColumn(2);
             column.setCellEditor(new EstadoAsistenciaEditor());
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al cargar asistencias: " + ex.getMessage());
         }
-        
-        System.out.println("Carga de asistencias completada."); // Debug
-        
-    } catch (SQLException ex) {
-        ex.printStackTrace();
-        JOptionPane.showMessageDialog(this, "Error al cargar asistencias: " + ex.getMessage());
     }
-}
-    
-      @Override
+
+    @Override
     protected void guardarAsistencias() {
         try {
+            // Obtener el mapa DNI -> ID que guardamos en la tabla
+            @SuppressWarnings("unchecked")
+            Map<String, Integer> dniToIdMap = (Map<String, Integer>) tablaAsistencia.getClientProperty("dniToIdMap");
+
+            if (dniToIdMap == null) {
+                JOptionPane.showMessageDialog(this, "Error: No se encontró la información de los alumnos");
+                return;
+            }
+
             // Primero eliminar asistencias existentes para esta fecha
-            String deleteQuery = 
-                "DELETE FROM asistencia_materia " +
-                "WHERE fecha = ? AND curso_id = ? AND materia_id = ?";
+            String deleteQuery
+                    = "DELETE FROM asistencia_materia "
+                    + "WHERE fecha = ? AND curso_id = ? AND materia_id = ?";
             PreparedStatement deletePs = conect.prepareStatement(deleteQuery);
             deletePs.setDate(1, java.sql.Date.valueOf(fecha));
             deletePs.setInt(2, cursoId);
             deletePs.setInt(3, materiaId);
             deletePs.executeUpdate();
-            
+
             // Insertar nuevas asistencias
-            String insertQuery = 
-                "INSERT INTO asistencia_materia " +
-                "(alumno_id, curso_id, materia_id, fecha, estado, creado_por) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+            String insertQuery
+                    = "INSERT INTO asistencia_materia "
+                    + "(alumno_id, curso_id, materia_id, fecha, estado, creado_por) "
+                    + "VALUES (?, ?, ?, ?, ?, ?)";
             PreparedStatement insertPs = conect.prepareStatement(insertQuery);
-            
+
             for (int i = 0; i < tableModel.getRowCount(); i++) {
                 String estado = tableModel.getValueAt(i, 2).toString();
                 if (!estado.equals("NC")) {
-                    insertPs.setString(1, tableModel.getValueAt(i, 1).toString()); // alumno_id (DNI)
+                    String dni = tableModel.getValueAt(i, 1).toString();
+                    Integer usuarioId = dniToIdMap.get(dni);
+
+                    if (usuarioId == null) {
+                        JOptionPane.showMessageDialog(this,
+                                "Error: No se encontró el ID para el alumno con DNI " + dni);
+                        continue;
+                    }
+
+                    insertPs.setInt(1, usuarioId);  // Usar el ID del usuario, no el DNI
                     insertPs.setInt(2, cursoId);
                     insertPs.setInt(3, materiaId);
                     insertPs.setDate(4, java.sql.Date.valueOf(fecha));
@@ -317,69 +372,72 @@ private String getDiaSemana(int dia) {
                     insertPs.executeUpdate();
                 }
             }
-            
+
             JOptionPane.showMessageDialog(this, "Asistencias guardadas exitosamente");
-            
+
         } catch (SQLException ex) {
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error al guardar asistencias: " + ex.getMessage());
         }
     }
+
     private void importarAsistenciaGeneral() {
-    try {
-        // Verificar si existe asistencia general para la fecha actual
-        String query = "SELECT ag.alumno_id, ag.estado " +
-                      "FROM asistencia_general ag " +
-                      "WHERE ag.curso_id = ? AND ag.fecha = ?";
-        
-        PreparedStatement ps = conect.prepareStatement(query);
-        ps.setInt(1, cursoId);
-        ps.setDate(2, java.sql.Date.valueOf(fecha));
-        
-        ResultSet rs = ps.executeQuery();
-        boolean hayAsistencia = false;
-        
-        while (rs.next()) {
-            hayAsistencia = true;
-            String alumnoId = rs.getString("alumno_id");
-            String estado = rs.getString("estado");
-            
-            // Actualizar la tabla con los estados
-            for (int i = 0; i < tableModel.getRowCount(); i++) {
-                if (tableModel.getValueAt(i, 1).toString().equals(alumnoId)) {
-                    // Encontrar la columna correspondiente a la fecha actual
-                    for (int j = 2; j < tableModel.getColumnCount(); j++) {
-                        String columnDate = tableModel.getColumnName(j).split(" ")[0]; // Obtener solo la fecha
-                        if (columnDate.equals(fecha.format(DateTimeFormatter.ofPattern("dd/MM")))) {
-                            tableModel.setValueAt(estado, i, j);
-                            break;
+        try {
+            // Verificar si existe asistencia general para la fecha actual
+            String query = "SELECT ag.alumno_id, ag.estado "
+                    + "FROM asistencia_general ag "
+                    + "WHERE ag.curso_id = ? AND ag.fecha = ?";
+
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, cursoId);
+            ps.setDate(2, java.sql.Date.valueOf(fecha));
+
+            ResultSet rs = ps.executeQuery();
+            boolean hayAsistencia = false;
+
+            while (rs.next()) {
+                hayAsistencia = true;
+                String alumnoId = rs.getString("alumno_id");
+                String estado = rs.getString("estado");
+
+                // Actualizar la tabla con los estados
+                for (int i = 0; i < tableModel.getRowCount(); i++) {
+                    if (tableModel.getValueAt(i, 1).toString().equals(alumnoId)) {
+                        // Encontrar la columna correspondiente a la fecha actual
+                        for (int j = 2; j < tableModel.getColumnCount(); j++) {
+                            String columnDate = tableModel.getColumnName(j).split(" ")[0]; // Obtener solo la fecha
+                            if (columnDate.equals(fecha.format(DateTimeFormatter.ofPattern("dd/MM")))) {
+                                tableModel.setValueAt(estado, i, j);
+                                break;
+                            }
                         }
+                        break;
                     }
-                    break;
                 }
             }
+
+            if (!hayAsistencia) {
+                JOptionPane.showMessageDialog(this,
+                        "No hay asistencia general registrada para esta fecha",
+                        "Información", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Asistencia general importada correctamente",
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            }
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al importar asistencia general: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
-        
-        if (!hayAsistencia) {
-            JOptionPane.showMessageDialog(this, 
-                "No hay asistencia general registrada para esta fecha",
-                "Información", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            JOptionPane.showMessageDialog(this, 
-                "Asistencia general importada correctamente",
-                "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        }
-        
-    } catch (SQLException ex) {
-        JOptionPane.showMessageDialog(this,
-            "Error al importar asistencia general: " + ex.getMessage(),
-            "Error", JOptionPane.ERROR_MESSAGE);
     }
-    }
+
     @Override
     protected boolean puedeEditarCelda(int row, int column) {
         return column == 2 && diasClase.contains(fecha);
     }
-    
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -543,11 +601,11 @@ private String getDiaSemana(int dia) {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
-       guardarAsistencias();
+        guardarAsistencias();
     }//GEN-LAST:event_btnGuardarActionPerformed
 
     private void btnCancelarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelarActionPerformed
-       cargarAsistencias();
+        cargarAsistencias();
     }//GEN-LAST:event_btnCancelarActionPerformed
 
     private void btnImportarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnImportarActionPerformed
