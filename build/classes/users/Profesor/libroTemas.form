@@ -26,18 +26,11 @@
           <Component id="bannerColor1" alignment="0" pref="903" max="32767" attributes="0"/>
           <Component id="bannerColor2" alignment="0" max="32767" attributes="0"/>
           <Group type="102" alignment="1" attributes="0">
+              <EmptySpace max="32767" attributes="0"/>
               <Group type="103" groupAlignment="1" attributes="0">
-                  <Group type="102" alignment="1" attributes="0">
-                      <EmptySpace max="32767" attributes="0"/>
-                      <Group type="103" groupAlignment="0" attributes="0">
-                          <Component id="btnVolver" alignment="1" min="-2" pref="134" max="-2" attributes="0"/>
-                          <Component id="btnContenidos" alignment="1" min="-2" pref="134" max="-2" attributes="0"/>
-                      </Group>
-                  </Group>
-                  <Group type="102" alignment="1" attributes="0">
-                      <EmptySpace max="32767" attributes="0"/>
-                      <Component id="btnFirmar" min="-2" pref="134" max="-2" attributes="0"/>
-                  </Group>
+                  <Component id="btnVolver" alignment="1" min="-2" pref="134" max="-2" attributes="0"/>
+                  <Component id="btnContenidos" alignment="1" min="-2" pref="134" max="-2" attributes="0"/>
+                  <Component id="btnFirmar" alignment="1" min="-2" pref="134" max="-2" attributes="0"/>
               </Group>
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
               <Component id="panelInfo" min="-2" max="-2" attributes="0"/>
@@ -51,7 +44,7 @@
               <Component id="bannerColor1" min="-2" max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" attributes="0">
-                      <EmptySpace min="-2" pref="60" max="-2" attributes="0"/>
+                      <EmptySpace min="-2" pref="137" max="-2" attributes="0"/>
                       <Component id="btnFirmar" min="-2" pref="35" max="-2" attributes="0"/>
                       <EmptySpace type="separate" max="-2" attributes="0"/>
                       <Component id="btnContenidos" min="-2" pref="35" max="-2" attributes="0"/>
@@ -60,7 +53,7 @@
                       <EmptySpace min="-2" pref="7" max="-2" attributes="0"/>
                   </Group>
                   <Group type="102" alignment="1" attributes="0">
-                      <EmptySpace pref="7" max="32767" attributes="0"/>
+                      <EmptySpace pref="83" max="32767" attributes="0"/>
                       <Component id="panelInfo" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                   </Group>

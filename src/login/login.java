@@ -13,6 +13,7 @@ import users.Attp.attp;
 public class login extends javax.swing.JFrame {
 
     Connection conect;
+    private int profesorId;
 
     private void probar_conexion() {
         // Obtener la conexión desde el Singleton
@@ -309,6 +310,8 @@ public class login extends javax.swing.JFrame {
             String apellido = rs.getString("apellido");
             int rol = rs.getInt("rol");
             String fotoUrl = rs.getString("foto_url");
+            int profesorId = rs.getInt("id");  // Aquí se obtiene el ID del usuario
+            System.out.println("Usuario autenticado en login.java, ID: " + profesorId);
             
             // Crear sesión de usuario
             UserSession session = new UserSession(nombre, apellido, mail, rol, fotoUrl);
@@ -408,7 +411,7 @@ public class login extends javax.swing.JFrame {
         // Obtener el ID del profesor
         int attpId = obtenerUsuarioId(session.getEmail());
         if (attpId != -1) {
-            attp attpForm = new attp(attpId);
+            attp attpForm = new attp();
             attpForm.updateLabels(session.getNombre() + " " + session.getApellido());
             attpForm.setVisible(true);
             this.dispose();
@@ -605,6 +608,7 @@ public class login extends javax.swing.JFrame {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new login().setVisible(true);
+                
             }
         });
     }

@@ -1,24 +1,65 @@
 package users.Profesor;
 
-import java.sql.Connection;
-import javax.swing.JOptionPane;
+import java.sql.*;
 import login.Conexion;
+import javax.swing.JOptionPane;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
 
 public class libroTemas extends javax.swing.JFrame {
     
     private Connection conect;
+    private int profesorId;
     
     public libroTemas() {
         initComponents();
         probar_conexion();
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "src/images/banner-et20.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "src/images/banner-et20.png");
+        System.out.println("ID del profesor: " + this.profesorId);
     }
     
     private void probar_conexion() {
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
+        }
+    }
+    
+    public void firmarAsistencia() {
+        try {
+            LocalDate fechaActual = LocalDate.now();
+            LocalTime horaActual = LocalTime.now();
+            String diaSemana = fechaActual.getDayOfWeek().toString().toLowerCase();
+            
+            String consulta = "SELECT curso_id, materia_id FROM horarios_materia WHERE profesor_id = ? AND dia_semana = ? AND ? BETWEEN hora_inicio AND hora_fin";
+            PreparedStatement ps = conect.prepareStatement(consulta);
+            ps.setInt(1, profesorId);
+            ps.setString(2, diaSemana);
+            ps.setTime(3, Time.valueOf(horaActual));
+            
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                int cursoId = rs.getInt("curso_id");
+                int materiaId = rs.getInt("materia_id");
+                
+                String insercion = "INSERT INTO firmas_asistencia (profesor_id, curso_id, materia_id, fecha, hora_firma) VALUES (?, ?, ?, ?, ?)";
+                PreparedStatement psInsert = conect.prepareStatement(insercion);
+                psInsert.setInt(1, profesorId);
+                psInsert.setInt(2, cursoId);
+                psInsert.setInt(3, materiaId);
+                psInsert.setDate(4, Date.valueOf(fechaActual));
+                psInsert.setTime(5, Time.valueOf(horaActual));
+                
+                psInsert.executeUpdate();
+                JOptionPane.showMessageDialog(null, "Firma registrada exitosamente.");
+            } else {
+                JOptionPane.showMessageDialog(null, "No tienes clase en este horario.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al registrar la firma.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -87,15 +128,11 @@ public class libroTemas extends javax.swing.JFrame {
             .addComponent(bannerColor1, javax.swing.GroupLayout.DEFAULT_SIZE, 903, Short.MAX_VALUE)
             .addComponent(bannerColor2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(btnVolver, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(btnContenidos, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(btnFirmar, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addComponent(btnVolver, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnContenidos, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnFirmar, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(panelInfo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18))
@@ -106,7 +143,7 @@ public class libroTemas extends javax.swing.JFrame {
                 .addComponent(bannerColor1)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(60, 60, 60)
+                        .addGap(137, 137, 137)
                         .addComponent(btnFirmar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
                         .addComponent(btnContenidos, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -114,7 +151,7 @@ public class libroTemas extends javax.swing.JFrame {
                         .addComponent(btnVolver, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(7, 7, 7))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 7, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 83, Short.MAX_VALUE)
                         .addComponent(panelInfo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)))
                 .addComponent(bannerColor2))
@@ -130,11 +167,13 @@ public class libroTemas extends javax.swing.JFrame {
     }//GEN-LAST:event_btnVolverActionPerformed
 
     private void btnFirmarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFirmarActionPerformed
-        // TODO add your handling code here:
+        firmarAsistencia();
     }//GEN-LAST:event_btnFirmarActionPerformed
 
     private void btnContenidosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnContenidosActionPerformed
-        // TODO add your handling code here:
+        tablaContenidos tablaCont = new tablaContenidos();  // Pasamos el ID
+        tablaCont.setVisible(true);
+        this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta
     }//GEN-LAST:event_btnContenidosActionPerformed
 
     public static void main(String args[]) {

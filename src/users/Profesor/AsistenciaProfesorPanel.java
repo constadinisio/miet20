@@ -13,18 +13,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
 import javax.swing.table.TableColumn;
-import com.toedter.calendar.JDateChooser;
-import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import java.time.DayOfWeek;
-import java.util.ArrayList;
 import java.util.HashMap;
 import javax.swing.table.DefaultTableModel;
 import login.Conexion;
-import java.util.List;
-import java.util.Collections;
 import java.util.Map;
 
 public class AsistenciaProfesorPanel extends AsistenciaPanel {

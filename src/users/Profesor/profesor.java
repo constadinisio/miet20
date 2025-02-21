@@ -1,12 +1,8 @@
 package users.Profesor;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Font;
 import java.sql.*;
 import javax.swing.*;
 import javax.swing.tree.*;
-import java.awt.event.*;
 import javax.swing.JOptionPane;
 import login.Conexion;
 import users.Profesor.AsistenciaProfesorPanel;
@@ -16,7 +12,6 @@ import javax.swing.JComboBox;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.time.LocalDate;
 
 public class profesor extends javax.swing.JFrame {
 
@@ -33,6 +28,7 @@ public class profesor extends javax.swing.JFrame {
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+        System.out.println("Profesor ID en Profesor.java: " + this.profesorId); // Para depuración
     }
 
     private void probar_conexion() {
@@ -132,6 +128,12 @@ public class profesor extends javax.swing.JFrame {
     public void updateLabels(String nombreCompleto) {
         labelNomApe.setText(nombreCompleto);
         labelRol.setText("Rol: Profesor");
+    }
+    
+    private void abrirLibroDeTemas() {
+        libroTemas temario = new libroTemas();  // Pasamos el ID
+        temario.setVisible(true);
+        this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta
     }
 
     @SuppressWarnings("unchecked")
@@ -413,10 +415,7 @@ public class profesor extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void botpre1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botpre1ActionPerformed
-
-        libroTemas temario = new libroTemas();
-        temario.setVisible(true);
-        this.setVisible(false);
+        abrirLibroDeTemas();
     }//GEN-LAST:event_botpre1ActionPerformed
 
     public static void main(String args[]) {
