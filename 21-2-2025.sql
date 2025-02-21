@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.2
--- Tiempo de generación: 19-02-2025 a las 05:15:05
+-- Tiempo de generación: 21-02-2025 a las 05:36:26
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -195,6 +195,21 @@ INSERT INTO `cursos` (`id`, `anio`, `division`, `turno`, `estado`, `created_at`,
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `firmas_asistencia`
+--
+
+CREATE TABLE `firmas_asistencia` (
+  `id` int(11) NOT NULL,
+  `profesor_id` int(11) NOT NULL,
+  `curso_id` int(11) NOT NULL,
+  `materia_id` int(11) NOT NULL,
+  `fecha` date NOT NULL,
+  `hora_firma` time NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `firmas_libro`
 --
 
@@ -229,11 +244,13 @@ CREATE TABLE `horarios_materia` (
 --
 
 INSERT INTO `horarios_materia` (`id`, `profesor_id`, `curso_id`, `materia_id`, `dia_semana`, `hora_inicio`, `hora_fin`) VALUES
-(1, 26, 1, 1, '1', '00:00:00', '23:59:00'),
-(2, 26, 1, 1, '3', '00:00:00', '23:59:00'),
-(3, 26, 1, 2, '2', '00:00:00', '23:59:00'),
-(4, 26, 1, 1, '4', '00:00:00', '23:59:00'),
-(5, 26, 1, 1, '5', '00:00:00', '23:59:00');
+(6, 26, 1, 1, 'monday', '00:00:00', '23:59:59'),
+(7, 26, 1, 1, 'tuesday', '00:00:00', '23:59:59'),
+(8, 26, 1, 1, 'wednesday', '00:00:00', '23:59:59'),
+(9, 26, 1, 1, 'thursday', '00:00:00', '23:59:59'),
+(10, 26, 1, 1, 'friday', '00:00:00', '23:59:59'),
+(11, 26, 1, 1, 'saturday', '00:00:00', '23:59:59'),
+(12, 26, 1, 1, 'sunday', '00:00:00', '23:59:59');
 
 -- --------------------------------------------------------
 
@@ -406,28 +423,6 @@ INSERT INTO `promedios` (`id`, `alumno_id`, `curso_id`, `materia_id`, `periodo`,
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `registro_firmas`
---
-
-CREATE TABLE `registro_firmas` (
-  `id` int(11) NOT NULL,
-  `profesor_id` int(50) DEFAULT NULL,
-  `curso_id` int(50) DEFAULT NULL,
-  `fecha_hora` datetime DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Volcado de datos para la tabla `registro_firmas`
---
-
-INSERT INTO `registro_firmas` (`id`, `profesor_id`, `curso_id`, `fecha_hora`, `created_at`) VALUES
-(1, NULL, NULL, '2025-02-19 00:46:39', '2025-02-19 03:46:39'),
-(2, NULL, NULL, '2025-02-19 00:52:09', '2025-02-19 03:52:09');
-
--- --------------------------------------------------------
-
---
 -- Estructura de tabla para la tabla `roles`
 --
 
@@ -571,6 +566,15 @@ ALTER TABLE `cursos`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indices de la tabla `firmas_asistencia`
+--
+ALTER TABLE `firmas_asistencia`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `profesor_id` (`profesor_id`),
+  ADD KEY `curso_id` (`curso_id`),
+  ADD KEY `materia_id` (`materia_id`);
+
+--
 -- Indices de la tabla `firmas_libro`
 --
 ALTER TABLE `firmas_libro`
@@ -629,14 +633,6 @@ ALTER TABLE `promedios`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indices de la tabla `registro_firmas`
---
-ALTER TABLE `registro_firmas`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `profesor_id` (`profesor_id`),
-  ADD KEY `curso_id` (`curso_id`);
-
---
 -- Indices de la tabla `roles`
 --
 ALTER TABLE `roles`
@@ -677,10 +673,16 @@ ALTER TABLE `cursos`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- AUTO_INCREMENT de la tabla `firmas_asistencia`
+--
+ALTER TABLE `firmas_asistencia`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `horarios_materia`
 --
 ALTER TABLE `horarios_materia`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT de la tabla `observaciones_asistencia`
@@ -699,12 +701,6 @@ ALTER TABLE `preceptor_curso`
 --
 ALTER TABLE `profesor_curso_materia`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT de la tabla `registro_firmas`
---
-ALTER TABLE `registro_firmas`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `usuarios`
@@ -741,6 +737,14 @@ ALTER TABLE `asistencia_materia`
   ADD CONSTRAINT `asistencia_materia_ibfk_4` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`);
 
 --
+-- Filtros para la tabla `firmas_asistencia`
+--
+ALTER TABLE `firmas_asistencia`
+  ADD CONSTRAINT `firmas_asistencia_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `firmas_asistencia_ibfk_2` FOREIGN KEY (`curso_id`) REFERENCES `profesor_curso_materia` (`curso_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `firmas_asistencia_ibfk_3` FOREIGN KEY (`materia_id`) REFERENCES `profesor_curso_materia` (`materia_id`) ON DELETE CASCADE;
+
+--
 -- Filtros para la tabla `horarios_materia`
 --
 ALTER TABLE `horarios_materia`
@@ -769,13 +773,6 @@ ALTER TABLE `profesor_curso_materia`
   ADD CONSTRAINT `profesor_curso_materia_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `usuarios` (`id`),
   ADD CONSTRAINT `profesor_curso_materia_ibfk_2` FOREIGN KEY (`curso_id`) REFERENCES `cursos` (`id`),
   ADD CONSTRAINT `profesor_curso_materia_ibfk_3` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`);
-
---
--- Filtros para la tabla `registro_firmas`
---
-ALTER TABLE `registro_firmas`
-  ADD CONSTRAINT `registro_firmas_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `profesor_curso_materia` (`profesor_id`),
-  ADD CONSTRAINT `registro_firmas_ibfk_2` FOREIGN KEY (`curso_id`) REFERENCES `cursos` (`id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
