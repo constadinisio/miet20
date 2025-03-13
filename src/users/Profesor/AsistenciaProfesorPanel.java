@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
- */
 package users.Profesor;
 
 import users.common.AsistenciaPanel;
@@ -20,14 +16,46 @@ import javax.swing.table.DefaultTableModel;
 import login.Conexion;
 import java.util.Map;
 
+/**
+ * Panel de asistencia específico para profesores.
+ * 
+ * Permite gestionar la asistencia de alumnos para una materia y curso específicos.
+ * 
+ * Características principales:
+ * - Gestión de asistencia por materia y curso
+ * - Visualización y edición de estados de asistencia
+ * - Importación de asistencias generales
+ * - Validación de días de clase
+ * 
+ * @author [Nicolas Bogarin]
+ * @author [Constantino Di Nisio]
+ * @version 1.0
+ * @since [3/12/2025]
+ */
+
 public class AsistenciaProfesorPanel extends AsistenciaPanel {
 
+    // Identificadores de curso, materia y profesor
     private int cursoId;
     private int materiaId;
+    
+    // Conjunto de días de clase para la materia actual
     private Set<LocalDate> diasClase;
+    
+    // Nombres de materia y curso
     private String nombreMateria;
     private String nombreCurso;
 
+
+    /**
+     * Constructor del panel de asistencia para profesores.
+     * 
+     * Inicializa componentes, carga datos y configura la interfaz.
+     * 
+     * @param profesorId Identificador del profesor
+     * @param cursoId Identificador del curso
+     * @param materiaId Identificador de la materia
+     */
     public AsistenciaProfesorPanel(int profesorId, int cursoId, int materiaId) {
         super();
         conect = Conexion.getInstancia().getConexion();
@@ -53,7 +81,11 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
         cargarAsistencias();
         configurarEventos();
     }
-
+    
+    /**
+     * Inicializa la base de la tabla de asistencia.
+     * Configura modelo de tabla, colores y estructura.
+     */
     private void inicializarBase() {
         this.tableModel = new DefaultTableModel();
         if (tablaAsistencia != null) {
@@ -62,7 +94,11 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
         inicializarColores();
         configurarTabla();
     }
-
+    
+    /**
+     * Configura los eventos de interacción del panel.
+     * Maneja cambios en la fecha y acciones de cancelación.
+     */
     private void configurarEventos() {
         dateChooser.addPropertyChangeListener("date", evt -> {
             if (dateChooser.getDate() != null) {
@@ -76,6 +112,9 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
         btnCancelar.addActionListener(e -> cargarAsistencias());
     }
 
+    /**
+    * Inicializa un mapa de colores para representar los diferentes estados de asistencia.
+    */
     private void inicializarColores() {
         colorEstados = new HashMap<>();
         colorEstados.put("P", new Color(144, 238, 144));  // Verde claro
@@ -85,6 +124,11 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
         colorEstados.put("NC", Color.WHITE);              // No cargado
     }
 
+    /**
+    * Obtiene los días de clase para la materia y curso actual.
+    * 
+    * @return Conjunto de fechas correspondientes a los días de clase
+    */
     private Set<LocalDate> obtenerDiasClase() {
         Set<LocalDate> dias = new HashSet<>();
         try {
@@ -120,6 +164,12 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
         return dias;
     }
 
+    /**
+    * Verifica si la fecha seleccionada es un día de clase válido para la materia actual.
+    * 
+    * @param fecha Fecha a validar
+    * @return true si es un día de clase, false en caso contrario
+    */
     private boolean esDiaClaseValido(LocalDate fecha) {
         try {
             String query = "SELECT COUNT(*) FROM horarios_materia "
@@ -142,6 +192,9 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
         return false;
     }
 
+    /**
+    * Carga todos los datos entre materias y cursos para mostrarlos en la tabla.
+    */
     private void cargarDatosMateriaCurso() {
         try {
             // Cargar datos de materia y curso
@@ -212,6 +265,12 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
         }
     }
 
+    /**
+    * Convierte un número de día de la semana a su representación en texto.
+    * 
+    * @param dia Número de día (1-5)
+    * @return Nombre del día en texto
+    */
     private String getDiaSemana(int dia) {
         switch (dia) {
             case 1:

@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package users.Admin;
 
 import java.awt.Image;
@@ -14,54 +10,70 @@ import javax.swing.JOptionPane;
 import login.Conexion;
 
 /**
+ * Interfaz principal del panel de administración del sistema.
  *
- * @author nico_
+ * Funcionalidades principales: - Gestión de usuarios pendientes -
+ * Administración de usuarios - Gestión de cursos - Manejo de sesión de
+ * administrador
+ *
+ * @author [Nicolas Bogarin]
+ * @version 1.0
+ * @since [12/03/2025]
  */
 public class admin extends javax.swing.JFrame {
-private String rolUsuario;  // Nueva variable
-private Connection conect;
-private final javax.swing.JPanel mainPanel;
-private javax.swing.JPanel usuariosPendientesPanel;
-private javax.swing.JPanel gestionUsuariosPanel;
-private final javax.swing.JPanel gestionCursosPanel;
-    
-    
+
+    // Rol del usuario administrador
+    private String rolUsuario;
+
+    // Conexión a base de datos
+    private Connection conect;
+
+    // Panel principal con diseño de tarjetas para cambiar vistas
+    private final javax.swing.JPanel mainPanel;
+
+    // Paneles para diferentes funcionalidades administrativas
+    private javax.swing.JPanel usuariosPendientesPanel;
+    private javax.swing.JPanel gestionUsuariosPanel;
+    private final javax.swing.JPanel gestionCursosPanel;
+
+    /**
+     * Constructor principal de la interfaz de administración.
+     *
+     * Inicializa componentes, conexión y configura la interfaz: - Escala
+     * imágenes - Configura paneles de funcionalidad - Establece diseño de
+     * tarjetas
+     */
     public admin() {
         initComponents();
-    probar_conexion();
-    
-    // Escalar imágenes
-    rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "src/images/logo et20 buena calidad.png");
-    rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "src/images/5c994f25d361a_1200.jpg");
-    
-    
-        
-        // Asegurarse que los labels tengan tamaño
-    imagenLogo1.setSize(205, 212);
-    fondoHome1.setSize(700, 565);
-    
-    // Escalar las imágenes
-    rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "src/images/logo et20 buena calidad.png");
-    rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "src/images/5c994f25d361a_1200.jpg");
-    
-    // Inicializar paneles de funcionalidad
-    mainPanel = new javax.swing.JPanel();
-   mainPanel.setLayout(new java.awt.CardLayout());
-    
-   usuariosPendientesPanel = new javax.swing.JPanel();
-    gestionUsuariosPanel = new javax.swing.JPanel();
-    gestionCursosPanel = new javax.swing.JPanel();
-    
-    mainPanel.add(usuariosPendientesPanel, "usuariosPendientes");
-    mainPanel.add(gestionUsuariosPanel, "gestionUsuarios");
-    mainPanel.add(gestionCursosPanel, "gestionCursos");
-    
-    // Agregar mainPanel al panel principal
-     jPanel1.add(mainPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, -1));
+        probar_conexion();
 
-        
-        
-        
+        // Escalar imágenes
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "src/images/logo et20 buena calidad.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "src/images/5c994f25d361a_1200.jpg");
+
+        // Asegurarse que los labels tengan tamaño
+        imagenLogo1.setSize(205, 212);
+        fondoHome1.setSize(700, 565);
+
+        // Escalar las imágenes
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "src/images/logo et20 buena calidad.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "src/images/5c994f25d361a_1200.jpg");
+
+        // Inicializar paneles de funcionalidad
+        mainPanel = new javax.swing.JPanel();
+        mainPanel.setLayout(new java.awt.CardLayout());
+
+        usuariosPendientesPanel = new javax.swing.JPanel();
+        gestionUsuariosPanel = new javax.swing.JPanel();
+        gestionCursosPanel = new javax.swing.JPanel();
+
+        mainPanel.add(usuariosPendientesPanel, "usuariosPendientes");
+        mainPanel.add(gestionUsuariosPanel, "gestionUsuarios");
+        mainPanel.add(gestionCursosPanel, "gestionCursos");
+
+        // Agregar mainPanel al panel principal
+        jPanel1.add(mainPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, -1));
+
         btnUsuariosPendientes = new javax.swing.JButton();
         btnUsuariosPendientes.setBackground(new java.awt.Color(51, 153, 255));
         btnUsuariosPendientes.setFont(new java.awt.Font("Arial", 1, 14));
@@ -99,36 +111,58 @@ private final javax.swing.JPanel gestionCursosPanel;
         });
     }
 
-    
+    /**
+     * Constructor que permite establecer información del usuario.
+     *
+     * @param nombre Nombre del administrador
+     * @param apellido Apellido del administrador
+     * @param rol Rol del administrador
+     */
     public admin(String nombre, String apellido, String rol) {
-    // Llamar al constructor sin parámetros primero
-    this();
-    
-    // Guardar y mostrar los datos del usuario
-    this.rolUsuario = rol;
-    labelNomApe.setText(nombre + " " + apellido);
-    labelRol.setText("Rol: " + rol);
-}
+        // Llamar al constructor sin parámetros primero
+        this();
 
+        // Guardar y mostrar los datos del usuario
+        this.rolUsuario = rol;
+        labelNomApe.setText(nombre + " " + apellido);
+        labelRol.setText("Rol: " + rol);
+    }
+
+    /**
+     * Actualiza las etiquetas de nombre y rol.
+     *
+     * @param nombreCompleto Nombre completo del usuario
+     * @param rolTexto Descripción del rol
+     */
     public void updateLabels(String nombreCompleto, String rolTexto) {
         labelNomApe.setText(nombreCompleto);
         labelRol.setText("Rol: " + rolTexto);
     }
+
+    /**
+     * Actualiza la foto de perfil del usuario.
+     *
+     * @param fotoUrl URL de la imagen de perfil
+     */
     public void updateFotoPerfil(String fotoUrl) {
-    if (fotoUrl != null && !fotoUrl.isEmpty()) {
-        try {
-            URL url = new URL(fotoUrl);
-            Image imagen = ImageIO.read(url);
-            Image imagenRedimensionada = imagen.getScaledInstance(96, 96, Image.SCALE_SMOOTH);
-            labelFotoPerfil.setIcon(new ImageIcon(imagenRedimensionada));  // asumiendo que jLabel2 es tu label de foto de perfil
-        } catch (IOException e) {
-            e.printStackTrace();
-            // Si hay error, mantener una imagen por defecto
-            labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource("/images/icons8-user-96.png")));
+        if (fotoUrl != null && !fotoUrl.isEmpty()) {
+            try {
+                URL url = new URL(fotoUrl);
+                Image imagen = ImageIO.read(url);
+                Image imagenRedimensionada = imagen.getScaledInstance(96, 96, Image.SCALE_SMOOTH);
+                labelFotoPerfil.setIcon(new ImageIcon(imagenRedimensionada));  // asumiendo que jLabel2 es tu label de foto de perfil
+            } catch (IOException e) {
+                e.printStackTrace();
+                // Si hay error, mantener una imagen por defecto
+                labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource("/images/icons8-user-96.png")));
+            }
         }
     }
-}
 
+    /**
+     * Verifica la conexión a la base de datos. Muestra un mensaje de error si
+     * no se puede establecer conexión.
+     */
     private void probar_conexion() {
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {
@@ -136,11 +170,20 @@ private final javax.swing.JPanel gestionCursosPanel;
         }
     }
 
+    /**
+     * Muestra un panel específico usando el diseño de tarjetas.
+     *
+     * @param nombrePanel Nombre del panel a mostrar
+     */
     private void mostrarPanel(String nombrePanel) {
         java.awt.CardLayout cl = (java.awt.CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, nombrePanel);
     }
 
+    /**
+     * Cierra la sesión actual. Solicita confirmación y vuelve a la pantalla de
+     * login.
+     */
     private void cerrarSesion() {
         int confirmacion = JOptionPane.showConfirmDialog(this,
                 "¿Está seguro que desea cerrar sesión?",
@@ -361,59 +404,57 @@ private final javax.swing.JPanel gestionCursosPanel;
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         int confirmacion = JOptionPane.showConfirmDialog(this,
-        "¿Está seguro que desea cerrar sesión?",
-        "Confirmar Cierre de Sesión",
-        JOptionPane.YES_NO_OPTION);
-        
-    if (confirmacion == JOptionPane.YES_OPTION) {
-        dispose();
-        new login.login().setVisible(true);
-    }
+                "¿Está seguro que desea cerrar sesión?",
+                "Confirmar Cierre de Sesión",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            dispose();
+            new login.login().setVisible(true);
+        }
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void btnUsuariosPendientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUsuariosPendientesActionPerformed
-     // Remover el panel actual
-    jPanel1.removeAll();
-    
-    // Crear y configurar el panel de usuarios pendientes
-    usuariosPendientesPanel = new GestionUsuariosPanel();
-    
-    // Agregar el nuevo panel usando AbsoluteLayout constraints
-    jPanel1.add(usuariosPendientesPanel, 
-        new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, 565));
-    
-    // Actualizar la vista
-    jPanel1.revalidate();
-    jPanel1.repaint();
-    
-    // Para debug
-    System.out.println("Panel agregado");
+        // Remover el panel actual
+        jPanel1.removeAll();
+
+        // Crear y configurar el panel de usuarios pendientes
+        usuariosPendientesPanel = new GestionUsuariosPanel();
+
+        // Agregar el nuevo panel usando AbsoluteLayout constraints
+        jPanel1.add(usuariosPendientesPanel,
+                new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, 565));
+
+        // Actualizar la vista
+        jPanel1.revalidate();
+        jPanel1.repaint();
+
+        // Para debug
+        System.out.println("Panel agregado");
     }//GEN-LAST:event_btnUsuariosPendientesActionPerformed
 
     private void btnGestionUsuariosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGestionUsuariosActionPerformed
-          // Remover el panel actual
-    jPanel1.removeAll();
-    
-    // Crear y configurar el panel de gestión de usuarios
-    gestionUsuariosPanel = new GestionUsuariosPanel();
-    
-    // Agregar el nuevo panel usando AbsoluteLayout constraints
-    jPanel1.add(gestionUsuariosPanel, 
-        new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, 565));
-    
-    // Actualizar la vista
-    jPanel1.revalidate();
-    jPanel1.repaint();
-    
-    System.out.println("Panel de gestión de usuarios agregado");
+        // Remover el panel actual
+        jPanel1.removeAll();
+
+        // Crear y configurar el panel de gestión de usuarios
+        gestionUsuariosPanel = new GestionUsuariosPanel();
+
+        // Agregar el nuevo panel usando AbsoluteLayout constraints
+        jPanel1.add(gestionUsuariosPanel,
+                new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, 565));
+
+        // Actualizar la vista
+        jPanel1.revalidate();
+        jPanel1.repaint();
+
+        System.out.println("Panel de gestión de usuarios agregado");
     }//GEN-LAST:event_btnGestionUsuariosActionPerformed
 
     private void btnGestionCursosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGestionCursosActionPerformed
         mostrarPanel("gestionCursos");
     }//GEN-LAST:event_btnGestionCursosActionPerformed
 
-    
-    
     /**
      * @param args the command line arguments
      */
@@ -445,7 +486,7 @@ private final javax.swing.JPanel gestionCursosPanel;
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                       new admin().setVisible(true);
+                new admin().setVisible(true);
             }
         });
     }

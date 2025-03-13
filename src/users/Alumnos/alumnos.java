@@ -1,5 +1,5 @@
 package users.Alumnos;
-        
+
 import java.awt.Color;
 import java.awt.Font;
 import java.sql.*;
@@ -15,32 +15,64 @@ import java.net.URL;
 import javax.swing.ImageIcon;
 import java.io.IOException;
 
+/**
+ * Interfaz principal para usuarios con rol de Alumno.
+ * 
+ * Características principales:
+ * - Muestra información del alumno
+ * - Gestiona conexión a base de datos
+ * - Configura elementos visuales de la interfaz
+ * 
+ * @author [Constantino Di Nisio]
+ * @version 1.0
+ * @since [12/03/2025]
+ */
 public class alumnos extends javax.swing.JFrame {
 
     // Ahora solo declaramos la variable de conexión
     Connection conect;
 
+    /**
+     * Constructor principal de la interfaz de alumno.
+     * 
+     * Inicializa componentes:
+     * - Verifica conexión a base de datos
+     * - Escala imágenes de la interfaz
+     */
     public alumnos() {
         initComponents();
         probar_conexion();  // Usamos la conexión aquí
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
-        
-    }
-    public void updateLabels(String nombreCompleto, String rolTexto, String cursoDiv) {
-    labelNomApe.setText(nombreCompleto);
-    labelRol.setText("Rol: " + rolTexto);
-    labelCursoDiv.setText("Curso: " + cursoDiv);
-}
 
-    // Método para probar la conexión a la base de datos
+    }
+
+    /**
+     * Actualiza las etiquetas de información del alumno.
+     * 
+     * @param nombreCompleto Nombre completo del alumno
+     * @param rolTexto Descripción del rol
+     * @param cursoDiv Curso y división del alumno
+     */
+    public void updateLabels(String nombreCompleto, String rolTexto, String cursoDiv) {
+        labelNomApe.setText(nombreCompleto);
+        labelRol.setText("Rol: " + rolTexto);
+        labelCursoDiv.setText("Curso: " + cursoDiv);
+    }
+
+    /**
+     * Verifica la conexión a la base de datos.
+     * 
+     * Utiliza el patrón Singleton para obtener la conexión.
+     * Muestra un mensaje de error si no se puede establecer conexión.
+     */
     private void probar_conexion() {
         // Obtenemos la conexión desde el Singleton
-        conect = Conexion.getInstancia().getConexion(); 
+        conect = Conexion.getInstancia().getConexion();
 
         // Verificamos si la conexión es válida
         if (conect != null) {
-            
+
         } else {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }
@@ -254,20 +286,20 @@ public class alumnos extends javax.swing.JFrame {
     }//GEN-LAST:event_botnotActionPerformed
 
     public void updateFotoPerfil(String fotoUrl) {
-    if (fotoUrl != null && !fotoUrl.isEmpty()) {
-        try {
-            URL url = new URL(fotoUrl);
-            Image imagen = ImageIO.read(url);
-            Image imagenRedimensionada = imagen.getScaledInstance(96, 96, Image.SCALE_SMOOTH);
-            labelFotoPerfil.setIcon(new ImageIcon(imagenRedimensionada));  // asumiendo que jLabel2 es tu label de foto de perfil
-        } catch (IOException e) {
-            e.printStackTrace();
-            // Si hay error, mantener una imagen por defecto
-            labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource("/images/icons8-user-96.png")));
+        if (fotoUrl != null && !fotoUrl.isEmpty()) {
+            try {
+                URL url = new URL(fotoUrl);
+                Image imagen = ImageIO.read(url);
+                Image imagenRedimensionada = imagen.getScaledInstance(96, 96, Image.SCALE_SMOOTH);
+                labelFotoPerfil.setIcon(new ImageIcon(imagenRedimensionada));  // asumiendo que jLabel2 es tu label de foto de perfil
+            } catch (IOException e) {
+                e.printStackTrace();
+                // Si hay error, mantener una imagen por defecto
+                labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource("/images/icons8-user-96.png")));
+            }
         }
     }
-}
-    
+
     private void botpreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botpreActionPerformed
         verasisten veras = new verasisten();
         veras.setVisible(true);
@@ -275,7 +307,7 @@ public class alumnos extends javax.swing.JFrame {
     }//GEN-LAST:event_botpreActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        System.exit(0); 
+        System.exit(0);
     }//GEN-LAST:event_jButton1ActionPerformed
 
     public static void main(String args[]) {

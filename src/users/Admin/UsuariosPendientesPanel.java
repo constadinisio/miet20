@@ -1,30 +1,50 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
- */
 package users.Admin;
+
 import java.sql.*;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import login.Conexion;
+
 /**
- *
- * @author nico_
+ * Panel para gestionar usuarios pendientes de aprobación en el sistema administrativo.
+ * 
+ * Funcionalidades principales:
+ * - Listar usuarios pendientes de asignación de rol
+ * - Aprobar usuarios asignándoles un rol específico
+ * - Rechazar usuarios cambiando su estado
+ * 
+ * @author [Nicolas Bogarin]
+ * @version 1.0
+ * @since [12/03/2025]
  */
 public class UsuariosPendientesPanel extends javax.swing.JPanel {
 
-    /**
-     * Creates new form NewJPanel
-     */private Connection conect;
+   // Conexión a la base de datos
+    private Connection conect;
+    
+    // Modelo de tabla para mostrar usuarios pendientes
     private DefaultTableModel tableModel;
 
-    public UsuariosPendientesPanel(){
+    /**
+     * Constructor del panel de usuarios pendientes.
+     * 
+     * Inicializa componentes:
+     * - Tabla de usuarios
+     * - Combo de selección de rol
+     * - Carga inicial de usuarios pendientes
+     */
+    public UsuariosPendientesPanel() {
         initComponents();
-    inicializarTabla();
-    inicializarComboBox();
-    cargarUsuariosPendientes();
+        inicializarTabla();
+        inicializarComboBox();
+        cargarUsuariosPendientes();
     }
 
+    /**
+     * Inicializa la tabla de usuarios pendientes.
+     * 
+     * Configura columnas: ID, Nombre, Apellido, Email, Fecha Registro
+     */
     private void inicializarTabla() {
         tableModel = new DefaultTableModel();
         tableModel.addColumn("ID");
@@ -35,6 +55,16 @@ public class UsuariosPendientesPanel extends javax.swing.JPanel {
         tablaUsuarios.setModel(tableModel);
     }
 
+    /**
+     * Inicializa el combo box de roles.
+     * 
+     * Agrega opciones:
+     * - Seleccionar Rol
+     * - Administrador
+     * - Preceptor
+     * - Profesor
+     * - Alumno
+     */
     private void inicializarComboBox() {
         comboRol.removeAllItems();
         comboRol.addItem("Seleccionar Rol");
@@ -44,35 +74,45 @@ public class UsuariosPendientesPanel extends javax.swing.JPanel {
         comboRol.addItem("Alumno");
     }
 
+    /**
+     * Carga usuarios pendientes desde la base de datos.
+     * 
+     * Recupera usuarios con rol 0 (pendiente) y status activo.
+     * Muestra información en la tabla: ID, nombre, apellido, email.
+     */
     private void cargarUsuariosPendientes() {
-    System.out.println("Cargando usuarios pendientes..."); // Debug
-    try {
-        conect = Conexion.getInstancia().getConexion();
-        String query = "SELECT id, nombre, apellido, mail  FROM usuarios WHERE rol = 0 AND status = 1;";
-        PreparedStatement ps = conect.prepareStatement(query);
-        ResultSet rs = ps.executeQuery();
-        
-        tableModel.setRowCount(0);
-        
-        while (rs.next()) {
-            Object[] row = {
-                rs.getInt("id"),
-                rs.getString("nombre"),
-                rs.getString("apellido"),
-                rs.getString("mail"),
-            };
-            tableModel.addRow(row);
-            System.out.println("Usuario agregado: " + rs.getString("nombre")); // Debug
-        }
-    } catch (SQLException ex) {
-        System.out.println("Error: " + ex.getMessage()); // Debug
-        JOptionPane.showMessageDialog(this, 
-            "Error al cargar usuarios pendientes: " + ex.getMessage(),
-            "Error", 
-            JOptionPane.ERROR_MESSAGE);
-    }
-}
+        System.out.println("Cargando usuarios pendientes..."); // Debug
+        try {
+            conect = Conexion.getInstancia().getConexion();
+            String query = "SELECT id, nombre, apellido, mail  FROM usuarios WHERE rol = 0 AND status = 1;";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
 
+            tableModel.setRowCount(0);
+
+            while (rs.next()) {
+                Object[] row = {
+                    rs.getInt("id"),
+                    rs.getString("nombre"),
+                    rs.getString("apellido"),
+                    rs.getString("mail"),};
+                tableModel.addRow(row);
+                System.out.println("Usuario agregado: " + rs.getString("nombre")); // Debug
+            }
+        } catch (SQLException ex) {
+            System.out.println("Error: " + ex.getMessage()); // Debug
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar usuarios pendientes: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Obtiene el código de rol seleccionado en el combo box.
+     * 
+     * @return Código numérico de rol
+     */
     private int obtenerRolSeleccionado() {
         switch (comboRol.getSelectedIndex()) {
             case 1:
@@ -88,6 +128,12 @@ public class UsuariosPendientesPanel extends javax.swing.JPanel {
         }
     }
 
+    /**
+     * Aprueba un usuario pendiente.
+     * 
+     * Valida selección de usuario y rol.
+     * Actualiza el rol del usuario en la base de datos.
+     */
     private void aprobarUsuario() {
         int filaSeleccionada = tablaUsuarios.getSelectedRow();
         if (filaSeleccionada == -1) {
@@ -119,7 +165,13 @@ public class UsuariosPendientesPanel extends javax.swing.JPanel {
                     JOptionPane.ERROR_MESSAGE);
         }
     }
-
+    
+    /**
+     * Rechaza un usuario pendiente.
+     * 
+     * Solicita confirmación.
+     * Cambia el estado del usuario a inactivo en la base de datos.
+     */
     private void rechazarUsuario() {
         int filaSeleccionada = tablaUsuarios.getSelectedRow();
         if (filaSeleccionada == -1) {
@@ -151,6 +203,7 @@ public class UsuariosPendientesPanel extends javax.swing.JPanel {
             }
         }
     }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

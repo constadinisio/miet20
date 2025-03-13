@@ -4,11 +4,31 @@ import java.sql.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * Interfaz para visualizar registros de asistencia de alumnos.
+ * 
+ * Características principales:
+ * - Muestra tabla de asistencias
+ * - Recupera datos de asistencia desde base de datos
+ * - Utiliza patrón Singleton para conexión
+ * 
+ * @author [Constantino Di Nisio]
+ * @version 1.0
+ * @since [12/03/2025]
+ */
 public class verasisten extends javax.swing.JFrame {
 
-    // Mantén la conexión abierta a nivel de la clase
+    // Conexión a la base de datos
     private Connection conect;
 
+    /**
+     * Constructor de la interfaz de visualización de asistencias.
+     * 
+     * Inicializa componentes y carga datos:
+     * - Obtiene conexión mediante Singleton
+     * - Inicializa componentes de interfaz
+     * - Muestra datos de asistencia
+     */
     public verasisten() {
         // Obtener la conexión a través del Singleton
         conect = Conexion.getInstancia().getConexion(); // Aquí obtienes la conexión desde el Singleton
@@ -16,6 +36,15 @@ public class verasisten extends javax.swing.JFrame {
         mostrarDatos();    // Mostrar datos al inicializar
     }
 
+    /**
+     * Carga y muestra los datos de asistencia en la tabla.
+     * 
+     * Pasos:
+     * - Crea modelo de tabla
+     * - Configura columnas
+     * - Ejecuta consulta SQL para recuperar asistencias
+     * - Añade filas al modelo de tabla
+     */
     public void mostrarDatos() {
         DefaultTableModel tcliente = new DefaultTableModel();
         tcliente.addColumn("alumno_id");

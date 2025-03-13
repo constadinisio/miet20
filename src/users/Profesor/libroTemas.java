@@ -6,24 +6,28 @@ import javax.swing.JOptionPane;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+// SE NECESITA MÁS DESARROLLO
 
 public class libroTemas extends javax.swing.JFrame {
     
     private Connection conect;
     private int profesorId;
     
+    public void setProfesorId(int profesorId) {
+        this.profesorId = profesorId;
+    }
+    
     public libroTemas() {
         initComponents();
         probar_conexion();
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "src/images/banner-et20.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "src/images/banner-et20.png");
-        System.out.println("ID del profesor: " + this.profesorId);
     }
     
     private void probar_conexion() {
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {
-            JOptionPane.showMessageDialog(this, "Error de conexión.");
+            JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -118,7 +122,7 @@ public class libroTemas extends javax.swing.JFrame {
         );
         panelInfoLayout.setVerticalGroup(
             panelInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 360, Short.MAX_VALUE)
+            .addGap(0, 435, Short.MAX_VALUE)
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -151,9 +155,9 @@ public class libroTemas extends javax.swing.JFrame {
                         .addComponent(btnVolver, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(7, 7, 7))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 83, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(panelInfo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)))
+                        .addGap(6, 6, 6)))
                 .addComponent(bannerColor2))
         );
 

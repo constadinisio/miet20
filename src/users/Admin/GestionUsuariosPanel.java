@@ -1,30 +1,50 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
- */
 package users.Admin;
+
 import java.awt.Frame;
 import java.sql.*;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import login.Conexion;
+
 /**
+ * Panel de gestión de usuarios para la interfaz administrativa.
  *
- * @author nico_
+ * Funcionalidades principales: - Listar usuarios con diferentes filtros -
+ * Editar información de usuarios - Cambiar estado de usuarios (activo/inactivo)
+ *
+ * @author [Nicolas Bogarin]
+ * @version 1.0
+ * @since [12/03/2025]
  */
 public class GestionUsuariosPanel extends javax.swing.JPanel {
-private Connection conect;
+
+    // Conexión a la base de datos
+    private Connection conect;
+    
+    // Modelo de tabla para mostrar usuarios
     private DefaultTableModel tableModel;
     
+    /**
+     * Constructor del panel de gestión de usuarios.
+     * 
+     * Inicializa componentes:
+     * - Tabla de usuarios
+     * - Combo de filtro de roles
+     * - Carga inicial de usuarios
+     */
     public GestionUsuariosPanel() {
         initComponents();
         inicializarTabla();
         inicializarComboFiltro();
         cargarUsuarios();
     }
-    
-    
-    
+
+    /**
+     * Inicializa la tabla de usuarios.
+     * 
+     * Configura columnas y establece la tabla como no editable.
+     * Columnas: ID, Nombre, Apellido, Email, Rol, Estado, Fecha Registro
+     */
     private void inicializarTabla() {
         tableModel = new DefaultTableModel() {
             @Override
@@ -41,7 +61,18 @@ private Connection conect;
         tableModel.addColumn("Fecha Registro");
         tablaUsuarios.setModel(tableModel);
     }
-    
+
+    /**
+     * Inicializa el combo de filtro de roles.
+     * 
+     * Agrega opciones:
+     * - Todos
+     * - Administrador
+     * - Preceptor
+     * - Profesor
+     * - Alumno
+     * - Pendiente
+     */
     private void inicializarComboFiltro() {
         comboFiltroRol.removeAllItems();
         comboFiltroRol.addItem("Todos");
@@ -51,22 +82,28 @@ private Connection conect;
         comboFiltroRol.addItem("Alumno");
         comboFiltroRol.addItem("Pendiente");
     }
-    
+
+    /**
+     * Carga usuarios desde la base de datos.
+     * 
+     * Recupera usuarios según el filtro de rol seleccionado.
+     * Muestra información en la tabla: ID, nombre, apellido, email, rol y estado.
+     */
     private void cargarUsuarios() {
         try {
             conect = Conexion.getInstancia().getConexion();
             String filtroRol = obtenerFiltroRol();
-            
+
             String query = "SELECT id, nombre, apellido, mail, rol, status FROM usuarios";
             if (!filtroRol.equals("")) {
                 query += " WHERE rol = " + filtroRol;
             }
-            
+
             PreparedStatement ps = conect.prepareStatement(query);
             ResultSet rs = ps.executeQuery();
-            
+
             tableModel.setRowCount(0);
-            
+
             while (rs.next()) {
                 Object[] row = {
                     rs.getInt("id"),
@@ -74,92 +111,122 @@ private Connection conect;
                     rs.getString("apellido"),
                     rs.getString("mail"),
                     convertirRol(rs.getInt("rol")),
-                    rs.getInt("status") == 1 ? "Activo" : "Inactivo",
-                    
-                };
+                    rs.getInt("status") == 1 ? "Activo" : "Inactivo",};
                 tableModel.addRow(row);
             }
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, 
-                "Error al cargar usuarios: " + ex.getMessage(),
-                "Error", 
-                JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar usuarios: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
+    /**
+     * Obtiene el filtro de rol seleccionado.
+     * 
+     * @return Código de rol para filtrar usuarios
+     */
     private String obtenerFiltroRol() {
         switch (comboFiltroRol.getSelectedIndex()) {
-            case 1: return "1"; // Administrador
-            case 2: return "2"; // Preceptor
-            case 3: return "3"; // Profesor
-            case 4: return "4"; // Alumno
-            case 5: return "0"; // Pendiente
-            default: return ""; // Todos
+            case 1:
+                return "1"; // Administrador
+            case 2:
+                return "2"; // Preceptor
+            case 3:
+                return "3"; // Profesor
+            case 4:
+                return "4"; // Alumno
+            case 5:
+                return "0"; // Pendiente
+            default:
+                return ""; // Todos
         }
     }
-    
+
+    /**
+     * Convierte código de rol numérico a texto descriptivo.
+     * 
+     * @param rol Código numérico de rol
+     * @return Descripción textual del rol
+     */
     private String convertirRol(int rol) {
         switch (rol) {
-            case 1: return "Administrador";
-            case 2: return "Preceptor";
-            case 3: return "Profesor";
-            case 4: return "Alumno";
-            case 0: return "Pendiente";
-            default: return "Desconocido";
+            case 1:
+                return "Administrador";
+            case 2:
+                return "Preceptor";
+            case 3:
+                return "Profesor";
+            case 4:
+                return "Alumno";
+            case 0:
+                return "Pendiente";
+            default:
+                return "Desconocido";
         }
     }
-    
+
+    /**
+     * Abre diálogo para editar usuario seleccionado.
+     * 
+     * Valida que se haya seleccionado un usuario.
+     * Muestra diálogo de edición y actualiza tabla si hay cambios.
+     */
     private void editarUsuario() {
-    int filaSeleccionada = tablaUsuarios.getSelectedRow();
-    if (filaSeleccionada == -1) {
-        JOptionPane.showMessageDialog(this, "Por favor, seleccione un usuario");
-        return;
+        int filaSeleccionada = tablaUsuarios.getSelectedRow();
+        if (filaSeleccionada == -1) {
+            JOptionPane.showMessageDialog(this, "Por favor, seleccione un usuario");
+            return;
+        }
+
+        // Obtener el ID del usuario seleccionado
+        int idUsuario = (int) tablaUsuarios.getValueAt(filaSeleccionada, 0);
+
+        // Crear y mostrar el diálogo de edición
+        EditarUsuarioDialog dialog = new EditarUsuarioDialog(
+                (Frame) javax.swing.SwingUtilities.getWindowAncestor(this),
+                true,
+                idUsuario);
+        dialog.setVisible(true);
+
+        // Si se guardaron cambios, actualizar la tabla
+        if (dialog.seGuardaronCambios()) {
+            cargarUsuarios();
+        }
     }
-    
-    // Obtener el ID del usuario seleccionado
-    int idUsuario = (int) tablaUsuarios.getValueAt(filaSeleccionada, 0);
-    
-    // Crear y mostrar el diálogo de edición
-    EditarUsuarioDialog dialog = new EditarUsuarioDialog(
-        (Frame) javax.swing.SwingUtilities.getWindowAncestor(this), 
-        true, 
-        idUsuario);
-    dialog.setVisible(true);
-    
-    // Si se guardaron cambios, actualizar la tabla
-    if (dialog.seGuardaronCambios()) {
-        cargarUsuarios();
-    }
-}
-    
-    
-    
-    
+
+    /**
+     * Cambia el estado del usuario seleccionado.
+     * 
+     * Alterna entre estados Activo e Inactivo.
+     * Actualiza el estado en base de datos y recarga la tabla.
+     */
     private void cambiarEstado() {
         int filaSeleccionada = tablaUsuarios.getSelectedRow();
         if (filaSeleccionada == -1) {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione un usuario");
             return;
         }
-        
+
         int idUsuario = (int) tablaUsuarios.getValueAt(filaSeleccionada, 0);
         String estadoActual = (String) tablaUsuarios.getValueAt(filaSeleccionada, 5);
         int nuevoEstado = estadoActual.equals("Activo") ? 0 : 1;
-        
+
         try {
             String query = "UPDATE usuarios SET status = ? WHERE id = ?";
             PreparedStatement ps = conect.prepareStatement(query);
             ps.setInt(1, nuevoEstado);
             ps.setInt(2, idUsuario);
             ps.executeUpdate();
-            
+
             JOptionPane.showMessageDialog(this, "Estado del usuario actualizado exitosamente");
             cargarUsuarios();
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, 
-                "Error al actualizar estado: " + ex.getMessage(),
-                "Error", 
-                JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Error al actualizar estado: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -230,7 +297,7 @@ private Connection conect;
     }//GEN-LAST:event_btnEditarActionPerformed
 
     private void btnCambiarEstadoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCambiarEstadoActionPerformed
-       cambiarEstado();
+        cambiarEstado();
     }//GEN-LAST:event_btnCambiarEstadoActionPerformed
 
 

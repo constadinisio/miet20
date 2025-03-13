@@ -9,12 +9,26 @@ import users.Preceptor.preceptor;
 import users.Profesor.profesor;
 import users.Attp.attp;
 
+/**
+ * Clase principal de inicio de sesión para la plataforma educativa.
+ * Gestiona la autenticación de usuarios mediante credenciales locales o Google.
+ * 
+ * @author [Nicolas Bogarin]
+ * @author [Constantino Di Nisio]
+ * @version 1.0
+ * @since [12/03/2025]
+ */
 
 public class login extends javax.swing.JFrame {
 
+    // Conexión a la base de datos
     Connection conect;
     private int profesorId;
 
+    /**
+     * Método para probar la conexión a la base de datos.
+     * Utiliza el patrón Singleton para obtener la conexión.
+     */
     private void probar_conexion() {
         // Obtener la conexión desde el Singleton
         conect = Conexion.getInstancia().getConexion();
@@ -23,8 +37,13 @@ public class login extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Constructor de la clase login.
+     * Inicializa los componentes de la interfaz y configura el cierre de la aplicación.
+     */
     public login() {
         initComponents();
+        // Configurar imágenes de la interfaz
         rsscalelabel.RSScaleLabel.setScaleLabel(jLabel1, "src/images/logo et20 buena calidad.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(jLabel2, "src/Assets/mail-icon.png");
 
@@ -40,6 +59,10 @@ public class login extends javax.swing.JFrame {
         });
     }
 
+    /**
+     * Método para cerrar la aplicación de manera segura.
+     * Realiza logout y termina la ejecución del programa.
+     */
     private void cerrarPrograma() {
         try {
             GoogleAuthenticator authenticator = new GoogleAuthenticator();
@@ -244,6 +267,7 @@ public class login extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    
     private void campoNombreFocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_campoNombreFocusGained
         if (campoNombre.getText().equals("Nombre")) {
             campoNombre.setText(null);
@@ -278,24 +302,33 @@ public class login extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_campoContraseñaActionPerformed
 
-    
+    /**
+     * Método de inicio de sesión con credenciales locales.
+     * Valida el usuario, obtiene sus datos y redirige según su rol.
+     * 
+     * @param evt Evento de acción del botón de login
+     */
     private void botonLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonLoginActionPerformed
-         try {
-        String mail = campoNombre.getText();
-        String contrasena = new String(campoContraseña.getPassword());
+        try {
+            // Obtener credenciales
+            String mail = campoNombre.getText();
+            String contrasena = new String(campoContraseña.getPassword());
         
-        if (mail.equals("Nombre") || contrasena.equals("Contraseña")) {
-            JOptionPane.showMessageDialog(this, 
-                "Por favor ingrese usuario y contraseña",
-                "Error de login",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+            // Validar campos
+            if (mail.equals("Nombre") || contrasena.equals("Contraseña")) {
+                JOptionPane.showMessageDialog(this, 
+                    "Por favor ingrese usuario y contraseña",
+                    "Error de login",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
+        // Validar conexión a base de datos    
         if (!validarConexion()) {
             return;
         }
 
+        // Consulta para autenticación
         String query = "SELECT id, nombre, apellido, rol, foto_url FROM usuarios " +
                       "WHERE mail = ? AND contrasena = ?";
         
@@ -303,15 +336,16 @@ public class login extends javax.swing.JFrame {
         ps.setString(1, mail);
         ps.setString(2, contrasena);
         
+        // Procesar resultado de autenticación
         ResultSet rs = ps.executeQuery();
         
         if (rs.next()) {
+            // Crear sesión de usuario
             String nombre = rs.getString("nombre");
             String apellido = rs.getString("apellido");
             int rol = rs.getInt("rol");
             String fotoUrl = rs.getString("foto_url");
             int profesorId = rs.getInt("id");  // Aquí se obtiene el ID del usuario
-            System.out.println("Usuario autenticado en login.java, ID: " + profesorId);
             
             // Crear sesión de usuario
             UserSession session = new UserSession(nombre, apellido, mail, rol, fotoUrl);
@@ -355,7 +389,12 @@ public class login extends javax.swing.JFrame {
     }
     }//GEN-LAST:event_botonLoginActionPerformed
 
-    
+    /**
+     * Método para manejar el login con Google.
+     * Autentica al usuario mediante servicio de Google y redirige según su rol.
+     * 
+     * @param evt Evento de acción del botón de Google
+     */
     private void botonGoogleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonGoogleActionPerformed
         try {
             GoogleAuthenticator authenticator = new GoogleAuthenticator();

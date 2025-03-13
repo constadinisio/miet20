@@ -20,21 +20,22 @@ public class profesor extends javax.swing.JFrame {
     private int profesorId;
     private DefaultMutableTreeNode rootNode;
     private DefaultTreeModel treeModel;
+    private libroTemas temario;
 
     public profesor(int profesorId) {
         this.profesorId = profesorId;
         initComponents();
+        temario = new libroTemas();
         probar_conexion();
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-        System.out.println("Profesor ID en Profesor.java: " + this.profesorId); // Para depuración
     }
 
     private void probar_conexion() {
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {
-            JOptionPane.showMessageDialog(this, "Error de conexión.");
+            JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -131,8 +132,9 @@ public class profesor extends javax.swing.JFrame {
     }
     
     private void abrirLibroDeTemas() {
-        libroTemas temario = new libroTemas();  // Pasamos el ID
-        temario.setVisible(true);
+        int profesorId = this.profesorId;
+        temario.setProfesorId(profesorId); // Enviar el ID
+        temario.setVisible(true); // Mostrar la pantalla
         this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta
     }
 

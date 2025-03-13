@@ -8,6 +8,10 @@ import javax.swing.table.DefaultTableModel;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+// SE NECESITA MÁS DESARROLLO
 
 public class tablaContenidos extends javax.swing.JFrame {
     
@@ -16,6 +20,7 @@ public class tablaContenidos extends javax.swing.JFrame {
     public tablaContenidos() {
         initComponents();
         cargarTabla();
+        probar_conexion();
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "src/images/banner-et20.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "src/images/banner-et20.png");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -24,7 +29,60 @@ public class tablaContenidos extends javax.swing.JFrame {
     private void probar_conexion() {
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {
-            JOptionPane.showMessageDialog(this, "Error de conexión.");
+            JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void añadirContenido() {
+        String contenido = lblContenidoVisto.getText();
+        String observaciones = lblObservaciones.getText();
+        String fecha = lblFechaContenido.getText();
+        LocalDate fechaActual = LocalDate.now();
+        LocalTime horaActual = LocalTime.now();
+
+        if (contenido.isEmpty() || fecha == null) {
+            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Connection connection = null;
+        PreparedStatement stmt = null;
+
+        try {
+            conect = Conexion.getInstancia().getConexion();
+
+            if (conect == null || conect.isClosed()) {
+                JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Preparar statement
+            String sql = "INSERT INTO contenidos_libro (fecha, contenido, observaciones, fecha_creacion) VALUES (?, ?, ?, ?)";
+            stmt = conect.prepareStatement(sql);
+            stmt.setString(1, fecha);
+            stmt.setString(2, contenido);
+            stmt.setString(3, observaciones);
+            stmt.setDate(4, Date.valueOf(fechaActual));
+
+            // Ejecutar inserción
+            int filasAfectadas = stmt.executeUpdate(); // Cambio clave: usar executeUpdate()
+
+            if (filasAfectadas > 0) {
+                cargarTabla();
+                JOptionPane.showMessageDialog(this, "Contenido añadido correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "No se pudo añadir el contenido.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al registrar: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            // Cerrar recursos
+            try {
+                if (stmt != null) stmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
     
@@ -47,7 +105,7 @@ public class tablaContenidos extends javax.swing.JFrame {
             while (rs.next()) {
                 Object[] fila = {
                     rs.getInt("id"),
-                    rs.getDate("fecha"),
+                    rs.getString("fecha"),
                     rs.getString("contenido"),
                     rs.getString("observaciones"),
                     rs.getTimestamp("fecha_creacion")
@@ -56,29 +114,6 @@ public class tablaContenidos extends javax.swing.JFrame {
             }
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error al cargar datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-    
-       private void añadirContenido() {
-        String contenido = lblContenidoVisto.getText();
-        String observaciones = lblObservaciones.getText();
-        String fecha = lblFechaContenido.getText();
-        
-        if (contenido.isEmpty() || fecha == null) {
-            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
-        try (PreparedStatement stmt = conect.prepareStatement("INSERT INTO contenidos_libro (fecha, contenido, observaciones) VALUES (?, ?, ?)");) {
-            
-            stmt.setString(1, fecha);
-            stmt.setString(2, contenido);
-            stmt.setString(3, observaciones);
-            stmt.executeUpdate();
-            cargarTabla();
-            JOptionPane.showMessageDialog(this, "Contenido añadido correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Error al insertar en la base de datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -103,18 +138,20 @@ public class tablaContenidos extends javax.swing.JFrame {
         String contenido = lblContenidoVisto.getText();
         String observaciones = lblObservaciones.getText();
         String fecha = lblFechaContenido.getText();
+        LocalTime horaActual = LocalTime.now();
         
         if (id.isEmpty() || contenido.isEmpty() || fecha == null) {
             JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios para modificar.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
-        try (PreparedStatement stmt = conect.prepareStatement("UPDATE contenidos_libro SET fechacontenido = ?, contenido = ?, observaciones = ? WHERE id = ?");) {
+        try (PreparedStatement stmt = conect.prepareStatement("UPDATE contenidos_libro SET fechacontenido = ?, contenido = ?, observaciones = ?, fecha_modificacion = ? WHERE id = ?");) {
             
             stmt.setString(1, fecha);
             stmt.setString(2, contenido);
             stmt.setString(3, observaciones);
             stmt.setInt(4, Integer.parseInt(id));
+            stmt.setTime(5, Time.valueOf(horaActual));
             stmt.executeUpdate();
             cargarTabla();
             JOptionPane.showMessageDialog(this, "Contenido modificado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);

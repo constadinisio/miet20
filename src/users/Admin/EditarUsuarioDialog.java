@@ -1,90 +1,133 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JDialog.java to edit this template
- */
 package users.Admin;
 
 import login.Conexion;
 import java.sql.*;
 import javax.swing.JOptionPane;
+
 /**
+ * Diálogo para editar información de usuarios en el sistema administrativo.
  *
- * @author nico_
+ * Características principales: - Permite modificar datos de usuario como
+ * nombre, apellido, email y rol - Carga información existente del usuario -
+ * Gestiona la actualización de datos en la base de datos
+ *
+ * @author [Nicolas Bogarin]
+ * @version 1.0
+ * @since [12/03/2025]
  */
 public class EditarUsuarioDialog extends javax.swing.JDialog {
-private int userId;
-private Connection conect;
-private boolean cambiosGuardados = false;
-    
-   public EditarUsuarioDialog(java.awt.Frame parent, boolean modal, int userId) {
-    super(parent, modal);
-    initComponents();
-    this.userId = userId;
-    inicializarComboRol();
-    cargarDatosUsuario();
-    setLocationRelativeTo(parent);
-}
-    
-    
-    public boolean seGuardaronCambios() {
-    return cambiosGuardados;
-}
 
-private void inicializarComboRol() {
-    comboRol.removeAllItems();
-    comboRol.addItem("Pendiente");
-    comboRol.addItem("Administrador");
-    comboRol.addItem("Preceptor");
-    comboRol.addItem("Profesor");
-    comboRol.addItem("Alumno");
-}
-
-private void cargarDatosUsuario() {
-    try {
-        conect = Conexion.getInstancia().getConexion();
-        String query = "SELECT nombre, apellido, mail, rol FROM usuarios WHERE id = ?";
-        PreparedStatement ps = conect.prepareStatement(query);
-        ps.setInt(1, userId);
-        ResultSet rs = ps.executeQuery();
-        
-        if (rs.next()) {
-            txtNombre.setText(rs.getString("nombre"));
-            txtApellido.setText(rs.getString("apellido"));
-            txtEmail.setText(rs.getString("mail"));
-            comboRol.setSelectedIndex(rs.getInt("rol"));
-        }
-    } catch (SQLException ex) {
-        JOptionPane.showMessageDialog(this, 
-            "Error al cargar datos del usuario: " + ex.getMessage(),
-            "Error", JOptionPane.ERROR_MESSAGE);
-    }
-}
-
-private void guardarCambios() {
-    try {
-        String query = "UPDATE usuarios SET nombre = ?, apellido = ?, mail = ?, rol = ? WHERE mail = ?";
-        PreparedStatement ps = conect.prepareStatement(query);
-        ps.setString(1, txtNombre.getText().trim());
-        ps.setString(2, txtApellido.getText().trim());
-        ps.setString(3, txtEmail.getText().trim());
-        ps.setInt(4, comboRol.getSelectedIndex());
-        ps.setString(5, txtEmail.getText().trim());
-        
-        ps.executeUpdate();
-        
-        cambiosGuardados = true;
-        JOptionPane.showMessageDialog(this, "Cambios guardados exitosamente");
-        dispose();
-    } catch (SQLException ex) {
-        JOptionPane.showMessageDialog(this, 
-            "Error al guardar cambios: " + ex.getMessage(),
-            "Error", JOptionPane.ERROR_MESSAGE);
-    }
-}
+    // Identificador del usuario a editar
+    private int userId;
     
+    // Conexión a la base de datos
+    private Connection conect;
+    
+    // Bandera para rastrear si se guardaron cambios
+    private boolean cambiosGuardados = false;
     
     /**
-     * Creates new form EditarUsuarioDialog
+     * Constructor principal para editar un usuario existente.
+     * 
+     * @param parent Ventana padre del diálogo
+     * @param modal Modo modal del diálogo
+     * @param userId Identificador del usuario a editar
+     */
+    public EditarUsuarioDialog(java.awt.Frame parent, boolean modal, int userId) {
+        super(parent, modal);
+        initComponents();
+        this.userId = userId;
+        inicializarComboRol();
+        cargarDatosUsuario();
+        setLocationRelativeTo(parent);
+    }
+    
+    /**
+     * Verifica si se realizaron y guardaron cambios en el usuario.
+     * 
+     * @return true si se guardaron cambios, false en caso contrario
+     */
+    public boolean seGuardaronCambios() {
+        return cambiosGuardados;
+    }
+
+    /**
+     * Inicializa el combo box de roles con las opciones disponibles.
+     * 
+     * Niveles de rol:
+     * - Pendiente (0)
+     * - Administrador (1)
+     * - Preceptor (2)
+     * - Profesor (3)
+     * - Alumno (4)
+     */
+    private void inicializarComboRol() {
+        comboRol.removeAllItems();
+        comboRol.addItem("Pendiente");
+        comboRol.addItem("Administrador");
+        comboRol.addItem("Preceptor");
+        comboRol.addItem("Profesor");
+        comboRol.addItem("Alumno");
+    }
+
+    /**
+     * Carga los datos del usuario desde la base de datos.
+     * 
+     * Recupera y muestra la información actual del usuario en los campos del formulario.
+     */
+    private void cargarDatosUsuario() {
+        try {
+            conect = Conexion.getInstancia().getConexion();
+            String query = "SELECT nombre, apellido, mail, rol FROM usuarios WHERE id = ?";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                txtNombre.setText(rs.getString("nombre"));
+                txtApellido.setText(rs.getString("apellido"));
+                txtEmail.setText(rs.getString("mail"));
+                comboRol.setSelectedIndex(rs.getInt("rol"));
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar datos del usuario: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Guarda los cambios realizados en la información del usuario.
+     * 
+     * Actualiza los datos en la base de datos y muestra mensajes de confirmación o error.
+     */
+    private void guardarCambios() {
+        try {
+            String query = "UPDATE usuarios SET nombre = ?, apellido = ?, mail = ?, rol = ? WHERE mail = ?";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setString(1, txtNombre.getText().trim());
+            ps.setString(2, txtApellido.getText().trim());
+            ps.setString(3, txtEmail.getText().trim());
+            ps.setInt(4, comboRol.getSelectedIndex());
+            ps.setString(5, txtEmail.getText().trim());
+
+            ps.executeUpdate();
+
+            cambiosGuardados = true;
+            JOptionPane.showMessageDialog(this, "Cambios guardados exitosamente");
+            dispose();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al guardar cambios: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Constructor secundario sin parámetros.
+     * 
+     * @param parent Ventana padre del diálogo
+     * @param modal Modo modal del diálogo
      */
     public EditarUsuarioDialog(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
@@ -208,13 +251,13 @@ private void guardarCambios() {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
-        
-    guardarCambios();
+
+        guardarCambios();
 
     }//GEN-LAST:event_btnGuardarActionPerformed
 
     private void btnCancelarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelarActionPerformed
-            dispose();
+        dispose();
     }//GEN-LAST:event_btnCancelarActionPerformed
 
     /**

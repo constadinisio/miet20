@@ -22,23 +22,38 @@ import java.awt.FlowLayout;
 import java.time.LocalDate;
 import users.Attp.menu.Prestamos;
 
+/**
+ * Interfaz principal para usuarios ATTP.
+ * 
+ * Características principales:
+ * - Gestión de netbooks
+ * - Conexión a base de datos
+ * - Interfaz dinámica con árbol de navegación
+ * 
+ * @author [División ATTP]
+ * @version 1.0
+ * @since [12/03/2025]
+ */
 public class attp extends javax.swing.JFrame {
 
-    // Ahora solo declaramos la variable de conexión
+    // Conexión a la base de datos
     Connection conect;
     
-    private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
-        if (conect == null) {
-            JOptionPane.showMessageDialog(this, "Error de conexión.");
-        }
-    }
-    
-    
+    // Identificador del profesor/usuario
     private int profesorId;
+    
+    // Nodo raíz y modelo para el árbol de cursos y materias
     private DefaultMutableTreeNode rootNode;
     private DefaultTreeModel treeModel;
 
+    /**
+     * Constructor principal de la interfaz ATTP.
+     * 
+     * Inicializa componentes:
+     * - Verifica conexión a base de datos
+     * - Escala imágenes
+     * - Configura ventana
+     */
     public attp() {
         this.profesorId = profesorId;
         initComponents();
@@ -49,6 +64,15 @@ public class attp extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }
 
+    /**
+     * Carga los cursos y materias asociados al usuario.
+     * 
+     * Construye un árbol jerárquico de:
+     * - Cursos
+     * - Materias por curso
+     * 
+     * Utiliza consulta SQL para recuperar información
+     */
     private void cargarCursosYMaterias() {
         try {
             String query
@@ -95,7 +119,9 @@ public class attp extends javax.swing.JFrame {
         }
     }
 
-    // Clases auxiliares para el árbol
+    /**
+     * Clase interna para representar nodos de Curso en el árbol.
+     */
     private static class CursoNode {
 
         private final int id;

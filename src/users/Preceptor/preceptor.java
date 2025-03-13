@@ -13,14 +13,44 @@ import users.Preceptor.AsistenciaPreceptorPanel;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Interfaz principal para usuarios con rol de Preceptor.
+ * 
+ * Funcionalidades principales:
+ * - Gestión de asistencias por curso
+ * - Selección de curso y fecha
+ * - Navegación entre diferentes módulos
+ * 
+ * @author [Nicolas Bogarin]
+ * @author [Constantino Di Nisio]
+ * @version 1.0
+ * @since [3/12/2025]
+ */
+
 public class preceptor extends javax.swing.JFrame {
 
-    // Ahora solo declaramos la variable de conexión
+    // Conexión a base de datos
     private Connection conect;
+    
+    // Identificador del preceptor actual
     private int preceptorId;
+    
+    // Fecha seleccionada para consultas
     private LocalDate fechaSeleccionada;
+    
+    // Mapa para almacenar cursos y sus IDs
     private Map<String, Integer> cursosMap = new HashMap<>();
 
+    /**
+     * Constructor de la interfaz de Preceptor.
+     * 
+     * Inicializa componentes:
+     * - Verifica conexión a base de datos
+     * - Configura imágenes
+     * - Carga componentes iniciales
+     * 
+     * @param preceptorId Identificador del preceptor que inicia sesión
+     */
     public preceptor(int preceptorId) {
         this.preceptorId = preceptorId;
         this.fechaSeleccionada = LocalDate.now();
@@ -37,13 +67,23 @@ public class preceptor extends javax.swing.JFrame {
         setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
 
+    /**
+     * Verifica la conexión a la base de datos.
+     * Muestra un mensaje de error si no se puede establecer conexión.
+     */
     private void probar_conexion() {
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }
     }
-
+    
+    /**
+     * Inicializa los componentes interactivos:
+     * - Selector de fecha
+     * - Combo de cursos
+     * Configura listeners para cambios de selección
+     */
     private void inicializarComponentes() {
          // Configurar selector de fecha
     dateChooser.setDate(java.sql.Date.valueOf(fechaSeleccionada));
@@ -61,6 +101,10 @@ public class preceptor extends javax.swing.JFrame {
         
     }
 
+    /**
+     * Carga los cursos activos desde la base de datos en el combo de cursos.
+     * Almacena la relación entre texto del curso y su ID en un mapa.
+     */
    private void cargarCursos() {
     try {
         String query = 
@@ -98,6 +142,10 @@ public class preceptor extends javax.swing.JFrame {
     }
 }
 
+   /**
+     * Actualiza el panel de asistencias según el curso y fecha seleccionados.
+     * Crea un nuevo panel de asistencia para el preceptor y curso actual.
+     */
     private void actualizarAsistencias() {
         String cursoSeleccionado = (String) comboCursos.getSelectedItem();
         if (cursoSeleccionado == null || cursoSeleccionado.equals("Seleccione un curso")) {
@@ -143,6 +191,11 @@ public class preceptor extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Actualiza las etiquetas de nombre y rol en la interfaz.
+     * 
+     * @param nombreCompleto Nombre completo del preceptor
+     */
     public void updateLabels(String nombreCompleto) {
         labelNomApe.setText(nombreCompleto);
         labelRol.setText("Rol: Preceptor");

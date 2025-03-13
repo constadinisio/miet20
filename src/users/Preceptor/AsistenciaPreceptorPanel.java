@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
- */
 package users.Preceptor;
 
 import java.sql.*;
@@ -43,11 +39,37 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import users.common.EstadoAsistenciaEditor;
 
+/**
+ * Panel de asistencia para preceptores, que permite gestionar y visualizar la
+ * asistencia de los alumnos de un curso específico.
+ *
+ * Características principales: - Carga y muestra asistencias por curso -
+ * Permite agregar y editar observaciones de asistencia - Exportación de datos a
+ * Excel - Filtrado y búsqueda de alumnos
+ *
+ * @author [Nicolas Bogarin]
+ * @author [Constantino Di Nisio]
+ * @version 1.0
+ * @since [3/12/2025]
+ */
 public class AsistenciaPreceptorPanel extends AsistenciaPanel {
 
+    // ID del curso asociado al preceptor
     private int cursoId;
 
+    /**
+     * Constructor del panel de asistencia para preceptores.
+     *
+     * Inicializa componentes, configura la interfaz y carga datos iniciales: -
+     * Conexión a base de datos - Configuración de componentes visuales - Carga
+     * de datos del curso - Configuración de eventos
+     *
+     * @param preceptorId Identificador del preceptor
+     * @param cursoId Identificador del curso
+     */
     public AsistenciaPreceptorPanel(int preceptorId, int cursoId) {
+        // Implementación original del constructor
+        // Inicializa conexión, componentes, fechas y configuraciones
         super();
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {
@@ -59,7 +81,7 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         this.usuarioId = preceptorId;
         this.cursoId = cursoId;
         this.fecha = LocalDate.now();
-// Ajustar a lunes de la semana actual
+        // Ajustar a lunes de la semana actual
         while (fecha.getDayOfWeek() != DayOfWeek.MONDAY) {
             fecha = fecha.minusDays(1);
         }
@@ -80,7 +102,7 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         txtNuevaObservacion.setLineWrap(true);
         txtNuevaObservacion.setWrapStyleWord(true);
 
-// Para los botones
+        // Para los botones
         btnBuscar.setPreferredSize(new Dimension(100, 30));
         btnGuardarObs.setPreferredSize(new Dimension(150, 30));
         btnExportar.setPreferredSize(new Dimension(150, 30));
@@ -88,7 +110,7 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         btnEditarObservacion.setEnabled(false);  // Deshabilitar hasta que se seleccione una fila
         btnEliminarObservacion.setEnabled(false);
 
-// Agregar listener para la selección en la tabla
+        // Agregar listener para la selección en la tabla
         tablaAsistencia.getSelectionModel().addListSelectionListener(e -> {
             boolean haySeleccion = tablaAsistencia.getSelectedRow() != -1;
             btnEditarObservacion.setEnabled(haySeleccion);
@@ -97,11 +119,11 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
 
         setLayout(new BorderLayout(5, 5)); // 5 píxeles de separación entre componentes
 
-// Configurar tamaños
+        // Configurar tamaños
         panelObservacionesCompleto.setPreferredSize(new Dimension(400, 0));
         jPanel2.setPreferredSize(new Dimension(1500, 0));
 
-// Agregar componentes
+        // Agregar componentes
         add(jPanel1, BorderLayout.NORTH);
         add(jPanel2, BorderLayout.CENTER);
         add(jPanel3, BorderLayout.SOUTH);
@@ -109,6 +131,10 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
 
     }
 
+    /**
+     * Carga los datos del curso asociado al preceptor.
+     * Recupera el año y división del curso desde la base de datos.
+     */
     private void cargarDatosCurso() {
         try {
             String query = "SELECT CONCAT(c.anio, '°', c.division) as curso "
@@ -124,7 +150,11 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
             JOptionPane.showMessageDialog(this, "Error al cargar datos: " + ex.getMessage());
         }
     }
-
+    
+    /**
+     * Inicializa la estructura base de la tabla de asistencia.
+     * Configura el modelo de tabla, colores y componentes visuales.
+     */
     private void inicializarBase() {
         // Inicializar tabla y modelo
         this.tableModel = new DefaultTableModel();
@@ -134,7 +164,10 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         inicializarColores();
         configurarTabla();
     }
-
+    
+    /**
+     * Define los colores asociados a los diferentes estados de asistencia.
+     */
     private void inicializarColores() {
         colorEstados = new HashMap<>();
         colorEstados.put("P", new Color(144, 238, 144));  // Verde claro
@@ -145,6 +178,9 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
     }
 
     @Override
+    /**
+     * Define la configuración de la tabla usada en la interfaz.
+     */
     protected void configurarTabla() {
         if (tableModel == null) {
             tableModel = new DefaultTableModel();
@@ -160,7 +196,7 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
 
         for (int i = 0; i < 5; i++) { // De lunes a viernes
             String nombreColumna = diaActual.format(formatter);
-            tableModel.addColumn(nombreColumna );
+            tableModel.addColumn(nombreColumna);
             tableModel.addColumn(nombreColumna + " (Cont)");
             diaActual = diaActual.plusDays(1);
         }
@@ -176,6 +212,9 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         }
     }
 
+    /**
+     * Define los colores asociados a los diferentes estados de asistencia.
+     */
     private void configurarEventos() {
         // Configurar event listener para el dateChooser
         if (dateChooser.getDate() != null) {
