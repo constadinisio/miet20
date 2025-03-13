@@ -1,6 +1,7 @@
 package users.Alumnos;
 
 import java.sql.*;
+import login.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 

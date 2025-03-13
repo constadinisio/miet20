@@ -3,6 +3,25 @@ package users.common;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * Editor personalizado para selección de estados de asistencia.
+ * 
+ * Características principales:
+ * - Proporciona un combo box para seleccionar estados de asistencia
+ * - Renderiza cada estado con un color de fondo diferente
+ * - Extiende DefaultCellEditor para uso en tablas
+ * 
+ * Estados de asistencia:
+ * - P: Presente (Verde claro)
+ * - A: Ausente (Rojo claro)
+ * - T: Tarde (Amarillo claro)
+ * - AP: Ausente con Permiso (Naranja claro)
+ * - NC: No Corresponde (Blanco)
+ * 
+ * @author [Nicolas Bogarin]
+ * @version 1.0
+ * @since [13/03/2025]
+ */
 public class EstadoAsistenciaEditor extends DefaultCellEditor {
     private static final String[] ESTADOS = {"P", "A", "T", "AP", "NC"};
     

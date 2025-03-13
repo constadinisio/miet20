@@ -14,16 +14,43 @@ import javax.swing.table.DefaultTableModel;
 import login.Conexion;
 import users.Attp.attp;
 
+/**
+ * Interfaz para visualización de préstamos de dispositivos.
+ *
+ * Características principales: 
+ * - Muestra tabla de préstamos de netbooks
+ * - Gestiona conexión a base de datos 
+ * - Recupera información de préstamos
+ *
+ * @author [División ATTP]
+ * @version 1.0
+ * @since [13/03/2025]
+ */
 public class Prestamos extends javax.swing.JFrame {
-    
+
+    // Conexión a la base de datos
     Connection conect;
-    
+
+    /**
+     * Constructor principal de la interfaz de préstamos.
+     *
+     * Inicializa componentes: 
+     * - Componentes de interfaz gráfica 
+     * - Verifica conexión a base de datos 
+     * - Carga datos de préstamos
+     */
     public Prestamos() {
         initComponents();
         mostrardatos();
         probar_conexion();
     }
-    
+
+    /**
+     * Verifica la conexión a la base de datos.
+     *
+     * Utiliza el patrón Singleton para obtener la conexión. 
+     * Muestra un mensaje de error si no se puede establecer conexión.
+     */
     private void probar_conexion() {
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {
@@ -31,8 +58,19 @@ public class Prestamos extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Carga y muestra los datos de préstamos en la tabla.
+     *
+     * Pasos: 
+     * - Crea modelo de tabla 
+     * - Configura columnas de préstamos
+     * - Ejecutaco consulta SQL para recuperar información 
+     * - Añade filas al modelo de tabla
+     */
     public void mostrardatos() {
         probar_conexion();
+
+        // Crear modelo de tabla
         DefaultTableModel tablitasPre = new DefaultTableModel();
         tablitasPre.addColumn("Netbook_ID");
         tablitasPre.addColumn("Fecha_Prestamo");
@@ -174,33 +212,48 @@ public class Prestamos extends javax.swing.JFrame {
     }//GEN-LAST:event_Boton_Volver4ActionPerformed
 
     private void Boton_Modificar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_Modificar2ActionPerformed
+        /**
+         * Método que gestiona la operación de préstamos.
+         *
+         * Funcionalidades principales: 
+         * - Recupera datos de préstamos desde la base de datos 
+         * - Registra datos iniciales en un archivo de texto 
+         * - Actualiza registros de préstamos 
+         * - Genera un log de cambios
+         *
+         * Pasos del proceso: 
+         * 1. Consulta todos los préstamos en la base de datos 
+         * 2. Escribe datos iniciales en archivo de registro 
+         * 3. Selecciona un registro de la tabla 
+         * 4. Actualiza el registro en la base de datos
+         * 5. Genera un log de los datos finales en un archivo TXT
+         */
         Statement statement = null;
         try {
             statement = conect.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM prestamos");
-             while (resultSet.next()) {
-                 String Prestamo_ID = resultSet.getString("Prestamo_ID");
-                 String Netbook_ID = resultSet.getString("Netbook_ID");
-                 String Fecha_Prestamo = resultSet.getString("Fecha_Prestamo");
-                 String Fecha_Devolucion = resultSet.getString("Fecha_Devolucion");
-                 String Hora_Prestamo = resultSet.getString("Hora_Prestamo");
-                 String Hora_Devolucion = resultSet.getString("Hora_Devolucion");
-                 String Curso = resultSet.getString("Curso");
-                 String Alumno = resultSet.getString("Alumno");
-                 String Tutor = resultSet.getString("Tutor");
-                 
-                 try  (FileWriter EscrituraInicial = new FileWriter("Registros.txt", true)){
+            while (resultSet.next()) {
+                String Prestamo_ID = resultSet.getString("Prestamo_ID");
+                String Netbook_ID = resultSet.getString("Netbook_ID");
+                String Fecha_Prestamo = resultSet.getString("Fecha_Prestamo");
+                String Fecha_Devolucion = resultSet.getString("Fecha_Devolucion");
+                String Hora_Prestamo = resultSet.getString("Hora_Prestamo");
+                String Hora_Devolucion = resultSet.getString("Hora_Devolucion");
+                String Curso = resultSet.getString("Curso");
+                String Alumno = resultSet.getString("Alumno");
+                String Tutor = resultSet.getString("Tutor");
+
+                try (FileWriter EscrituraInicial = new FileWriter("Registros.txt", true)) {
                     EscrituraInicial.write("\n");
-       EscrituraInicial.write("Datos iniciales de prestamos: "+Prestamo_ID+"|"+Netbook_ID+"|"+Fecha_Prestamo+"|"+Fecha_Devolucion+"|"+Hora_Prestamo+"|"+Hora_Devolucion+"|"+Curso+"|"+Alumno+"|"+Tutor);
-       EscrituraInicial.write("\n");
-        }
-        catch(IOException e){
-            JOptionPane.showMessageDialog(null, "Error al escribir en el archivo: " + e.getMessage());
-        }
-             }
+                    EscrituraInicial.write("Datos iniciales de prestamos: " + Prestamo_ID + "|" + Netbook_ID + "|" + Fecha_Prestamo + "|" + Fecha_Devolucion + "|" + Hora_Prestamo + "|" + Hora_Devolucion + "|" + Curso + "|" + Alumno + "|" + Tutor);
+                    EscrituraInicial.write("\n");
+                } catch (IOException e) {
+                    JOptionPane.showMessageDialog(null, "Error al escribir en el archivo: " + e.getMessage());
+                }
+            }
         } catch (SQLException ex) {
         }
-        
+
         int fila = TablasPre.getSelectedRow();
 
         if (fila < 0) {
@@ -210,8 +263,8 @@ public class Prestamos extends javax.swing.JFrame {
         String Netbook_ID = TablasPre.getValueAt(fila, 0).toString();
         String Fecha_Prestamo = TablasPre.getValueAt(fila, 1).toString();
         String Fecha_Devolucion = TablasPre.getValueAt(fila, 2).toString();
-        String Hora_Prestamo = TablasPre.getValueAt (fila,3).toString();
-        String Hora_Devolucion = TablasPre.getValueAt (fila,4).toString();
+        String Hora_Prestamo = TablasPre.getValueAt(fila, 3).toString();
+        String Hora_Devolucion = TablasPre.getValueAt(fila, 4).toString();
         String Curso = TablasPre.getValueAt(fila, 5).toString();
         String Alumno = TablasPre.getValueAt(fila, 6).toString();
         String Tutor = TablasPre.getValueAt(fila, 7).toString();
@@ -219,25 +272,24 @@ public class Prestamos extends javax.swing.JFrame {
 
         try {
             PreparedStatement actu = conect.prepareStatement("UPDATE prestamos SET Fecha_Prestamo= '" + Fecha_Prestamo + "',Fecha_Devolucion = '" + Fecha_Devolucion
-                    + "',Hora_Prestamo = '"+ Hora_Prestamo + "',Hora_Devolucion = '"+ Hora_Devolucion+ "',Curso = '" + Curso + "',Alumno = '" + Alumno + "',Tutor = '" + Tutor + "' WHERE Netbook_ID = '" + Netbook_ID + "'");
+                    + "',Hora_Prestamo = '" + Hora_Prestamo + "',Hora_Devolucion = '" + Hora_Devolucion + "',Curso = '" + Curso + "',Alumno = '" + Alumno + "',Tutor = '" + Tutor + "' WHERE Netbook_ID = '" + Netbook_ID + "'");
             actu.executeUpdate();
             mostrardatos();
         } catch (SQLException e) {
 
             JOptionPane.showMessageDialog(null, e + "No se pudo actualizar los datos");
         }
-                               try  (FileWriter Escritura = new FileWriter("Registros.txt", true)){
-                    Escritura.write("\n");
-         Netbook_ID = TablasPre.getValueAt(fila, 0).toString();
-         Fecha_Prestamo = TablasPre.getValueAt(fila, 1).toString();
-         Fecha_Devolucion = TablasPre.getValueAt(fila, 2).toString();
-         Curso = TablasPre.getValueAt(fila, 3).toString();
-         Alumno = TablasPre.getValueAt(fila, 4).toString();
-         Tutor = TablasPre.getValueAt(fila, 5).toString();
-       String Registro2=("Datos finales de prestamos: "+Netbook_ID+"|"+Fecha_Prestamo+"|"+Fecha_Devolucion+"|"+Hora_Prestamo+"|"+Hora_Devolucion+"|"+Curso+"|"+Alumno+"|"+Tutor);
-       Escritura.write(Registro2);
-                               }
-                               catch(IOException e){
+        try (FileWriter Escritura = new FileWriter("Registros.txt", true)) {
+            Escritura.write("\n");
+            Netbook_ID = TablasPre.getValueAt(fila, 0).toString();
+            Fecha_Prestamo = TablasPre.getValueAt(fila, 1).toString();
+            Fecha_Devolucion = TablasPre.getValueAt(fila, 2).toString();
+            Curso = TablasPre.getValueAt(fila, 3).toString();
+            Alumno = TablasPre.getValueAt(fila, 4).toString();
+            Tutor = TablasPre.getValueAt(fila, 5).toString();
+            String Registro2 = ("Datos finales de prestamos: " + Netbook_ID + "|" + Fecha_Prestamo + "|" + Fecha_Devolucion + "|" + Hora_Prestamo + "|" + Hora_Devolucion + "|" + Curso + "|" + Alumno + "|" + Tutor);
+            Escritura.write(Registro2);
+        } catch (IOException e) {
             JOptionPane.showMessageDialog(null, "Error al escribir en el archivo: " + e.getMessage());
         }
     }//GEN-LAST:event_Boton_Modificar2ActionPerformed
@@ -249,6 +301,25 @@ public class Prestamos extends javax.swing.JFrame {
     }//GEN-LAST:event_Boton_ingresarActionPerformed
 
     private void Boton_borrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_borrarActionPerformed
+        /**
+        * Método para eliminar un registro de préstamo seleccionado.
+        * 
+        * Funcionalidades principales:
+        * - Verifica selección de fila en la tabla
+        * - Elimina registro de préstamo de la base de datos
+        * - Actualiza la vista de tabla
+        * 
+        * Pasos del proceso:
+        * 1. Obtener la fila seleccionada
+        * 2. Validar que se haya seleccionado una fila
+        * 3. Recuperar ID de préstamo
+        * 4. Ejecutar consulta SQL de eliminación
+        * 5. Actualizar tabla y mostrar mensaje de confirmación
+        * 
+        * Manejo de errores:
+        * - Muestra mensaje si no se selecciona fila
+        * - Captura y muestra errores de base de datos
+        */
         int fila = TablasPre.getSelectedRow();
         if (fila < 0) {
             JOptionPane.showMessageDialog(null, "Seleccione el registro antes de apretar el botón");

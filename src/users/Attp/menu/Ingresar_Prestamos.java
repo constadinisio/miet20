@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package users.Attp.menu;
 
 import java.io.FileWriter;
@@ -17,18 +13,38 @@ import javax.swing.JOptionPane;
 import login.Conexion;
 
 /**
- *
- * @author AlumnosET20
+ * Interfaz para ingreso de préstamos en el sistema ATTP.
+ * 
+ * Características principales:
+ * - Gestión de conexión a base de datos
+ * - Interfaz para registrar préstamos
+ * 
+ * @author [División ATTP]
+ * @version 1.0
+ * @since [13/03/2025]
  */
 public class Ingresar_Prestamos extends javax.swing.JFrame {
 
     Connection conect;
     
+    /**
+     * Constructor principal de la interfaz de préstamos.
+     * 
+     * Inicializa componentes:
+     * - Componentes de interfaz gráfica
+     * - Verifica conexión a base de datos
+     */
     public Ingresar_Prestamos() {
         initComponents();
         probar_conexion();
     }
-
+    
+    /**
+     * Verifica la conexión a la base de datos.
+     * 
+     * Utiliza el patrón Singleton para obtener la conexión.
+     * Muestra un mensaje de error si no se puede establecer conexión.
+     */
     private void probar_conexion() {
         conect = Conexion.getInstancia().getConexion();
         if (conect == null) {

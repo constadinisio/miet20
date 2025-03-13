@@ -2,6 +2,7 @@ package users.Alumnos;
 
 import java.sql.*;
 import javax.swing.*;
+import login.*;
 import javax.swing.table.DefaultTableModel;
 
 public class vernotas extends javax.swing.JFrame {

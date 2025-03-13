@@ -16,13 +16,28 @@ import login.Conexion;
 import users.Attp.attp;
 
 /**
+ * Clase para gestión de inventario o stock de dispositivos.
  *
- * @author AlumnosET20
+ * Funcionalidades principales: 
+ * - Mostrar inventario de dispositivos 
+ * - Registrar información de stock en archivo 
+ * - Gestionar conexión a base de datos
+ *
+ * @author [División ATTP]
+ * @version 1.0
+ * @since [13/03/2025]
  */
 public class Stock extends javax.swing.JFrame {
 
+    // Conexión a la base de datos
     Connection conect;
 
+    /**
+     * Verifica la conexión a la base de datos.
+     *
+     * Utiliza el patrón Singleton para obtener la conexión. 
+     * Muestra mensaje de error si no se puede establecer conexión.
+     */
     private void probar_conexion() {
         // Obtener la conexión desde el Singleton
         conect = Conexion.getInstancia().getConexion();
@@ -30,13 +45,30 @@ public class Stock extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }
     }
-    
+
+    /**
+     * Constructor de la interfaz de Stock.
+     *
+     * Inicializa componentes: 
+     * - Componentes de interfaz gráfica 
+     * - Carga de datos 
+     * - Verificación de conexión
+     */
     public Stock() {
         initComponents();
         mostrardatos();
         probar_conexion();
     }
-    
+
+    /**
+     * Carga y muestra los datos de stock en la tabla.
+     *
+     * Pasos: 
+     * - Crear modelo de tabla 
+     * - Configurar columnas 
+     * - Ejecutar consulta SQL para recuperar inventario 
+     * - Añadir filas al modelo de tabla
+     */
     public void mostrardatos() {
         probar_conexion();
         DefaultTableModel tablitastock = new DefaultTableModel();
@@ -63,31 +95,39 @@ public class Stock extends javax.swing.JFrame {
 
         Tablastock.setModel(tablitastock);
     }
-    public void RegistrosFichero(){
+
+    /**
+     * Registra datos de stock en un archivo de texto.
+     *
+     * Procesos: 
+     * - Consulta información de stock 
+     * - Escribe datos en archivo de registro 
+     * - Maneja posibles errores de escritura
+     */
+    public void RegistrosFichero() {
         Statement statement = null;
         try {
             statement = conect.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM stock");
-             while (resultSet.next()) {
-                 String ID1 = resultSet.getString("ID");
-                 String Cod1 = resultSet.getString("Cod_Barra");
-                 String Estado1 = resultSet.getString("Estado");
-                 String Obser1 = resultSet.getString("Observaciones");
-                 
-                 try  (FileWriter EscrituraInicial = new FileWriter("Registros.txt", true)){
+            while (resultSet.next()) {
+                String ID1 = resultSet.getString("ID");
+                String Cod1 = resultSet.getString("Cod_Barra");
+                String Estado1 = resultSet.getString("Estado");
+                String Obser1 = resultSet.getString("Observaciones");
+
+                try (FileWriter EscrituraInicial = new FileWriter("Registros.txt", true)) {
                     EscrituraInicial.write("\n");
-       EscrituraInicial.write("Datos iniciales: "+ID1+"|"+Cod1+"|"+Estado1+"|"+Obser1);
-       EscrituraInicial.write("\n");
-        }
-        catch(IOException e){
-            JOptionPane.showMessageDialog(null, "Error al escribir en el archivo: " + e.getMessage());
-        }
-             }
+                    EscrituraInicial.write("Datos iniciales: " + ID1 + "|" + Cod1 + "|" + Estado1 + "|" + Obser1);
+                    EscrituraInicial.write("\n");
+                } catch (IOException e) {
+                    JOptionPane.showMessageDialog(null, "Error al escribir en el archivo: " + e.getMessage());
+                }
+            }
         } catch (SQLException ex) {
             Logger.getLogger(Stock.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -203,7 +243,7 @@ public class Stock extends javax.swing.JFrame {
     private void Boton_Volver2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_Volver2ActionPerformed
         this.setVisible(false);
         attp Attp = new attp();
-        Attp.setVisible (true);
+        Attp.setVisible(true);
     }//GEN-LAST:event_Boton_Volver2ActionPerformed
 
     private void TablastockAncestorAdded(javax.swing.event.AncestorEvent evt) {//GEN-FIRST:event_TablastockAncestorAdded
@@ -211,36 +251,34 @@ public class Stock extends javax.swing.JFrame {
     }//GEN-LAST:event_TablastockAncestorAdded
 
     private void Boton_Modificar1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_Modificar1ActionPerformed
-       Statement statement = null;
+        Statement statement = null;
         try {
             statement = conect.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM stock");
-             while (resultSet.next()) {
-                 String ID1 = resultSet.getString("ID");
-                 String Cod1 = resultSet.getString("Cod_Barra");
-                 String Estado1 = resultSet.getString("Estado");
-                 String Obser1 = resultSet.getString("Observaciones");
-                 
-                 try  (FileWriter EscrituraInicial = new FileWriter("Registros.txt", true)){
+            while (resultSet.next()) {
+                String ID1 = resultSet.getString("ID");
+                String Cod1 = resultSet.getString("Cod_Barra");
+                String Estado1 = resultSet.getString("Estado");
+                String Obser1 = resultSet.getString("Observaciones");
+
+                try (FileWriter EscrituraInicial = new FileWriter("Registros.txt", true)) {
                     EscrituraInicial.write("\n");
-       EscrituraInicial.write("Datos iniciales de stock: "+ID1+"|"+Cod1+"|"+Estado1+"|"+Obser1);
-       EscrituraInicial.write("\n");
-        }
-        catch(IOException e){
-            JOptionPane.showMessageDialog(null, "Error al escribir en el archivo: " + e.getMessage());
-        }
-             }
+                    EscrituraInicial.write("Datos iniciales de stock: " + ID1 + "|" + Cod1 + "|" + Estado1 + "|" + Obser1);
+                    EscrituraInicial.write("\n");
+                } catch (IOException e) {
+                    JOptionPane.showMessageDialog(null, "Error al escribir en el archivo: " + e.getMessage());
+                }
+            }
         } catch (SQLException ex) {
             Logger.getLogger(Stock.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
         int fila = Tablastock.getSelectedRow();
         if (fila < 0) {
             JOptionPane.showMessageDialog(null, "Seleccione el registro antes de apretar el botón");
         }
 
-        
-            String ID = Tablastock.getValueAt(fila, 0).toString();
+        String ID = Tablastock.getValueAt(fila, 0).toString();
         String Cod = Tablastock.getValueAt(fila, 1).toString();
         String Estado = Tablastock.getValueAt(fila, 2).toString();
         String Obser = Tablastock.getValueAt(fila, 3).toString();
@@ -249,7 +287,7 @@ public class Stock extends javax.swing.JFrame {
             PreparedStatement actu = conect.prepareStatement("UPDATE stock SET ID='" + ID + "',Observaciones='" + Obser + "'WHERE Cod_Barra='" + Cod + "'");
             actu.executeUpdate();
             mostrardatos();
-            
+
         } catch (SQLException e) {
 
             JOptionPane.showMessageDialog(null, e + "No se pudo actualizar los datos");
@@ -259,16 +297,15 @@ public class Stock extends javax.swing.JFrame {
         } else {
             JOptionPane.showMessageDialog(null, "¡Registro actualizado!");
         }
-                        try  (FileWriter Escritura = new FileWriter("Registros.txt", true)){
-                    Escritura.write("\n");
-        String ID2 = Tablastock.getValueAt(fila, 0).toString();
-        String Cod2 = Tablastock.getValueAt(fila, 1).toString();
-        String Estado2 = Tablastock.getValueAt(fila, 2).toString();
-        String Obser2 = Tablastock.getValueAt(fila, 3).toString();
-       String Registro2=("Datos finales de stock: "+ID2+"|"+Cod2+"|"+Estado+"|"+"|"+Obser2);
-       Escritura.write(Registro2);
-        }
-        catch(IOException e){
+        try (FileWriter Escritura = new FileWriter("Registros.txt", true)) {
+            Escritura.write("\n");
+            String ID2 = Tablastock.getValueAt(fila, 0).toString();
+            String Cod2 = Tablastock.getValueAt(fila, 1).toString();
+            String Estado2 = Tablastock.getValueAt(fila, 2).toString();
+            String Obser2 = Tablastock.getValueAt(fila, 3).toString();
+            String Registro2 = ("Datos finales de stock: " + ID2 + "|" + Cod2 + "|" + Estado + "|" + "|" + Obser2);
+            Escritura.write(Registro2);
+        } catch (IOException e) {
             JOptionPane.showMessageDialog(null, "Error al escribir en el archivo: " + e.getMessage());
         }
 

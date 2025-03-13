@@ -5,7 +5,7 @@ import java.awt.Font;
 import java.sql.*;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
-
+import login.*;
 import javax.swing.JOptionPane;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -69,10 +69,8 @@ public class alumnos extends javax.swing.JFrame {
     private void probar_conexion() {
         // Obtenemos la conexión desde el Singleton
         conect = Conexion.getInstancia().getConexion();
-
         // Verificamos si la conexión es válida
         if (conect != null) {
-
         } else {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }

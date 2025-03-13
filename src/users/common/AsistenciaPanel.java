@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
- */
 package users.common;
 
 
@@ -17,29 +13,74 @@ import login.Conexion;
 
 import javax.swing.table.DefaultTableCellRenderer;
 
+/**
+ * Clase abstracta base para paneles de gestión de asistencia.
+ * 
+ * Características principales:
+ * - Proporciona estructura común para paneles de asistencia
+ * - Define métodos abstractos para cargar y guardar asistencias
+ * - Gestiona colores y renderizado de estados de asistencia
+ * 
+ * @author [Nicolas Bogarin]
+ * @version 1.0
+ * @since [13/03/2025]
+ */
 public abstract class AsistenciaPanel extends JPanel {
    
+    // Conexión a base de datos
     protected Connection conect;
+    
+    // Identificador del usuario
     protected int usuarioId;
+    
+    // Fecha de asistencia
     protected LocalDate fecha;
+    
+    // Tabla de asistencia
     protected JTable tablaAsistencia;
+    
+    // Modelo de tabla
     protected DefaultTableModel tableModel;
+    
+    // Mapa de colores para estados de asistencia
     protected Map<String, Color> colorEstados;
     
+    /**
+     * Constructor por defecto.
+     * Inicializa los colores de los estados de asistencia.
+     */
     public AsistenciaPanel(){
     super();
     inicializarColores();
     }
     
+    /**
+     * Inicializa el mapa de colores para los diferentes estados de asistencia.
+     * 
+     * Estados definidos:
+     * - "P": Verde claro (Presente)
+     * - "A": Rojo claro (Ausente)
+     * - "T": Amarillo claro (Tarde)
+     * - "AP": Naranja claro (Ausente con Permiso)
+     * - "NC": Blanco (No Corresponde)
+     */
     private void inicializarColores(){
     colorEstados = new HashMap<>();
-        colorEstados.put("P", new Color(144, 238, 144));  // Verde claro
-        colorEstados.put("A", new Color(255, 182, 193));  // Rojo claro
-        colorEstados.put("T", new Color(255, 255, 153));  // Amarillo claro
-        colorEstados.put("AP", new Color(255, 218, 185)); // Naranja claro
-        colorEstados.put("NC", Color.WHITE);              // No corresponde
+        colorEstados.put("P", new Color(144, 238, 144)); 
+        colorEstados.put("A", new Color(255, 182, 193));
+        colorEstados.put("T", new Color(255, 255, 153)); 
+        colorEstados.put("AP", new Color(255, 218, 185));
+        colorEstados.put("NC", Color.WHITE);           
     }
     
+    /**
+     * Configura la estructura básica de la tabla de asistencia.
+     * 
+     * Pasos:
+     * - Crear modelo de tabla si no existe
+     * - Añadir columnas estándar: Alumno, DNI, Estado
+     * - Establecer modelo en la tabla
+     */
     protected void configurarTabla(){
     if (tableModel == null){
     tableModel= new DefaultTableModel();
@@ -53,11 +94,32 @@ public abstract class AsistenciaPanel extends JPanel {
     }
     
     }
-    
+    /**
+     * Método abstracto para cargar asistencias.
+     * Debe ser implementado por las subclases.
+     */
     protected abstract void cargarAsistencias();
+    
+    /**
+     * Método abstracto para guardar asistencias.
+     * Debe ser implementado por las subclases.
+     */
     protected abstract void guardarAsistencias();
+    
+    /**
+     * Método abstracto para determinar si una celda puede ser editada.
+     * 
+     * @param row Fila de la celda
+     * @param column Columna de la celda
+     * @return true si la celda puede ser editada, false en caso contrario
+     */
     protected abstract boolean puedeEditarCelda(int row, int column);
     
+    /**
+     * Inicializa la base del panel de asistencia.
+     * 
+     * @param usuarioId Identificador del usuario
+     */
     protected void inicializarBase(int usuarioId) {
         this.usuarioId = usuarioId;
         this.fecha = LocalDate.now();
@@ -75,15 +137,19 @@ public abstract class AsistenciaPanel extends JPanel {
         configurarTabla();
     }
     
+    /**
+     * Inicializa componentes básicos.
+     * Obtiene conexión y inicializa colores.
+     */
     private void inicializarComponentes() {
         conect = Conexion.getInstancia().getConexion();
         inicializarColores();
     }
     
-   
-    
-    
-    // Clase interna para el renderizado de celdas
+    /**
+     * Clase interna para renderizado personalizado de celdas de asistencia.
+     * Aplica colores según el estado de asistencia.
+     */
     protected class AsistenciaCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
@@ -98,8 +164,6 @@ public abstract class AsistenciaPanel extends JPanel {
             return c;
         }
     }
-    
-
 
     /**
      * This method is called from within the constructor to initialize the form.

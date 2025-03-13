@@ -11,7 +11,7 @@ import javax.swing.*;
 import javax.swing.tree.*;
 import java.awt.event.*;
 import javax.swing.JOptionPane;
-import login.Conexion;
+import login.*;
 import users.Profesor.AsistenciaProfesorPanel;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,6 +62,14 @@ public class attp extends javax.swing.JFrame {
         rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setLocationRelativeTo(null);
+    }
+    
+    private void probar_conexion() {
+        conect = Conexion.getInstancia().getConexion();
+        if (conect != null) {
+        } else {
+            JOptionPane.showMessageDialog(this, "Error de conexión.");
+        }
     }
 
     /**
