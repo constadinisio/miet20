@@ -1,9 +1,12 @@
-package login; // O el paquete que prefieras
+package login;
 
-import javax.swing.JFrame;
-import login.login; // Ajusta según tu paquete de login
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import login.ResponsiveUtils;
 
 public class Main {
+
     public static void main(String args[]) {
         // Agregar shutdown hook para cerrar sesión al salir
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -29,6 +32,9 @@ public class Main {
             java.util.logging.Logger.getLogger(Main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
 
+        // Configurar UI responsiva
+        setupResponsiveUI();
+
         // Iniciar la aplicación mostrando el login
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -37,6 +43,40 @@ public class Main {
                 loginFrame.setVisible(true);
             }
         });
-    
+    }
+
+    /**
+     * Configura la UI para que sea responsive en todas las ventanas
+     */
+    public static void setupResponsiveUI() {
+        // Interceptar la creación de ventanas para hacerlas responsivas
+        Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
+            @Override
+            public void eventDispatched(AWTEvent event) {
+                if (event.getID() == WindowEvent.WINDOW_OPENED) {
+                    Window window = (Window) event.getSource();
+                    if (window instanceof JFrame) {
+                        JFrame frame = (JFrame) window;
+
+                        // Aplicar configuración responsive de forma recursiva
+                        makeAllPanelsResponsive(frame.getContentPane());
+                    }
+                }
+            }
+        }, AWTEvent.WINDOW_EVENT_MASK);
+    }
+
+    private static void makeAllPanelsResponsive(Container container) {
+        // Procesar este contenedor si es un panel
+        if (container instanceof JPanel) {
+            ResponsiveUtils.makeResponsive((JPanel) container);
+        }
+
+        // Procesar recursivamente todos los componentes
+        for (Component comp : container.getComponents()) {
+            if (comp instanceof Container) {
+                makeAllPanelsResponsive((Container) comp);
+            }
+        }
     }
 }

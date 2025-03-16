@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JComboBox;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.time.LocalDate;
@@ -26,13 +27,67 @@ public class profesor extends javax.swing.JFrame {
     private DefaultMutableTreeNode rootNode;
     private DefaultTreeModel treeModel;
 
+    // En profesor.java, en el constructor
     public profesor(int profesorId) {
         this.profesorId = profesorId;
         initComponents();
         probar_conexion();
+
+        // Configurar layout principal para que sea responsivo
+        getContentPane().setLayout(new BorderLayout());
+
+        // Panel izquierdo (menú) - le damos un tamaño fijo
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setPreferredSize(new Dimension(270, getHeight()));
+        leftPanel.add(jPanel2, BorderLayout.NORTH); // Logo
+        leftPanel.add(jPanel4, BorderLayout.CENTER); // Menú y botones
+
+        // Configurar el panel principal para que sea scrolleable
+        JScrollPane scrollPane = new JScrollPane(panelPrincipal);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+
+        // Añadir los paneles al contenedor principal
+        getContentPane().add(leftPanel, BorderLayout.WEST);
+        getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+        // Otras configuraciones
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // Configurar un tamaño mínimo para la ventana
+        setMinimumSize(new Dimension(1024, 768));
+
+        jPanel2.setLayout(new BorderLayout());
+        jPanel2.add(imagenLogo, BorderLayout.CENTER);
+
+        jPanel4.setLayout(new BoxLayout(jPanel4, BoxLayout.Y_AXIS));
+
+        // Asegurar que los componentes del panel4 se alineen correctamente
+        labelFotoPerfil.setAlignmentX(Component.CENTER_ALIGNMENT);
+        labelNomApe.setAlignmentX(Component.CENTER_ALIGNMENT);
+        labelRol.setAlignmentX(Component.CENTER_ALIGNMENT);
+        botnot.setAlignmentX(Component.CENTER_ALIGNMENT);
+        botpre.setAlignmentX(Component.CENTER_ALIGNMENT);
+        jButton1.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Agregar espaciado
+        jPanel4.add(Box.createVerticalGlue());
+        jPanel4.add(labelFotoPerfil);
+        jPanel4.add(labelNomApe);
+        jPanel4.add(labelRol);
+        jPanel4.add(Box.createRigidArea(new Dimension(0, 20)));
+        jPanel4.add(botnot);
+        jPanel4.add(Box.createRigidArea(new Dimension(0, 10)));
+        jPanel4.add(botpre);
+        jPanel4.add(Box.createVerticalGlue());
+        jPanel4.add(jButton1);
+        jPanel4.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        // Establecer tamaños mínimos para evitar que se compriman demasiado
+        jPanel2.setMinimumSize(new Dimension(200, 250));
+        jPanel4.setMinimumSize(new Dimension(200, 400));
     }
 
     private void probar_conexion() {
@@ -328,82 +383,152 @@ public class profesor extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void botpreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botpreActionPerformed
-      try {
-        // Panel superior para selección
-        JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
-        JComboBox<String> comboMaterias = new JComboBox<>();
-        Map<String, int[]> materiaIds = new HashMap<>();
-
-        String query = 
-            "SELECT DISTINCT c.id as curso_id, CONCAT(c.anio, '°', c.division) as curso, " +
-            "m.id as materia_id, m.nombre as materia " +
-            "FROM cursos c " +
-            "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id " +
-            "JOIN materias m ON pcm.materia_id = m.id " +
-            "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' " +
-            "ORDER BY c.anio, c.division, m.nombre";
-            
-        PreparedStatement ps = conect.prepareStatement(query);
-        ps.setInt(1, profesorId);
-        ResultSet rs = ps.executeQuery();
-        
-        while (rs.next()) {
-            String item = rs.getString("curso") + " - " + rs.getString("materia");
-            comboMaterias.addItem(item);
-            materiaIds.put(item, new int[]{rs.getInt("curso_id"), rs.getInt("materia_id")});
-        }
-
-        comboMaterias.setPreferredSize(new Dimension(300, 30));
-        panelSeleccion.add(lblSeleccion);
-        panelSeleccion.add(comboMaterias);
-
-        // Listener para el combo
-        comboMaterias.addActionListener(e -> {
-    String seleccion = (String)comboMaterias.getSelectedItem();
-    System.out.println("Selección: " + seleccion); // Debug
-
-    if (seleccion != null) {
         try {
-            int[] ids = materiaIds.get(seleccion);
-            System.out.println("CursoId: " + ids[0] + ", MateriaId: " + ids[1]); // Debug
-            
-            AsistenciaProfesorPanel panelAsistencia = new AsistenciaProfesorPanel(
-                profesorId,
-                ids[0], // cursoId
-                ids[1]  // materiaId
-            );
-            
-            panelPrincipal.removeAll();
-            panelPrincipal.setLayout(new BorderLayout()); // Importante: establecer el layout
-            panelPrincipal.add(panelAsistencia, BorderLayout.CENTER);
-            panelPrincipal.revalidate();
-            panelPrincipal.repaint();
-        } catch (Exception ex) {
-            System.out.println("Error completo: "); // Debug
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al cargar panel: " + ex.getMessage());
+            // Panel superior para selección
+            JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
+            JComboBox<String> comboMaterias = new JComboBox<>();
+            Map<String, int[]> materiaIds = new HashMap<>();
+
+            String query
+                    = "SELECT DISTINCT c.id as curso_id, CONCAT(c.anio, '°', c.division) as curso, "
+                    + "m.id as materia_id, m.nombre as materia "
+                    + "FROM cursos c "
+                    + "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id "
+                    + "JOIN materias m ON pcm.materia_id = m.id "
+                    + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
+                    + "ORDER BY c.anio, c.division, m.nombre";
+
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, profesorId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String item = rs.getString("curso") + " - " + rs.getString("materia");
+                comboMaterias.addItem(item);
+                materiaIds.put(item, new int[]{rs.getInt("curso_id"), rs.getInt("materia_id")});
+            }
+
+            comboMaterias.setPreferredSize(new Dimension(300, 30));
+            panelSeleccion.add(lblSeleccion);
+            panelSeleccion.add(comboMaterias);
+
+            // Listener para el combo
+            comboMaterias.addActionListener(e -> {
+                String seleccion = (String) comboMaterias.getSelectedItem();
+
+                if (seleccion != null) {
+                    try {
+                        int[] ids = materiaIds.get(seleccion);
+
+                        AsistenciaProfesorPanel panelAsistencia = new AsistenciaProfesorPanel(
+                                profesorId,
+                                ids[0], // cursoId
+                                ids[1] // materiaId
+                        );
+
+                        // Usar la utilidad para hacer el panel responsivo
+                        utils.PanelUtils.addPanelToContainer(panelPrincipal, panelAsistencia, BorderLayout.CENTER);
+
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "Error al cargar panel: " + ex.getMessage());
+                    }
+                }
+            });
+
+            // Usar la utilidad para agregar el panel de selección
+            utils.PanelUtils.addPanelToContainer(panelPrincipal, panelSeleccion, BorderLayout.NORTH);
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar los cursos: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
-    }
-});
-
-        panelPrincipal.removeAll();
-        panelPrincipal.add(panelSeleccion, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, panelPrincipal.getWidth(), 50));
-        panelPrincipal.revalidate();
-        panelPrincipal.repaint();
-
-    } catch (SQLException ex) {
-        JOptionPane.showMessageDialog(this,
-            "Error al cargar los cursos: " + ex.getMessage(),
-            "Error", JOptionPane.ERROR_MESSAGE);
-    }
-
     }//GEN-LAST:event_botpreActionPerformed
 
     private void botnotActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botnotActionPerformed
-        //    vernotas verno = new vernotas();
-        //    verno.setVisible(true);
-        // this.setVisible(false);
+        try {
+            // Panel superior para selección
+            JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
+            JComboBox<String> comboMaterias = new JComboBox<>();
+            Map<String, int[]> materiaIds = new HashMap<>();
+
+            String query
+                    = "SELECT DISTINCT c.id as curso_id, CONCAT(c.anio, '°', c.division) as curso, "
+                    + "m.id as materia_id, m.nombre as materia "
+                    + "FROM cursos c "
+                    + "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id "
+                    + "JOIN materias m ON pcm.materia_id = m.id "
+                    + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
+                    + "ORDER BY c.anio, c.division, m.nombre";
+
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, profesorId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String item = rs.getString("curso") + " - " + rs.getString("materia");
+                comboMaterias.addItem(item);
+                materiaIds.put(item, new int[]{rs.getInt("curso_id"), rs.getInt("materia_id")});
+            }
+
+            // Agregar radio buttons para elegir el tipo de panel de notas
+            JRadioButton rbTrabajos = new JRadioButton("Trabajos y Actividades", true);
+            JRadioButton rbBimestral = new JRadioButton("Notas Bimestrales", false);
+            ButtonGroup grupoOpciones = new ButtonGroup();
+            grupoOpciones.add(rbTrabajos);
+            grupoOpciones.add(rbBimestral);
+
+            panelSeleccion.add(lblSeleccion);
+            panelSeleccion.add(comboMaterias);
+            panelSeleccion.add(rbTrabajos);
+            panelSeleccion.add(rbBimestral);
+
+            // Botón para cargar el panel seleccionado
+            JButton btnCargar = new JButton("Cargar");
+            panelSeleccion.add(btnCargar);
+
+            // Listener para el botón
+            btnCargar.addActionListener(e -> {
+                String seleccion = (String) comboMaterias.getSelectedItem();
+                if (seleccion != null) {
+                    try {
+                        int[] ids = materiaIds.get(seleccion);
+                        int cursoId = ids[0];
+                        int materiaId = ids[1];
+
+                        // Cargar el panel correspondiente según la selección
+                        if (rbTrabajos.isSelected()) {
+                            // Crear el panel de notas
+                            NotasProfesorPanel panelNotas = new NotasProfesorPanel(profesorId, cursoId, materiaId);
+
+                            // Usar la utilidad para hacerlo responsivo
+                            utils.PanelUtils.addPanelToContainer(panelPrincipal, panelNotas, BorderLayout.CENTER);
+                        } else {
+                            NotasBimestralesPanel panelBimestral = new NotasBimestralesPanel(
+                                    profesorId, cursoId, materiaId
+                            );
+
+                            // Usar la utilidad para hacerlo responsivo
+                            utils.PanelUtils.addPanelToContainer(panelPrincipal, panelBimestral, BorderLayout.CENTER);
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "Error al cargar panel: " + ex.getMessage());
+                    }
+                }
+            });
+
+            // Usar la utilidad para agregar el panel de selección
+            utils.PanelUtils.addPanelToContainer(panelPrincipal, panelSeleccion, BorderLayout.NORTH);
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar los cursos: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_botnotActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed

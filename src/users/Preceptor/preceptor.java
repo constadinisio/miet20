@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.awt.Dimension;
 import com.toedter.calendar.JDateChooser;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
 import login.Conexion;
@@ -30,6 +31,9 @@ public class preceptor extends javax.swing.JFrame {
         // Escalar imágenes
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
 
+        // Configurar layout de panelPrincipal para que sea responsivo
+        panelPrincipal.setLayout(new BorderLayout());
+
         // Inicializar combo de cursos y fecha
         inicializarComponentes();
         cargarCursos();
@@ -45,58 +49,59 @@ public class preceptor extends javax.swing.JFrame {
     }
 
     private void inicializarComponentes() {
-         // Configurar selector de fecha
-    dateChooser.setDate(java.sql.Date.valueOf(fechaSeleccionada));
-    dateChooser.addPropertyChangeListener("date", evt -> {
-        if ("date".equals(evt.getPropertyName())) {
-            fechaSeleccionada = dateChooser.getDate().toInstant()
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDate();
-            actualizarAsistencias();
-        }
-    });
+        // Configurar selector de fecha
+        dateChooser.setDate(java.sql.Date.valueOf(fechaSeleccionada));
+        dateChooser.addPropertyChangeListener("date", evt -> {
+            if ("date".equals(evt.getPropertyName())) {
+                fechaSeleccionada = dateChooser.getDate().toInstant()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate();
+                actualizarAsistencias();
+            }
+        });
 
-    // Configurar combo de cursos
-    comboCursos.addActionListener(evt -> actualizarAsistencias());
-        
+        // Configurar combo de cursos
+        comboCursos.addActionListener(evt -> actualizarAsistencias());
+
     }
 
-   private void cargarCursos() {
-    try {
-        String query = 
-            "SELECT id, anio, division " +
-            "FROM cursos " +
-            "WHERE estado = 'activo' " +  // Si tienes un campo estado
-            "ORDER BY anio, division";
-            
-        System.out.println("Cargando todos los cursos");
-        PreparedStatement ps = conect.prepareStatement(query);
-        ResultSet rs = ps.executeQuery();
-        
-        comboCursos.removeAllItems();
-        comboCursos.addItem("Seleccione un curso");
-        cursosMap.clear();
-        
-        int cursosCount = 0;
-        while (rs.next()) {
-            cursosCount++;
-            int id = rs.getInt("id");
-            String texto = rs.getInt("anio") + "°" + rs.getInt("division");
-            System.out.println("Agregando curso: " + texto + " (ID: " + id + ")");
-            comboCursos.addItem(texto);
-            cursosMap.put(texto, id);
+    private void cargarCursos() {
+        try {
+            String query
+                    = "SELECT id, anio, division "
+                    + "FROM cursos "
+                    + "WHERE estado = 'activo' "
+                    + // Si tienes un campo estado
+                    "ORDER BY anio, division";
+
+            System.out.println("Cargando todos los cursos");
+            PreparedStatement ps = conect.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+
+            comboCursos.removeAllItems();
+            comboCursos.addItem("Seleccione un curso");
+            cursosMap.clear();
+
+            int cursosCount = 0;
+            while (rs.next()) {
+                cursosCount++;
+                int id = rs.getInt("id");
+                String texto = rs.getInt("anio") + "°" + rs.getInt("division");
+                System.out.println("Agregando curso: " + texto + " (ID: " + id + ")");
+                comboCursos.addItem(texto);
+                cursosMap.put(texto, id);
+            }
+
+            System.out.println("Total de cursos cargados: " + cursosCount);
+
+        } catch (SQLException ex) {
+            System.out.println("Error al cargar cursos: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar cursos: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
-        
-        System.out.println("Total de cursos cargados: " + cursosCount);
-            
-    } catch (SQLException ex) {
-        System.out.println("Error al cargar cursos: " + ex.getMessage());
-        ex.printStackTrace();
-        JOptionPane.showMessageDialog(this, 
-            "Error al cargar cursos: " + ex.getMessage(),
-            "Error", JOptionPane.ERROR_MESSAGE);
     }
-}
 
     private void actualizarAsistencias() {
         String cursoSeleccionado = (String) comboCursos.getSelectedItem();
@@ -110,16 +115,14 @@ public class preceptor extends javax.swing.JFrame {
             return;
         }
 
+        // Crear el panel de asistencia
         AsistenciaPreceptorPanel panelAsistencia = new AsistenciaPreceptorPanel(
                 preceptorId,
                 cursoId
         );
 
-        panelPrincipal.removeAll();
-        panelAsistencia.setPreferredSize(new Dimension(panelPrincipal.getWidth(), panelPrincipal.getHeight()));
-        panelPrincipal.add(panelAsistencia, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, panelPrincipal.getWidth(), panelPrincipal.getHeight()));
-        panelPrincipal.revalidate();
-        panelPrincipal.repaint();
+        // Usar el método que preserva el layout original
+        utils.PanelUtils.addPanelWithOriginalLayout(panelPrincipal, panelAsistencia, BorderLayout.CENTER);
     }
 
     // Clase auxiliar para el combo de cursos
@@ -223,7 +226,6 @@ public class preceptor extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jPanel3 = new javax.swing.JPanel();
         jPanel2 = new javax.swing.JPanel();
         imagenLogo = new javax.swing.JLabel();
         jPanel4 = new javax.swing.JPanel();
@@ -245,17 +247,6 @@ public class preceptor extends javax.swing.JFrame {
         dateChooser = new com.toedter.calendar.JDateChooser();
         txtResumen = new javax.swing.JTextArea();
 
-        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
-        jPanel3.setLayout(jPanel3Layout);
-        jPanel3Layout.setHorizontalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 100, Short.MAX_VALUE)
-        );
-        jPanel3Layout.setVerticalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 100, Short.MAX_VALUE)
-        );
-
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         jPanel2.setBackground(new java.awt.Color(255, 255, 255));
@@ -270,7 +261,7 @@ public class preceptor extends javax.swing.JFrame {
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addGap(34, 34, 34)
                 .addComponent(imagenLogo, javax.swing.GroupLayout.PREFERRED_SIZE, 205, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(41, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -306,12 +297,10 @@ public class preceptor extends javax.swing.JFrame {
 
         labelNomApe.setFont(new java.awt.Font("Arial", 1, 14)); // NOI18N
         labelNomApe.setForeground(new java.awt.Color(255, 255, 255));
-        labelNomApe.setText("Constantino Di Nisio");
 
         labelRol.setBackground(new java.awt.Color(255, 255, 255));
         labelRol.setFont(new java.awt.Font("Arial", 1, 14)); // NOI18N
         labelRol.setForeground(new java.awt.Color(255, 255, 255));
-        labelRol.setText("Rol: Alumno");
 
         jButton1.setBackground(new java.awt.Color(153, 153, 153));
         jButton1.setFont(new java.awt.Font("Arial", 1, 18)); // NOI18N
@@ -373,14 +362,15 @@ public class preceptor extends javax.swing.JFrame {
                 .addComponent(botnot, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(30, 30, 30)
                 .addComponent(botpre, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 37, Short.MAX_VALUE)
                 .addComponent(btnExprotar, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(32, 32, 32)
                 .addComponent(jButton1)
                 .addGap(15, 15, 15))
         );
 
         panelPrincipal.setBackground(new java.awt.Color(204, 204, 204));
+        panelPrincipal.setPreferredSize(new java.awt.Dimension(1200, 900));
         panelPrincipal.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabel4.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/banner-et20.png"))); // NOI18N
@@ -418,20 +408,18 @@ public class preceptor extends javax.swing.JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addGap(0, 0, 0)
-                .addComponent(panelPrincipal, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(panelPrincipal, javax.swing.GroupLayout.DEFAULT_SIZE, 758, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(6, 6, 6)
                 .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addComponent(panelPrincipal, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(panelPrincipal, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
         );
 
         pack();
@@ -444,33 +432,27 @@ public class preceptor extends javax.swing.JFrame {
     }//GEN-LAST:event_botnotActionPerformed
 
     private void botpreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botpreActionPerformed
-        // Limpiar el panel principal
-    panelPrincipal.removeAll();
-    
-    // Crear panel de selección
-    JPanel panelSeleccion = new JPanel();
-    panelSeleccion.setBackground(new Color(204, 204, 204));
-    
-    // Agregar componentes al panel
-    JLabel lblCurso = new JLabel("Seleccione un Curso:");
-    lblCurso.setFont(new Font("Arial", Font.BOLD, 14));
-    panelSeleccion.add(lblCurso);
-    panelSeleccion.add(comboCursos);
-    
-    JLabel lblFecha = new JLabel("Fecha:");
-    lblFecha.setFont(new Font("Arial", Font.BOLD, 14));
-    panelSeleccion.add(lblFecha);
-    panelSeleccion.add(dateChooser);
-    
-    // Agregar el panel al panel principal
-    panelPrincipal.add(panelSeleccion, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, 50));
-    
-    // Cargar cursos en el combo
-    cargarCursos();
-    
-    // Actualizar la vista
-    panelPrincipal.revalidate();
-    panelPrincipal.repaint();
+
+        // Crear panel de selección
+        JPanel panelSeleccion = new JPanel();
+        panelSeleccion.setBackground(new Color(204, 204, 204));
+
+        // Agregar componentes al panel
+        JLabel lblCurso = new JLabel("Seleccione un Curso:");
+        lblCurso.setFont(new Font("Arial", Font.BOLD, 14));
+        panelSeleccion.add(lblCurso);
+        panelSeleccion.add(comboCursos);
+
+        JLabel lblFecha = new JLabel("Fecha:");
+        lblFecha.setFont(new Font("Arial", Font.BOLD, 14));
+        panelSeleccion.add(lblFecha);
+        panelSeleccion.add(dateChooser);
+
+        // Usar la utilidad para agregar el panel de selección
+        utils.PanelUtils.addPanelToContainer(panelPrincipal, panelSeleccion, BorderLayout.NORTH);
+
+        // Cargar cursos en el combo
+        cargarCursos();
     }//GEN-LAST:event_botpreActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
@@ -492,16 +474,24 @@ public class preceptor extends javax.swing.JFrame {
                 if ("Nimbus".equals(info.getName())) {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
+
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(preceptor.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(preceptor.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
+
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(preceptor.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(preceptor.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
+
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(preceptor.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(preceptor.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
+
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(preceptor.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(preceptor.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
         //</editor-fold>
@@ -512,10 +502,12 @@ public class preceptor extends javax.swing.JFrame {
                 if ("Nimbus".equals(info.getName())) {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
+
                 }
             }
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(preceptor.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(preceptor.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
 
         java.awt.EventQueue.invokeLater(new Runnable() {
@@ -541,7 +533,6 @@ public class preceptor extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel2;
-    private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JLabel labelNomApe;
