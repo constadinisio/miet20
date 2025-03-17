@@ -1,5 +1,6 @@
 package login;
 
+import java.net.URL;
 import java.sql.*;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -31,7 +32,7 @@ public class login extends javax.swing.JFrame {
      */
     private void probar_conexion() {
         // Obtener la conexión desde el Singleton
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }
@@ -43,10 +44,9 @@ public class login extends javax.swing.JFrame {
      */
     public login() {
         initComponents();
-        // Configurar imágenes de la interfaz
-        rsscalelabel.RSScaleLabel.setScaleLabel(jLabel1, "src/images/logo et20 buena calidad.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(jLabel2, "src/Assets/mail-icon.png");
-
+        
+        rsscalelabel.RSScaleLabel.setScaleLabel(jLabel1, "images/logo et20 buena calidad.png");
+        
         // Desactivar el comportamiento por defecto del botón X
         setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
 
@@ -260,7 +260,7 @@ public class login extends javax.swing.JFrame {
         jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/logo et20 buena calidad.png"))); // NOI18N
         jLabel1.setAutoscrolls(true);
         jLabel1.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
-        panelLogin.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(330, 130, 106, 104));
+        panelLogin.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(330, 130, 130, 120));
 
         getContentPane().add(panelLogin, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 760, 860));
 
@@ -434,7 +434,7 @@ public class login extends javax.swing.JFrame {
 
     private boolean validarConexion() {
         // Obtener una conexión fresca
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(null,
                     "No se pudo establecer conexión con la base de datos",

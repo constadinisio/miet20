@@ -17,9 +17,6 @@ import login.Conexion;
  * - Gestiona la relación entre alumnos y cursos en la base de datos
  * - Proporciona interfaz para selección múltiple de alumnos
  * 
- * @author [Nicolas Bogarin]
- * @version 1.0
- * @since [12/03/2025]
  */
 public class AsignarAlumnosDialog extends javax.swing.JDialog {
 
@@ -58,9 +55,9 @@ public class AsignarAlumnosDialog extends javax.swing.JDialog {
      * Muestra un mensaje de error si no se puede establecer conexión.
      */
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
-            JOptionPane.showMessageDialog(this, "Error de conexión.");
+            JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -168,7 +165,7 @@ public class AsignarAlumnosDialog extends javax.swing.JDialog {
                 "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     /**
      * Verifica si se realizaron cambios en las asignaciones de alumnos.
      * 

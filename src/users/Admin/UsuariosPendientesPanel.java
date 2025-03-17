@@ -83,7 +83,7 @@ public class UsuariosPendientesPanel extends javax.swing.JPanel {
     private void cargarUsuariosPendientes() {
         System.out.println("Cargando usuarios pendientes..."); // Debug
         try {
-            conect = Conexion.getInstancia().getConexion();
+            conect = Conexion.getInstancia().verificarConexion();
             String query = "SELECT id, nombre, apellido, mail  FROM usuarios WHERE rol = 0 AND status = 1;";
             PreparedStatement ps = conect.prepareStatement(query);
             ResultSet rs = ps.executeQuery();

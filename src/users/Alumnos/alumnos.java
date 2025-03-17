@@ -42,8 +42,8 @@ public class alumnos extends javax.swing.JFrame {
     public alumnos() {
         initComponents();
         probar_conexion();  // Usamos la conexión aquí
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "images/logo et20 buena calidad.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "images/5c994f25d361a_1200.jpg");
 
     }
 
@@ -68,7 +68,7 @@ public class alumnos extends javax.swing.JFrame {
      */
     private void probar_conexion() {
         // Obtenemos la conexión desde el Singleton
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         // Verificamos si la conexión es válida
         if (conect != null) {
         } else {

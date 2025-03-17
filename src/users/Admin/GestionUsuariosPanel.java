@@ -91,7 +91,7 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
      */
     private void cargarUsuarios() {
         try {
-            conect = Conexion.getInstancia().getConexion();
+            conect = Conexion.getInstancia().verificarConexion();
             String filtroRol = obtenerFiltroRol();
 
             String query = "SELECT id, nombre, apellido, mail, rol, status FROM usuarios";

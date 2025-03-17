@@ -128,7 +128,7 @@ public abstract class AsistenciaPanel extends JPanel {
             tablaAsistencia.setModel(tableModel);
         }
         // Inicializar conexión
-        this.conect = Conexion.getInstancia().getConexion();
+        this.conect = Conexion.getInstancia().verificarConexion();
         if (this.conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
             return;
@@ -142,7 +142,7 @@ public abstract class AsistenciaPanel extends JPanel {
      * Obtiene conexión y inicializa colores.
      */
     private void inicializarComponentes() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         inicializarColores();
     }
     

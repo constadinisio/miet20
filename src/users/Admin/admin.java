@@ -48,16 +48,16 @@ public class admin extends javax.swing.JFrame {
         probar_conexion();
 
         // Escalar imágenes
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "src/images/logo et20 buena calidad.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "src/images/5c994f25d361a_1200.jpg");
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "images/logo et20 buena calidad.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "images/5c994f25d361a_1200.jpg");
 
         // Asegurarse que los labels tengan tamaño
         imagenLogo1.setSize(205, 212);
         fondoHome1.setSize(700, 565);
 
         // Escalar las imágenes
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "src/images/logo et20 buena calidad.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "src/images/5c994f25d361a_1200.jpg");
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "images/logo et20 buena calidad.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "images/5c994f25d361a_1200.jpg");
 
         // Inicializar paneles de funcionalidad
         mainPanel = new javax.swing.JPanel();
@@ -164,7 +164,7 @@ public class admin extends javax.swing.JFrame {
      * no se puede establecer conexión.
      */
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }

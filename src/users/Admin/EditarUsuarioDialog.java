@@ -77,7 +77,7 @@ public class EditarUsuarioDialog extends javax.swing.JDialog {
      */
     private void cargarDatosUsuario() {
         try {
-            conect = Conexion.getInstancia().getConexion();
+            conect = Conexion.getInstancia().verificarConexion();
             String query = "SELECT nombre, apellido, mail, rol FROM usuarios WHERE id = ?";
             PreparedStatement ps = conect.prepareStatement(query);
             ps.setInt(1, userId);

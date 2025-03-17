@@ -20,7 +20,7 @@ public class Registros extends javax.swing.JFrame {
     }
 
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }

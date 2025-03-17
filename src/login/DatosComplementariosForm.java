@@ -16,7 +16,7 @@ public class DatosComplementariosForm extends JDialog {
     public DatosComplementariosForm(Frame parent, UserSession userSession) {
         super(parent, "Datos Complementarios", true);
         this.userSession = userSession;
-        this.conn = new Conexion().getConexion();
+        this.conn = new Conexion().verificarConexion();
 
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();

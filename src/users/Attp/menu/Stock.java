@@ -40,7 +40,7 @@ public class Stock extends javax.swing.JFrame {
      */
     private void probar_conexion() {
         // Obtener la conexión desde el Singleton
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }

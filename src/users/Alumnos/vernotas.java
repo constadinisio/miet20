@@ -18,7 +18,7 @@ public class vernotas extends javax.swing.JFrame {
 
     private void probar_conexion() {
         // Obtenemos la conexión desde el Singleton
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
 
         // Verificamos si la conexión es válida
         if (conect != null) {

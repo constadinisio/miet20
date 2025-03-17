@@ -54,12 +54,28 @@ public class Conexion {
     }
     
     /**
-     * Obtiene la conexión actual a la base de datos.
-     * 
-     * @return Objeto Connection para interactuar con la base de datos
-     */
-    public Connection getConexion() {
-        return conexion;
+    * Verifica si la conexión está cerrada y la restablece si es necesario.
+    * 
+    * @return Conexión activa a la base de datos
+    */
+    public Connection verificarConexion() {
+        try {
+            // Si la conexión está cerrada o es nula, crear una nueva
+            if (conexion == null || conexion.isClosed()) {
+                String url = "jdbc:mysql://localhost:3306/et20plataforma";
+                String usuario = "root";
+                String contrasena = "";
+
+                // Establecer nueva conexión
+                conexion = DriverManager.getConnection(url, usuario, contrasena);
+                System.out.println("Conexión restablecida correctamente");
+            }
+            return conexion;
+        } catch (SQLException e) {
+            System.err.println("Error al verificar/restablecer la conexión: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
     
     /**

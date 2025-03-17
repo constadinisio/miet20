@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.awt.Dimension;
 import com.toedter.calendar.JDateChooser;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
 import login.Conexion;
@@ -60,6 +61,9 @@ public class preceptor extends javax.swing.JFrame {
         // Escalar imágenes
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
 
+        // Configurar layout de panelPrincipal para que sea responsivo
+        panelPrincipal.setLayout(new BorderLayout());
+
         // Inicializar combo de cursos y fecha
         inicializarComponentes();
         cargarCursos();
@@ -72,9 +76,9 @@ public class preceptor extends javax.swing.JFrame {
      * Muestra un mensaje de error si no se puede establecer conexión.
      */
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
-            JOptionPane.showMessageDialog(this, "Error de conexión.");
+            JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -85,20 +89,20 @@ public class preceptor extends javax.swing.JFrame {
      * Configura listeners para cambios de selección
      */
     private void inicializarComponentes() {
-         // Configurar selector de fecha
-    dateChooser.setDate(java.sql.Date.valueOf(fechaSeleccionada));
-    dateChooser.addPropertyChangeListener("date", evt -> {
-        if ("date".equals(evt.getPropertyName())) {
-            fechaSeleccionada = dateChooser.getDate().toInstant()
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDate();
-            actualizarAsistencias();
-        }
-    });
+        // Configurar selector de fecha
+        dateChooser.setDate(java.sql.Date.valueOf(fechaSeleccionada));
+        dateChooser.addPropertyChangeListener("date", evt -> {
+            if ("date".equals(evt.getPropertyName())) {
+                fechaSeleccionada = dateChooser.getDate().toInstant()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate();
+                actualizarAsistencias();
+            }
+        });
 
-    // Configurar combo de cursos
-    comboCursos.addActionListener(evt -> actualizarAsistencias());
-        
+        // Configurar combo de cursos
+        comboCursos.addActionListener(evt -> actualizarAsistencias());
+
     }
 
     /**
@@ -106,41 +110,42 @@ public class preceptor extends javax.swing.JFrame {
      * Almacena la relación entre texto del curso y su ID en un mapa.
      */
    private void cargarCursos() {
-    try {
-        String query = 
-            "SELECT id, anio, division " +
-            "FROM cursos " +
-            "WHERE estado = 'activo' " +  // Si tienes un campo estado
-            "ORDER BY anio, division";
-            
-        System.out.println("Cargando todos los cursos");
-        PreparedStatement ps = conect.prepareStatement(query);
-        ResultSet rs = ps.executeQuery();
-        
-        comboCursos.removeAllItems();
-        comboCursos.addItem("Seleccione un curso");
-        cursosMap.clear();
-        
-        int cursosCount = 0;
-        while (rs.next()) {
-            cursosCount++;
-            int id = rs.getInt("id");
-            String texto = rs.getInt("anio") + "°" + rs.getInt("division");
-            System.out.println("Agregando curso: " + texto + " (ID: " + id + ")");
-            comboCursos.addItem(texto);
-            cursosMap.put(texto, id);
+        try {
+            String query
+                    = "SELECT id, anio, division "
+                    + "FROM cursos "
+                    + "WHERE estado = 'activo' "
+                    + // Si tienes un campo estado
+                    "ORDER BY anio, division";
+
+            System.out.println("Cargando todos los cursos");
+            PreparedStatement ps = conect.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+
+            comboCursos.removeAllItems();
+            comboCursos.addItem("Seleccione un curso");
+            cursosMap.clear();
+
+            int cursosCount = 0;
+            while (rs.next()) {
+                cursosCount++;
+                int id = rs.getInt("id");
+                String texto = rs.getInt("anio") + "°" + rs.getInt("division");
+                System.out.println("Agregando curso: " + texto + " (ID: " + id + ")");
+                comboCursos.addItem(texto);
+                cursosMap.put(texto, id);
+            }
+
+            System.out.println("Total de cursos cargados: " + cursosCount);
+
+        } catch (SQLException ex) {
+            System.out.println("Error al cargar cursos: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar cursos: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
-        
-        System.out.println("Total de cursos cargados: " + cursosCount);
-            
-    } catch (SQLException ex) {
-        System.out.println("Error al cargar cursos: " + ex.getMessage());
-        ex.printStackTrace();
-        JOptionPane.showMessageDialog(this, 
-            "Error al cargar cursos: " + ex.getMessage(),
-            "Error", JOptionPane.ERROR_MESSAGE);
     }
-}
 
    /**
      * Actualiza el panel de asistencias según el curso y fecha seleccionados.
@@ -158,18 +163,17 @@ public class preceptor extends javax.swing.JFrame {
             return;
         }
 
+        // Crear el panel de asistencia
         AsistenciaPreceptorPanel panelAsistencia = new AsistenciaPreceptorPanel(
                 preceptorId,
                 cursoId
         );
 
-        panelPrincipal.removeAll();
-        panelAsistencia.setPreferredSize(new Dimension(panelPrincipal.getWidth(), panelPrincipal.getHeight()));
-        panelPrincipal.add(panelAsistencia, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, panelPrincipal.getWidth(), panelPrincipal.getHeight()));
-        panelPrincipal.revalidate();
-        panelPrincipal.repaint();
+        // Usar el método que preserva el layout original
+        utils.PanelUtils.addPanelWithOriginalLayout(panelPrincipal, panelAsistencia, BorderLayout.CENTER);
     }
 
+    // Clase auxiliar para el combo de cursos
     // Clase auxiliar para el combo de cursos
     private static class CursoItem {
 

@@ -58,7 +58,7 @@ public class AsistenciaProfesorPanel extends AsistenciaPanel {
      */
     public AsistenciaProfesorPanel(int profesorId, int cursoId, int materiaId) {
         super();
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
             return;

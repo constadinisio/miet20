@@ -58,14 +58,14 @@ public class attp extends javax.swing.JFrame {
         this.profesorId = profesorId;
         initComponents();
         probar_conexion();
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "images/logo et20 buena calidad.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "images/5c994f25d361a_1200.jpg");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setLocationRelativeTo(null);
     }
     
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect != null) {
         } else {
             JOptionPane.showMessageDialog(this, "Error de conexión.");

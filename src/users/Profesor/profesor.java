@@ -1,8 +1,12 @@
 package users.Profesor;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
 import java.sql.*;
 import javax.swing.*;
 import javax.swing.tree.*;
+import java.awt.event.*;
 import javax.swing.JOptionPane;
 import login.Conexion;
 import users.Profesor.AsistenciaProfesorPanel;
@@ -10,8 +14,10 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JComboBox;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.time.LocalDate;
 
 public class profesor extends javax.swing.JFrame {
 
@@ -22,20 +28,74 @@ public class profesor extends javax.swing.JFrame {
     private DefaultTreeModel treeModel;
     private libroTemas temario;
 
+    // En profesor.java, en el constructor
     public profesor(int profesorId) {
         this.profesorId = profesorId;
         initComponents();
-        temario = new libroTemas();
         probar_conexion();
+        temario = new libroTemas();
+        
+        // Configurar layout principal para que sea responsivo
+        getContentPane().setLayout(new BorderLayout());
+
+        // Panel izquierdo (menú) - le damos un tamaño fijo
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setPreferredSize(new Dimension(270, getHeight()));
+        leftPanel.add(jPanel2, BorderLayout.NORTH); // Logo
+        leftPanel.add(jPanel4, BorderLayout.CENTER); // Menú y botones
+
+        // Configurar el panel principal para que sea scrolleable
+        JScrollPane scrollPane = new JScrollPane(panelPrincipal);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+
+        // Añadir los paneles al contenedor principal
+        getContentPane().add(leftPanel, BorderLayout.WEST);
+        getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+        // Otras configuraciones
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // Configurar un tamaño mínimo para la ventana
+        setMinimumSize(new Dimension(1024, 768));
+
+        jPanel2.setLayout(new BorderLayout());
+        jPanel2.add(imagenLogo, BorderLayout.CENTER);
+
+        jPanel4.setLayout(new BoxLayout(jPanel4, BoxLayout.Y_AXIS));
+
+        // Asegurar que los componentes del panel4 se alineen correctamente
+        labelFotoPerfil.setAlignmentX(Component.CENTER_ALIGNMENT);
+        labelNomApe.setAlignmentX(Component.CENTER_ALIGNMENT);
+        labelRol.setAlignmentX(Component.CENTER_ALIGNMENT);
+        botnot.setAlignmentX(Component.CENTER_ALIGNMENT);
+        botpre.setAlignmentX(Component.CENTER_ALIGNMENT);
+        jButton1.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Agregar espaciado
+        jPanel4.add(Box.createVerticalGlue());
+        jPanel4.add(labelFotoPerfil);
+        jPanel4.add(labelNomApe);
+        jPanel4.add(labelRol);
+        jPanel4.add(Box.createRigidArea(new Dimension(0, 20)));
+        jPanel4.add(botnot);
+        jPanel4.add(Box.createRigidArea(new Dimension(0, 10)));
+        jPanel4.add(botpre);
+        jPanel4.add(Box.createVerticalGlue());
+        jPanel4.add(jButton1);
+        jPanel4.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        // Establecer tamaños mínimos para evitar que se compriman demasiado
+        jPanel2.setMinimumSize(new Dimension(200, 250));
+        jPanel4.setMinimumSize(new Dimension(200, 400));
     }
 
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
-            JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error de conexión.");
         }
     }
 

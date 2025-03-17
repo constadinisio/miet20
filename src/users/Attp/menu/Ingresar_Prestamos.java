@@ -46,7 +46,7 @@ public class Ingresar_Prestamos extends javax.swing.JFrame {
      * Muestra un mensaje de error si no se puede establecer conexión.
      */
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }

@@ -21,13 +21,13 @@ public class tablaContenidos extends javax.swing.JFrame {
         initComponents();
         cargarTabla();
         probar_conexion();
-        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "src/images/banner-et20.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "src/images/banner-et20.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "images/banner-et20.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "images/banner-et20.png");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
     
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -49,7 +49,7 @@ public class tablaContenidos extends javax.swing.JFrame {
         PreparedStatement stmt = null;
 
         try {
-            conect = Conexion.getInstancia().getConexion();
+            Conexion.getInstancia().verificarConexion();
 
             if (conect == null || conect.isClosed()) {
                 JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -98,7 +98,7 @@ public class tablaContenidos extends javax.swing.JFrame {
 
         String sql = "SELECT id, fecha, contenido, observaciones, fecha_creacion FROM contenidos_libro";
 
-        try (Connection conn = Conexion.getInstancia().getConexion();
+        try (Connection conn = Conexion.getInstancia().verificarConexion();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
@@ -160,7 +160,14 @@ public class tablaContenidos extends javax.swing.JFrame {
         }
     }
     
-    
+    private void accionVolver() {
+        // Cerrar ventana actual
+        dispose();
+        // Abrir la ventana libroTemas
+        libroTemas libros = new libroTemas();
+        Conexion.getInstancia().verificarConexion();
+        libros.setVisible(true);
+    }
     
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -343,10 +350,7 @@ public class tablaContenidos extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnVolverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnVolverActionPerformed
-        int profesorId = 0;
-        profesor log = new profesor(profesorId);
-        log.setVisible(true);
-        this.setVisible(false);
+        accionVolver();
     }//GEN-LAST:event_btnVolverActionPerformed
 
     private void btnModificarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnModificarActionPerformed

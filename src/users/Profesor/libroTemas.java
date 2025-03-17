@@ -12,6 +12,7 @@ public class libroTemas extends javax.swing.JFrame {
     
     private Connection conect;
     private int profesorId;
+    private profesor menuProf;
     
     public void setProfesorId(int profesorId) {
         this.profesorId = profesorId;
@@ -20,12 +21,12 @@ public class libroTemas extends javax.swing.JFrame {
     public libroTemas() {
         initComponents();
         probar_conexion();
-        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "src/images/banner-et20.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "src/images/banner-et20.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "images/banner-et20.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "images/banner-et20.png");
     }
     
     private void probar_conexion() {
-        conect = Conexion.getInstancia().getConexion();
+        conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -65,6 +66,11 @@ public class libroTemas extends javax.swing.JFrame {
             e.printStackTrace();
             JOptionPane.showMessageDialog(null, "Error al registrar la firma.", "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    private void accionVolver() {
+        menuProf.setVisible(true); // Mostrar la pantalla
+        this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta
     }
     
     @SuppressWarnings("unchecked")
@@ -165,9 +171,7 @@ public class libroTemas extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnVolverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnVolverActionPerformed
-        //    vernotas verno = new vernotas();
-        //    verno.setVisible(true);
-        // this.setVisible(false);
+        accionVolver();
     }//GEN-LAST:event_btnVolverActionPerformed
 
     private void btnFirmarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFirmarActionPerformed
@@ -175,6 +179,7 @@ public class libroTemas extends javax.swing.JFrame {
     }//GEN-LAST:event_btnFirmarActionPerformed
 
     private void btnContenidosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnContenidosActionPerformed
+        Conexion.getInstancia().verificarConexion();
         tablaContenidos tablaCont = new tablaContenidos();  // Pasamos el ID
         tablaCont.setVisible(true);
         this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta

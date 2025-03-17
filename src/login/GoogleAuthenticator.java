@@ -33,7 +33,7 @@ public class GoogleAuthenticator {
 
     public UserSession authenticateUser() throws IOException {
         try {
-            Connection conn = dbConnection.getConexion();
+            Connection conn = dbConnection.verificarConexion();
             if (conn == null) {
                 throw new SQLException("No se pudo establecer conexión con la base de datos");
             }
@@ -117,7 +117,7 @@ public class GoogleAuthenticator {
         ResultSet rs = null;
         
         try {
-            conn = dbConnection.getConexion();
+            conn = dbConnection.verificarConexion();
             if (conn == null) {
                 throw new SQLException("No se pudo establecer conexión con la base de datos");
             }

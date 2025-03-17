@@ -32,7 +32,7 @@ public class verasisten extends javax.swing.JFrame {
      */
     public verasisten() {
         // Obtener la conexión a través del Singleton
-        conect = Conexion.getInstancia().getConexion(); // Aquí obtienes la conexión desde el Singleton
+        conect = Conexion.getInstancia().verificarConexion(); // Aquí obtienes la conexión desde el Singleton
         initComponents();
         mostrarDatos();    // Mostrar datos al inicializar
     }
