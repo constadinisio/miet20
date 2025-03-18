@@ -1,6 +1,7 @@
 package users.Alumnos;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import login.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -21,61 +22,180 @@ public class verasisten extends javax.swing.JFrame {
 
     // Conexión a la base de datos
     private Connection conect;
-
+    // ID del alumno logueado
+    private int alumnoId;
+    
     /**
      * Constructor de la interfaz de visualización de asistencias.
      * 
      * Inicializa componentes y carga datos:
      * - Obtiene conexión mediante Singleton
+     * - Recupera ID del alumno actualmente logueado
      * - Inicializa componentes de interfaz
-     * - Muestra datos de asistencia
+     * - Muestra datos de asistencia del alumno
      */
     public verasisten() {
         // Obtener la conexión a través del Singleton
-        conect = Conexion.getInstancia().verificarConexion(); // Aquí obtienes la conexión desde el Singleton
+        conect = Conexion.getInstancia().verificarConexion();
+        
+        // Obtener el ID del alumno logueado desde la sesión actual
+        alumnoId = SesionUsuario.getInstancia().getUsuarioId();
+        
         initComponents();
         mostrarDatos();    // Mostrar datos al inicializar
     }
-
+    
     /**
      * Carga y muestra los datos de asistencia en la tabla.
      * 
      * Pasos:
      * - Crea modelo de tabla
      * - Configura columnas
-     * - Ejecuta consulta SQL para recuperar asistencias
-     * - Añade filas al modelo de tabla
+     * - Ejecuta consulta SQL para recuperar asistencias del alumno específico
+     * - Añade filas al modelo de tabla con formato mejorado
      */
     public void mostrarDatos() {
-        DefaultTableModel tcliente = new DefaultTableModel();
-        tcliente.addColumn("alumno_id");
-        tcliente.addColumn("fecha");
-        tcliente.addColumn("estado");
-        tcliente.addColumn("docente_id");
-        tablasisten.setModel(tcliente);
-
-        String[] datos = new String[4];  // Cambié de 6 a 4 columnas
-
-        // Usamos la conexión del Singleton (la conexión ya está abierta durante toda la instancia)
+        DefaultTableModel modeloTabla = new DefaultTableModel();
+        modeloTabla.addColumn("Fecha");
+        modeloTabla.addColumn("Materia");
+        modeloTabla.addColumn("Estado");
+        modeloTabla.addColumn("Observaciones");
+        tablasisten.setModel(modeloTabla);
+        
+        SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy");
+        
         try {
-            Statement leer = conect.createStatement();
-            ResultSet resultado = leer.executeQuery("SELECT * FROM asistencia");
-
-            while (resultado.next()) {
-                datos[0] = resultado.getString(2);
-                datos[1] = resultado.getString(3);
-                datos[2] = resultado.getString(4);
-                datos[3] = resultado.getString(5);
-
-                tcliente.addRow(datos);
+            // Consulta para obtener asistencias generales
+            String consultaGeneral = 
+                "SELECT ag.fecha, 'General' AS materia, ag.estado, oa.observacion " +
+                "FROM asistencia_general ag " +
+                "LEFT JOIN observaciones_asistencia oa ON ag.alumno_id = oa.alumno_id AND ag.fecha = oa.fecha " +
+                "WHERE ag.alumno_id = ? " +
+                "ORDER BY ag.fecha DESC";
+            
+            PreparedStatement psGeneral = conect.prepareStatement(consultaGeneral);
+            psGeneral.setInt(1, alumnoId);
+            ResultSet rsGeneral = psGeneral.executeQuery();
+            
+            // Consulta para obtener asistencias por materia
+            String consultaMateria = 
+                "SELECT am.fecha, m.nombre AS materia, am.estado, am.observaciones " +
+                "FROM asistencia_materia am " +
+                "INNER JOIN materias m ON am.materia_id = m.id " +
+                "WHERE am.alumno_id = ? " +
+                "ORDER BY am.fecha DESC, m.nombre";
+            
+            PreparedStatement psMateria = conect.prepareStatement(consultaMateria);
+            psMateria.setInt(1, alumnoId);
+            ResultSet rsMateria = psMateria.executeQuery();
+            
+            // Procesar asistencias generales
+            while (rsGeneral.next()) {
+                String[] fila = new String[4];
+                
+                // Formatear la fecha
+                Date fecha = rsGeneral.getDate("fecha");
+                fila[0] = fecha != null ? formatoFecha.format(fecha) : "N/A";
+                
+                fila[1] = rsGeneral.getString("materia"); // Siempre será "General"
+                
+                // Convertir el código de estado a texto explicativo
+                String estadoCodigo = rsGeneral.getString("estado");
+                fila[2] = convertirEstadoATexto(estadoCodigo);
+                
+                // Observaciones (puede ser null)
+                fila[3] = rsGeneral.getString("observacion");
+                if (fila[3] == null) {
+                    fila[3] = "";
+                }
+                
+                modeloTabla.addRow(fila);
             }
-
-            tablasisten.setModel(tcliente);
-
+            
+            // Procesar asistencias por materia
+            while (rsMateria.next()) {
+                String[] fila = new String[4];
+                
+                // Formatear la fecha
+                Date fecha = rsMateria.getDate("fecha");
+                fila[0] = fecha != null ? formatoFecha.format(fecha) : "N/A";
+                
+                fila[1] = rsMateria.getString("materia");
+                
+                // Convertir el código de estado a texto explicativo
+                String estadoCodigo = rsMateria.getString("estado");
+                fila[2] = convertirEstadoATexto(estadoCodigo);
+                
+                // Observaciones (puede ser null)
+                fila[3] = rsMateria.getString("observaciones");
+                if (fila[3] == null) {
+                    fila[3] = "";
+                }
+                
+                modeloTabla.addRow(fila);
+            }
+            
+            // Si no hay registros, mostrar mensaje
+            if (modeloTabla.getRowCount() == 0) {
+                String[] fila = {"No hay registros", "", "", ""};
+                modeloTabla.addRow(fila);
+            }
+            
+            // Actualizar la tabla
+            tablasisten.setModel(modeloTabla);
+            
+            // Cerrar resultsets
+            rsGeneral.close();
+            rsMateria.close();
+            
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, e + " Error en la consulta");
+            JOptionPane.showMessageDialog(null, "Error al consultar asistencias: " + e.getMessage());
+            e.printStackTrace();
         }
     }
+    
+    /**
+     * Convierte el código de estado de asistencia a una descripción textual.
+     * 
+     * @param codigo Código de estado (P, A, T, etc.)
+     * @return Descripción textual del estado
+     */
+    private String convertirEstadoATexto(String codigo) {
+        if (codigo == null) return "Desconocido";
+        
+        switch (codigo) {
+            case "P": return "Presente";
+            case "A": return "Ausente";
+            case "T": return "Tarde";
+            case "1/2": return "Media Falta";
+            case "J": return "Justificada";
+            default: return codigo;
+        }
+    }
+    
+    // Clase para manejar la sesión del usuario (igual que en el ejemplo anterior)
+    public static class SesionUsuario {
+        private static SesionUsuario instancia;
+        private int usuarioId;
+        
+        private SesionUsuario() {}
+        
+        public static SesionUsuario getInstancia() {
+            if (instancia == null) {
+                instancia = new SesionUsuario();
+            }
+            return instancia;
+        }
+        
+        public void setUsuarioId(int id) {
+            this.usuarioId = id;
+        }
+        
+        public int getUsuarioId() {
+            return usuarioId;
+        }
+    }
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {

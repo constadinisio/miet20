@@ -43,20 +43,23 @@ public class login extends javax.swing.JFrame {
      * Inicializa los componentes de la interfaz y configura el cierre de la aplicación.
      */
     public login() {
-        initComponents();
-        
-        rsscalelabel.RSScaleLabel.setScaleLabel(jLabel1, "images/logo et20 buena calidad.png");
-        
-        // Desactivar el comportamiento por defecto del botón X
-        setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
+         initComponents();
+    rsscalelabel.RSScaleLabel.setScaleLabel(jLabel1, "src/images/logo et20 buena calidad.png");
+    rsscalelabel.RSScaleLabel.setScaleLabel(jLabel2, "src/Assets/mail-icon.png");
+    
+    // Configurar el campo de contraseña para mostrar texto plano inicialmente
+    campoContraseña.setText("****************");
+    campoContraseña.setEchoChar((char)0);
+    // Desactivar el comportamiento por defecto del botón X
+    setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
 
-        // Agregar el listener para el botón de cerrar
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent evt) {
-                cerrarPrograma();
-            }
-        });
+    // Agregar el listener para el botón de cerrar
+    addWindowListener(new java.awt.event.WindowAdapter() {
+        @Override
+        public void windowClosing(java.awt.event.WindowEvent evt) {
+            cerrarPrograma();
+        }
+    });
     }
 
     /**
@@ -143,7 +146,7 @@ public class login extends javax.swing.JFrame {
         jLabel3.setForeground(new java.awt.Color(21, 24, 43));
         jLabel3.setText("Usuario");
 
-        campoNombre.setText("Nombre");
+        campoNombre.setText("Ingrese su mail");
         campoNombre.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(204, 204, 204)));
         campoNombre.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusGained(java.awt.event.FocusEvent evt) {
@@ -269,15 +272,15 @@ public class login extends javax.swing.JFrame {
 
     
     private void campoNombreFocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_campoNombreFocusGained
-        if (campoNombre.getText().equals("Nombre")) {
+        if (campoNombre.getText().equals("Ingrese su mail")) {
             campoNombre.setText(null);
             campoNombre.requestFocus();
         }
     }//GEN-LAST:event_campoNombreFocusGained
 
     private void campoNombreFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_campoNombreFocusLost
-        if (campoNombre.getText().length() == 0) {
-            campoNombre.setText("Nombre");
+         if (campoNombre.getText().isEmpty()) {
+            campoNombre.setText("Ingrese su mail");
         }
     }//GEN-LAST:event_campoNombreFocusLost
 
@@ -286,16 +289,19 @@ public class login extends javax.swing.JFrame {
     }//GEN-LAST:event_campoNombreActionPerformed
 
     private void campoContraseñaFocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_campoContraseñaFocusGained
-        if (campoContraseña.getText().equals("Contraseña")) {
-            campoContraseña.setText(null);
-            campoContraseña.requestFocus();
-        }
+          String password = String.valueOf(campoContraseña.getPassword());
+    if (password.equals("****************")) {
+        campoContraseña.setText("");
+        campoContraseña.setEchoChar('•'); // Activar caracteres ocultos
+    }
     }//GEN-LAST:event_campoContraseñaFocusGained
 
     private void campoContraseñaFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_campoContraseñaFocusLost
-        if (campoContraseña.getText().length() == 0) {
-            campoContraseña.setText("Contraseña");
-        }
+         String password = String.valueOf(campoContraseña.getPassword());
+    if (password.isEmpty()) {
+        campoContraseña.setText("****************");
+        campoContraseña.setEchoChar((char)0); // Mostrar texto plano
+    }
     }//GEN-LAST:event_campoContraseñaFocusLost
 
     private void campoContraseñaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_campoContraseñaActionPerformed

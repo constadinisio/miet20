@@ -9,17 +9,21 @@ public class vernotas extends javax.swing.JFrame {
     
     // Mantén la conexión abierta a nivel de la clase
     private Connection conect;
-
+    private int alumnoId; // Variable para almacenar el ID del alumno logueado
+    
     public vernotas() {
         initComponents();
         probar_conexion(); // Aquí obtienes la conexión desde el Singleton
+        
+        // Obtener el ID del alumno logueado desde la sesión actual
+        alumnoId = SesionUsuario.getInstancia().getUsuarioId();
+        
         mostrarDatos();    // Mostrar datos al inicializar
     }
-
+    
     private void probar_conexion() {
         // Obtenemos la conexión desde el Singleton
         conect = Conexion.getInstancia().verificarConexion();
-
         // Verificamos si la conexión es válida
         if (conect != null) {
             System.out.println("Conexión exitosa");
@@ -27,39 +31,115 @@ public class vernotas extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }
     }
-
+    
     public void mostrarDatos() {
         DefaultTableModel tcliente = new DefaultTableModel();
-        tcliente.addColumn("alumno_id");
-        tcliente.addColumn("materia_id");
-        tcliente.addColumn("nota");
-        tcliente.addColumn("evaluacion");
-        tcliente.addColumn("fecha");
+        tcliente.addColumn("Materia");
+        tcliente.addColumn("Nota");
+        tcliente.addColumn("Evaluación");
+        tcliente.addColumn("Fecha");
         tablanotas.setModel(tcliente);
-
-        String[] datos = new String[5];  // Cambié de 6 a 4 columnas
-
-        // Usamos la conexión global (la mantenemos abierta durante toda la instancia)
+        
         try {
-            Statement leer = conect.createStatement();
-            ResultSet resultado = leer.executeQuery("SELECT * FROM notas");
-
-            while (resultado.next()) {
-                datos[0] = resultado.getString(2);
-                datos[1] = resultado.getString(3);
-                datos[2] = resultado.getString(4);
-                datos[3] = resultado.getString(5);
-                datos[4] = resultado.getString(6);
-
-                tcliente.addRow(datos);
+            // Primero, obtenemos todas las materias asignadas al alumno a través de su curso
+            String consultaCurso = "SELECT curso_id FROM alumno_curso WHERE alumno_id = ? AND estado = 'activo'";
+            PreparedStatement psCurso = conect.prepareStatement(consultaCurso);
+            psCurso.setInt(1, alumnoId);
+            ResultSet rsCurso = psCurso.executeQuery();
+            
+            if (rsCurso.next()) {
+                int cursoId = rsCurso.getInt("curso_id");
+                
+                // Obtenemos todas las materias asociadas al curso del alumno
+                String consultaMaterias = "SELECT m.id, m.nombre FROM materias m " +
+                                         "INNER JOIN profesor_curso_materia pcm ON m.id = pcm.materia_id " +
+                                         "WHERE pcm.curso_id = ? AND pcm.estado = 'activo'";
+                PreparedStatement psMaterias = conect.prepareStatement(consultaMaterias);
+                psMaterias.setInt(1, cursoId);
+                ResultSet rsMaterias = psMaterias.executeQuery();
+                
+                // Para cada materia, buscamos si hay calificaciones del alumno
+                while (rsMaterias.next()) {
+                    int materiaId = rsMaterias.getInt("id");
+                    String nombreMateria = rsMaterias.getString("nombre");
+                    
+                    String consultaCalificaciones = "SELECT c.nota, ae.nombre as evaluacion, c.fecha_carga FROM calificaciones c " +
+                                                    "INNER JOIN actividades_evaluables ae ON c.actividad_id = ae.id " +
+                                                    "WHERE c.alumno_id = ? AND ae.materia_id = ?";
+                    PreparedStatement psCalificaciones = conect.prepareStatement(consultaCalificaciones);
+                    psCalificaciones.setInt(1, alumnoId);
+                    psCalificaciones.setInt(2, materiaId);
+                    ResultSet rsCalificaciones = psCalificaciones.executeQuery();
+                    
+                    // Si hay calificaciones, las agregamos a la tabla
+                    boolean tieneNotas = false;
+                    while (rsCalificaciones.next()) {
+                        tieneNotas = true;
+                        String[] datos = new String[4];
+                        datos[0] = nombreMateria;
+                        datos[1] = rsCalificaciones.getString("nota");
+                        datos[2] = rsCalificaciones.getString("evaluacion");
+                        
+                        // Formatear la fecha para presentación
+                        Timestamp fechaCarga = rsCalificaciones.getTimestamp("fecha_carga");
+                        datos[3] = (fechaCarga != null) ? fechaCarga.toString().substring(0, 10) : "N/A";
+                        
+                        tcliente.addRow(datos);
+                    }
+                    
+                    // Si no tiene notas para esta materia, agregamos una fila con "Sin Nota"
+                    if (!tieneNotas) {
+                        String[] datos = new String[4];
+                        datos[0] = nombreMateria;
+                        datos[1] = "Sin Nota";
+                        datos[2] = "N/A";
+                        datos[3] = "N/A";
+                        tcliente.addRow(datos);
+                    }
+                    
+                    rsCalificaciones.close();
+                }
+                
+                rsMaterias.close();
+            } else {
+                JOptionPane.showMessageDialog(this, "El alumno no está asignado a ningún curso activo.");
             }
-
+            
+            rsCurso.close();
+            
+            // Actualizar la tabla con los datos obtenidos
             tablanotas.setModel(tcliente);
-
+            
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, e + " Error en la consulta");
+            JOptionPane.showMessageDialog(null, "Error en la consulta: " + e.getMessage());
+            e.printStackTrace();
         }
     }
+    
+    // Necesitaremos una clase para manejar la sesión del usuario
+    // Esto es un ejemplo, ajusta según tu implementación actual
+    public static class SesionUsuario {
+        private static SesionUsuario instancia;
+        private int usuarioId;
+        
+        private SesionUsuario() {}
+        
+        public static SesionUsuario getInstancia() {
+            if (instancia == null) {
+                instancia = new SesionUsuario();
+            }
+            return instancia;
+        }
+        
+        public void setUsuarioId(int id) {
+            this.usuarioId = id;
+        }
+        
+        public int getUsuarioId() {
+            return usuarioId;
+        }
+    }
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
