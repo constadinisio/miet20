@@ -17,23 +17,33 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GridBagLayout;
+import java.awt.LayoutManager;
 import java.time.LocalDate;
+import utils.ResponsiveImageLabel;
 
 public class profesor extends javax.swing.JFrame {
 
-    // Ahora solo declaramos la variable de conexión
+    // Variables de instancia
     private Connection conect;
     private int profesorId;
     private DefaultMutableTreeNode rootNode;
     private DefaultTreeModel treeModel;
+    private JLabel fondoHomeOriginal;  // Para guardar el fondo original
+<<<<<<< HEAD
     private libroTemas temario;
+=======
+>>>>>>> 7bd857bd68141d394d16a06b9dddd99029b64fa3
 
-    // En profesor.java, en el constructor
     public profesor(int profesorId) {
-        this.profesorId = profesorId;
+   this.profesorId = profesorId;
         initComponents();
         probar_conexion();
+<<<<<<< HEAD
         temario = new libroTemas();
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+=======
+>>>>>>> 7bd857bd68141d394d16a06b9dddd99029b64fa3
 
         // Configurar layout principal para que sea responsivo
         getContentPane().setLayout(new BorderLayout());
@@ -54,8 +64,18 @@ public class profesor extends javax.swing.JFrame {
         getContentPane().add(scrollPane, BorderLayout.CENTER);
 
         // Otras configuraciones
+<<<<<<< HEAD
+        imagenLogo = new ResponsiveImageLabel("src/images/logo et20 buena calidad.png");
+        fondoHome = new ResponsiveImageLabel("src/images/5c994f25d361a_1200.jpg");
+
+=======
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
+>>>>>>> 7bd857bd68141d394d16a06b9dddd99029b64fa3
+        
+        // Guardar referencia al fondo original
+        fondoHomeOriginal = fondoHome;
+        
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         // Configurar un tamaño mínimo para la ventana
@@ -72,6 +92,7 @@ public class profesor extends javax.swing.JFrame {
         labelRol.setAlignmentX(Component.CENTER_ALIGNMENT);
         botnot.setAlignmentX(Component.CENTER_ALIGNMENT);
         botpre.setAlignmentX(Component.CENTER_ALIGNMENT);
+        botpre1.setAlignmentX(Component.CENTER_ALIGNMENT);
         jButton1.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Add components with proper spacing
@@ -84,6 +105,7 @@ public class profesor extends javax.swing.JFrame {
         jPanel4.add(botnot);
         jPanel4.add(Box.createRigidArea(new Dimension(0, 15))); // Space between buttons
         jPanel4.add(botpre);
+        jPanel4.add(Box.createRigidArea(new Dimension(0, 15))); // Space between buttons
         jPanel4.add(botpre1);
         jPanel4.add(Box.createVerticalGlue());
         jPanel4.add(jButton1);
@@ -100,51 +122,25 @@ public class profesor extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Error de conexión.");
         }
     }
-
-    private void cargarCursosYMaterias() {
-        try {
-            String query
-                    = "SELECT DISTINCT c.id as curso_id, c.anio, c.division, "
-                    + "m.id as materia_id, m.nombre as materia_nombre "
-                    + "FROM cursos c "
-                    + "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id "
-                    + "JOIN materias m ON pcm.materia_id = m.id "
-                    + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
-                    + "ORDER BY c.anio, c.division, m.nombre";
-
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, profesorId);
-            ResultSet rs = ps.executeQuery();
-
-            DefaultMutableTreeNode cursoNode = null;
-            int currentCursoId = -1;
-
-            while (rs.next()) {
-                int cursoId = rs.getInt("curso_id");
-
-                if (cursoId != currentCursoId) {
-                    // Nuevo curso
-                    String cursoText = rs.getInt("anio") + "°" + rs.getInt("division");
-                    CursoNode cursoInfo = new CursoNode(cursoId, cursoText);
-                    cursoNode = new DefaultMutableTreeNode(cursoInfo);
-                    rootNode.add(cursoNode);
-                    currentCursoId = cursoId;
-                }
-
-                // Agregar materia al curso actual
-                int materiaId = rs.getInt("materia_id");
-                String materiaNombre = rs.getString("materia_nombre");
-                MateriaNode materiaInfo = new MateriaNode(materiaId, materiaNombre);
-                cursoNode.add(new DefaultMutableTreeNode(materiaInfo));
-            }
-
-            treeModel.reload();
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al cargar cursos y materias: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
+<<<<<<< HEAD
+    
+    // Método para restaurar la vista original del panel principal
+    public void restaurarVistaPrincipal() {
+        panelPrincipal.removeAll();
+        panelPrincipal.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+        
+        // Restaurar los componentes originales
+        panelPrincipal.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, -1, -1));
+        panelPrincipal.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 642, -1, -1));
+        panelPrincipal.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 320, 370, 80));
+        panelPrincipal.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 280, 540, 80));
+        
+        // Restaurar el fondo
+        jScrollPane1.setViewportView(fondoHomeOriginal);
+        panelPrincipal.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, -1));
+        
+        panelPrincipal.revalidate();
+        panelPrincipal.repaint();
     }
 
     // Clases auxiliares para el árbol
@@ -187,19 +183,50 @@ public class profesor extends javax.swing.JFrame {
             return nombre;
         }
     }
+=======
+>>>>>>> 7bd857bd68141d394d16a06b9dddd99029b64fa3
 
     public void updateLabels(String nombreCompleto) {
         labelNomApe.setText(nombreCompleto);
         labelRol.setText("Rol: Profesor");
     }
-
-    private void abrirLibroDeTemas() {
-        int profesorId = this.profesorId;
-        temario.setProfesorId(profesorId); // Enviar el ID
-        temario.setVisible(true); // Mostrar la pantalla
-        this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta
+    
+    // Método para restaurar la vista original del panel principal
+    public void restaurarVistaPrincipal() {
+        panelPrincipal.removeAll();
+        panelPrincipal.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+        
+        // Restaurar los componentes originales
+        panelPrincipal.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, -1, -1));
+        panelPrincipal.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 642, -1, -1));
+        panelPrincipal.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 320, 370, 80));
+        panelPrincipal.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 280, 540, 80));
+        
+        // Restaurar el fondo
+        jScrollPane1.setViewportView(fondoHomeOriginal);
+        panelPrincipal.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, -1));
+        
+        panelPrincipal.revalidate();
+        panelPrincipal.repaint();
     }
 
+    private void abrirLibroDeTemas() {
+        // Crear el panel del libro de temas pasando el panel principal
+        libroTemas libro = new libroTemas(panelPrincipal, profesorId, this);
+        
+        // Limpiar el panel principal y agregar el nuevo componente
+        panelPrincipal.removeAll();
+        panelPrincipal.setLayout(new BorderLayout());
+        panelPrincipal.add(libro, BorderLayout.CENTER);
+        panelPrincipal.revalidate();
+        panelPrincipal.repaint();
+    }
+<<<<<<< HEAD
+    
+=======
+
+
+>>>>>>> 7bd857bd68141d394d16a06b9dddd99029b64fa3
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -252,7 +279,6 @@ public class profesor extends javax.swing.JFrame {
         jPanel2.setBackground(new java.awt.Color(255, 255, 255));
 
         imagenLogo.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/logo et20 buena calidad.png"))); // NOI18N
-        imagenLogo.setText("imagenLogo");
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -336,10 +362,13 @@ public class profesor extends javax.swing.JFrame {
                             .addGap(22, 22, 22))
                         .addGroup(jPanel4Layout.createSequentialGroup()
                             .addComponent(labelNomApe)
-                            .addGap(77, 77, 77)
-                            .addComponent(labelFotoPerfil)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(labelRol)
+                            .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addGroup(jPanel4Layout.createSequentialGroup()
+                                    .addGap(179, 179, 179)
+                                    .addComponent(labelRol))
+                                .addGroup(jPanel4Layout.createSequentialGroup()
+                                    .addGap(65, 65, 65)
+                                    .addComponent(labelFotoPerfil)))
                             .addGap(0, 0, Short.MAX_VALUE)))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
                         .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
@@ -397,7 +426,7 @@ public class profesor extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void botpreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botpreActionPerformed
-        try {
+          try {
             // Panel superior para selección
             JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
             JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
@@ -457,7 +486,12 @@ public class profesor extends javax.swing.JFrame {
             });
 
             panelPrincipal.removeAll();
-            panelPrincipal.add(panelSeleccion, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, panelPrincipal.getWidth(), 50));
+<<<<<<< HEAD
+            utils.PanelUtils.addPanelToContainer(panelPrincipal, panelSeleccion, BorderLayout.NORTH);
+=======
+            panelPrincipal.setLayout(new BorderLayout());
+            panelPrincipal.add(panelSeleccion, BorderLayout.NORTH);
+>>>>>>> 7bd857bd68141d394d16a06b9dddd99029b64fa3
             panelPrincipal.revalidate();
             panelPrincipal.repaint();
 
@@ -469,7 +503,7 @@ public class profesor extends javax.swing.JFrame {
     }//GEN-LAST:event_botpreActionPerformed
 
     private void botnotActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botnotActionPerformed
-        try {
+         try {
             // Panel superior para selección
             JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
             JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
@@ -543,7 +577,11 @@ public class profesor extends javax.swing.JFrame {
             });
 
             // Usar la utilidad para agregar el panel de selección
-            utils.PanelUtils.addPanelToContainer(panelPrincipal, panelSeleccion, BorderLayout.NORTH);
+            panelPrincipal.removeAll();
+            panelPrincipal.setLayout(new BorderLayout());
+            panelPrincipal.add(panelSeleccion, BorderLayout.NORTH);
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
 
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this,

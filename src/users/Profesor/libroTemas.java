@@ -9,46 +9,51 @@ import java.time.LocalTime;
 // SE NECESITA MÁS DESARROLLO
 
 public class libroTemas extends javax.swing.JFrame {
-    
+
     private Connection conect;
     private int profesorId;
-    private profesor menuProf;
-    
+    private profesor profMenu;
+
     public void setProfesorId(int profesorId) {
         this.profesorId = profesorId;
     }
-    
+
+    public libroTemas(profesor menuAnterior) {
+        initComponents();
+        this.profMenu = menuAnterior;
+    }
+
     public libroTemas() {
         initComponents();
         probar_conexion();
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "images/banner-et20.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "images/banner-et20.png");
     }
-    
+
     private void probar_conexion() {
         conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     public void firmarAsistencia() {
         try {
             LocalDate fechaActual = LocalDate.now();
             LocalTime horaActual = LocalTime.now();
             String diaSemana = fechaActual.getDayOfWeek().toString().toLowerCase();
-            
+
             String consulta = "SELECT curso_id, materia_id FROM horarios_materia WHERE profesor_id = ? AND dia_semana = ? AND ? BETWEEN hora_inicio AND hora_fin";
             PreparedStatement ps = conect.prepareStatement(consulta);
             ps.setInt(1, profesorId);
             ps.setString(2, diaSemana);
             ps.setTime(3, Time.valueOf(horaActual));
-            
+
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 int cursoId = rs.getInt("curso_id");
                 int materiaId = rs.getInt("materia_id");
-                
+
                 String insercion = "INSERT INTO firmas_asistencia (profesor_id, curso_id, materia_id, fecha, hora_firma) VALUES (?, ?, ?, ?, ?)";
                 PreparedStatement psInsert = conect.prepareStatement(insercion);
                 psInsert.setInt(1, profesorId);
@@ -56,7 +61,7 @@ public class libroTemas extends javax.swing.JFrame {
                 psInsert.setInt(3, materiaId);
                 psInsert.setDate(4, Date.valueOf(fechaActual));
                 psInsert.setTime(5, Time.valueOf(horaActual));
-                
+
                 psInsert.executeUpdate();
                 JOptionPane.showMessageDialog(null, "Firma registrada exitosamente.");
             } else {
@@ -67,10 +72,18 @@ public class libroTemas extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(null, "Error al registrar la firma.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     private void accionVolver() {
-        menuProf.setVisible(true); // Mostrar la pantalla
-        this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta
+        Conexion.getInstancia().verificarConexion();
+        this.setVisible(false);
+        profMenu.setVisible(true);
+    }
+    
+    private void abrirContenidos() {
+        Conexion.getInstancia().verificarConexion();
+        tablaContenidos tablaCont = new tablaContenidos(this);
+        tablaCont.setVisible(true);
+        this.setVisible(false);
     }
     
     @SuppressWarnings("unchecked")
@@ -179,10 +192,7 @@ public class libroTemas extends javax.swing.JFrame {
     }//GEN-LAST:event_btnFirmarActionPerformed
 
     private void btnContenidosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnContenidosActionPerformed
-        Conexion.getInstancia().verificarConexion();
-        tablaContenidos tablaCont = new tablaContenidos();  // Pasamos el ID
-        tablaCont.setVisible(true);
-        this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta
+        abrirContenidos();
     }//GEN-LAST:event_btnContenidosActionPerformed
 
     public static void main(String args[]) {

@@ -16,6 +16,7 @@ import java.time.LocalTime;
 public class tablaContenidos extends javax.swing.JFrame {
     
     private Connection conect;
+    private libroTemas libroAnterior;
         
     public tablaContenidos() {
         initComponents();
@@ -24,6 +25,12 @@ public class tablaContenidos extends javax.swing.JFrame {
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "images/banner-et20.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "images/banner-et20.png");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+    }
+    
+    public tablaContenidos(libroTemas libroAnterior) {
+        initComponents();
+        this.libroAnterior = libroAnterior;
+        // Inicialización básica
     }
     
     private void probar_conexion() {
@@ -161,12 +168,8 @@ public class tablaContenidos extends javax.swing.JFrame {
     }
     
     private void accionVolver() {
-        // Cerrar ventana actual
-        dispose();
-        // Abrir la ventana libroTemas
-        libroTemas libros = new libroTemas();
-        Conexion.getInstancia().verificarConexion();
-        libros.setVisible(true);
+       libroAnterior.setVisible(true);
+       this.setVisible(false);
     }
     
     @SuppressWarnings("unchecked")
