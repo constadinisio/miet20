@@ -21,19 +21,17 @@ import java.time.LocalDate;
 
 public class profesor extends javax.swing.JFrame {
 
-    // Ahora solo declaramos la variable de conexión
+    // Variables de instancia
     private Connection conect;
     private int profesorId;
     private DefaultMutableTreeNode rootNode;
     private DefaultTreeModel treeModel;
-    private libroTemas temario;
+    private JLabel fondoHomeOriginal;  // Para guardar el fondo original
 
-    // En profesor.java, en el constructor
     public profesor(int profesorId) {
-        this.profesorId = profesorId;
+   this.profesorId = profesorId;
         initComponents();
         probar_conexion();
-        temario = new libroTemas();
 
         // Configurar layout principal para que sea responsivo
         getContentPane().setLayout(new BorderLayout());
@@ -56,6 +54,10 @@ public class profesor extends javax.swing.JFrame {
         // Otras configuraciones
         rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "src/images/logo et20 buena calidad.png");
         rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "src/images/5c994f25d361a_1200.jpg");
+        
+        // Guardar referencia al fondo original
+        fondoHomeOriginal = fondoHome;
+        
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         // Configurar un tamaño mínimo para la ventana
@@ -72,6 +74,7 @@ public class profesor extends javax.swing.JFrame {
         labelRol.setAlignmentX(Component.CENTER_ALIGNMENT);
         botnot.setAlignmentX(Component.CENTER_ALIGNMENT);
         botpre.setAlignmentX(Component.CENTER_ALIGNMENT);
+        botpre1.setAlignmentX(Component.CENTER_ALIGNMENT);
         jButton1.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Add components with proper spacing
@@ -84,6 +87,7 @@ public class profesor extends javax.swing.JFrame {
         jPanel4.add(botnot);
         jPanel4.add(Box.createRigidArea(new Dimension(0, 15))); // Space between buttons
         jPanel4.add(botpre);
+        jPanel4.add(Box.createRigidArea(new Dimension(0, 15))); // Space between buttons
         jPanel4.add(botpre1);
         jPanel4.add(Box.createVerticalGlue());
         jPanel4.add(jButton1);
@@ -101,104 +105,42 @@ public class profesor extends javax.swing.JFrame {
         }
     }
 
-    private void cargarCursosYMaterias() {
-        try {
-            String query
-                    = "SELECT DISTINCT c.id as curso_id, c.anio, c.division, "
-                    + "m.id as materia_id, m.nombre as materia_nombre "
-                    + "FROM cursos c "
-                    + "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id "
-                    + "JOIN materias m ON pcm.materia_id = m.id "
-                    + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
-                    + "ORDER BY c.anio, c.division, m.nombre";
-
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, profesorId);
-            ResultSet rs = ps.executeQuery();
-
-            DefaultMutableTreeNode cursoNode = null;
-            int currentCursoId = -1;
-
-            while (rs.next()) {
-                int cursoId = rs.getInt("curso_id");
-
-                if (cursoId != currentCursoId) {
-                    // Nuevo curso
-                    String cursoText = rs.getInt("anio") + "°" + rs.getInt("division");
-                    CursoNode cursoInfo = new CursoNode(cursoId, cursoText);
-                    cursoNode = new DefaultMutableTreeNode(cursoInfo);
-                    rootNode.add(cursoNode);
-                    currentCursoId = cursoId;
-                }
-
-                // Agregar materia al curso actual
-                int materiaId = rs.getInt("materia_id");
-                String materiaNombre = rs.getString("materia_nombre");
-                MateriaNode materiaInfo = new MateriaNode(materiaId, materiaNombre);
-                cursoNode.add(new DefaultMutableTreeNode(materiaInfo));
-            }
-
-            treeModel.reload();
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al cargar cursos y materias: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    // Clases auxiliares para el árbol
-    private static class CursoNode {
-
-        private final int id;
-        private final String texto;
-
-        public CursoNode(int id, String texto) {
-            this.id = id;
-            this.texto = texto;
-        }
-
-        public int getId() {
-            return id;
-        }
-
-        @Override
-        public String toString() {
-            return texto;
-        }
-    }
-
-    private static class MateriaNode {
-
-        private final int id;
-        private final String nombre;
-
-        public MateriaNode(int id, String nombre) {
-            this.id = id;
-            this.nombre = nombre;
-        }
-
-        public int getId() {
-            return id;
-        }
-
-        @Override
-        public String toString() {
-            return nombre;
-        }
-    }
-
     public void updateLabels(String nombreCompleto) {
         labelNomApe.setText(nombreCompleto);
         labelRol.setText("Rol: Profesor");
     }
+    
+    // Método para restaurar la vista original del panel principal
+    public void restaurarVistaPrincipal() {
+        panelPrincipal.removeAll();
+        panelPrincipal.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+        
+        // Restaurar los componentes originales
+        panelPrincipal.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, -1, -1));
+        panelPrincipal.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 642, -1, -1));
+        panelPrincipal.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 320, 370, 80));
+        panelPrincipal.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 280, 540, 80));
+        
+        // Restaurar el fondo
+        jScrollPane1.setViewportView(fondoHomeOriginal);
+        panelPrincipal.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, -1));
+        
+        panelPrincipal.revalidate();
+        panelPrincipal.repaint();
+    }
 
     private void abrirLibroDeTemas() {
-        int profesorId = this.profesorId;
-        temario.setProfesorId(profesorId); // Enviar el ID
-        temario.setVisible(true); // Mostrar la pantalla
-        this.dispose();  // Opcional: cierra la ventana actual si no la necesitas abierta
+        // Crear el panel del libro de temas pasando el panel principal
+        libroTemas libro = new libroTemas(panelPrincipal, profesorId, this);
+        
+        // Limpiar el panel principal y agregar el nuevo componente
+        panelPrincipal.removeAll();
+        panelPrincipal.setLayout(new BorderLayout());
+        panelPrincipal.add(libro, BorderLayout.CENTER);
+        panelPrincipal.revalidate();
+        panelPrincipal.repaint();
     }
+
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -397,7 +339,7 @@ public class profesor extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void botpreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botpreActionPerformed
-        try {
+          try {
             // Panel superior para selección
             JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
             JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
@@ -457,7 +399,8 @@ public class profesor extends javax.swing.JFrame {
             });
 
             panelPrincipal.removeAll();
-            panelPrincipal.add(panelSeleccion, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, panelPrincipal.getWidth(), 50));
+            panelPrincipal.setLayout(new BorderLayout());
+            panelPrincipal.add(panelSeleccion, BorderLayout.NORTH);
             panelPrincipal.revalidate();
             panelPrincipal.repaint();
 
@@ -469,7 +412,7 @@ public class profesor extends javax.swing.JFrame {
     }//GEN-LAST:event_botpreActionPerformed
 
     private void botnotActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botnotActionPerformed
-        try {
+         try {
             // Panel superior para selección
             JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
             JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
@@ -543,7 +486,11 @@ public class profesor extends javax.swing.JFrame {
             });
 
             // Usar la utilidad para agregar el panel de selección
-            utils.PanelUtils.addPanelToContainer(panelPrincipal, panelSeleccion, BorderLayout.NORTH);
+            panelPrincipal.removeAll();
+            panelPrincipal.setLayout(new BorderLayout());
+            panelPrincipal.add(panelSeleccion, BorderLayout.NORTH);
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
 
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this,

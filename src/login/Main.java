@@ -8,19 +8,23 @@ import login.ResponsiveUtils;
 public class Main {
 
     public static void main(String args[]) {
-        // Agregar shutdown hook para cerrar sesión al salir
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                try {
-                    GoogleAuthenticator authenticator = new GoogleAuthenticator();
-                    authenticator.logout();
-                } catch (Exception e) {
-                    System.err.println("Error al cerrar sesión durante el apagado: " + e.getMessage());
-                }
-            }
-        });
-
         // Configurar look and feel
+        configurarLookAndFeel();
+        
+        // Verificar actualizaciones antes de iniciar la aplicación
+        verificarYActualizarAplicacion();
+        
+        // Configurar UI responsiva
+        setupResponsiveUI();
+        
+        // Agregar shutdown hook para cerrar sesión al salir
+        agregarShutdownHook();
+        
+        // Iniciar la aplicación
+        iniciarAplicacion();
+    }
+    
+    private static void configurarLookAndFeel() {
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -31,11 +35,27 @@ public class Main {
         } catch (Exception ex) {
             java.util.logging.Logger.getLogger(Main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-
-        // Configurar UI responsiva
-        setupResponsiveUI();
-
-        // Iniciar la aplicación mostrando el login
+    }
+    
+    private static void verificarYActualizarAplicacion() {
+        // Verificar actualizaciones usando el ActualizadorApp
+        ActualizadorApp.verificarActualizaciones();
+    }
+    
+    private static void agregarShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    GoogleAuthenticator authenticator = new GoogleAuthenticator();
+                    authenticator.logout();
+                } catch (Exception e) {
+                    System.err.println("Error al cerrar sesión durante el apagado: " + e.getMessage());
+                }
+            }
+        });
+    }
+    
+    private static void iniciarAplicacion() {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 JFrame loginFrame = new login();
