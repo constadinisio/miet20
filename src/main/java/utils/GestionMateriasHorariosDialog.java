@@ -186,14 +186,19 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
     private void cargarListaMaterias(DefaultTableModel modelo) {
     try {
         modelo.setRowCount(0);
+        
+        // Limpiar columnas existentes y añadir nuevas
+        while (modelo.getColumnCount() > 0) {
+            modelo.setColumnCount(modelo.getColumnCount() - 1);
+        }
 
-        // Modificar para incluir la columna categoría
         modelo.addColumn("ID");
         modelo.addColumn("Nombre");
         modelo.addColumn("Estado");
-        modelo.addColumn("Categoría");  // Nueva columna
+        modelo.addColumn("Categoría");
+        modelo.addColumn("Contraturno");  // Nueva columna
 
-        String query = "SELECT id, nombre, estado, categoria FROM materias ORDER BY nombre";
+        String query = "SELECT id, nombre, estado, categoria, es_contraturno FROM materias ORDER BY nombre";
         PreparedStatement ps = conect.prepareStatement(query);
         ResultSet rs = ps.executeQuery();
 
@@ -202,7 +207,8 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
                 rs.getInt("id"),
                 rs.getString("nombre"),
                 rs.getString("estado"),
-                rs.getString("categoria")  // Mostrar la categoría
+                rs.getString("categoria"),
+                rs.getBoolean("es_contraturno") ? "Sí" : "No"  // Mostrar si es contraturno
             };
             modelo.addRow(row);
         }
@@ -229,15 +235,17 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
     String nombreActual = (String) tabla.getValueAt(filaSeleccionada, 1);
     String estadoActual = (String) tabla.getValueAt(filaSeleccionada, 2);
     String categoriaActual = "";
+    boolean esContraturnoBD = false;
 
     try {
-        // Obtener la categoría actual
-        String queryCategoría = "SELECT categoria FROM materias WHERE id = ?";
-        PreparedStatement psCategoría = conect.prepareStatement(queryCategoría);
-        psCategoría.setInt(1, materiaId);
-        ResultSet rsCategoría = psCategoría.executeQuery();
-        if (rsCategoría.next()) {
-            categoriaActual = rsCategoría.getString("categoria");
+        // Obtener la categoría y el estado de contraturno actual
+        String queryDatos = "SELECT categoria, es_contraturno FROM materias WHERE id = ?";
+        PreparedStatement psDatos = conect.prepareStatement(queryDatos);
+        psDatos.setInt(1, materiaId);
+        ResultSet rsDatos = psDatos.executeQuery();
+        if (rsDatos.next()) {
+            categoriaActual = rsDatos.getString("categoria");
+            esContraturnoBD = rsDatos.getBoolean("es_contraturno");
         }
 
         // Preparar el diálogo
@@ -253,6 +261,10 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
         comboCategoria.addItem("GENERAL DEL SEGUNDO CICLO");
         comboCategoria.addItem("TALLER PRIMER CICLO");
         
+        // Checkbox para contraturno
+        JCheckBox chkContraturno = new JCheckBox("Es materia de contraturno");
+        chkContraturno.setSelected(esContraturnoBD);
+        
         // Seleccionar la categoría actual si existe
         if (categoriaActual != null && !categoriaActual.isEmpty()) {
             comboCategoria.setSelectedItem(categoriaActual);
@@ -265,6 +277,8 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
         panel.add(comboEstado);
         panel.add(new JLabel("Categoría:"));
         panel.add(comboCategoria);
+        panel.add(new JLabel("Contraturno:"));
+        panel.add(chkContraturno);
 
         // Mostrar el diálogo
         int result = JOptionPane.showConfirmDialog(this, panel, "Editar Materia",
@@ -275,6 +289,7 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
             String nuevoNombre = txtNombreMateria.getText().trim();
             String nuevoEstado = comboEstado.getSelectedItem().toString();
             String nuevaCategoria = comboCategoria.getSelectedItem().toString();
+            boolean nuevoEsContraturno = chkContraturno.isSelected();
 
             if (nuevoNombre.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "El nombre de la materia no puede estar vacío",
@@ -283,12 +298,13 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
             }
 
             // Actualizar la materia
-            String queryUpdate = "UPDATE materias SET nombre = ?, estado = ?, categoria = ? WHERE id = ?";
+            String queryUpdate = "UPDATE materias SET nombre = ?, estado = ?, categoria = ?, es_contraturno = ? WHERE id = ?";
             PreparedStatement psUpdate = conect.prepareStatement(queryUpdate);
             psUpdate.setString(1, nuevoNombre);
             psUpdate.setString(2, nuevoEstado);
             psUpdate.setString(3, nuevaCategoria);
-            psUpdate.setInt(4, materiaId);
+            psUpdate.setBoolean(4, nuevoEsContraturno);
+            psUpdate.setInt(5, materiaId);
             psUpdate.executeUpdate();
 
             JOptionPane.showMessageDialog(this, "Materia actualizada correctamente");
@@ -443,49 +459,55 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
     }
 
     private void cargarHorarios() {
-        try {
-            modeloHorarios.setRowCount(0);
+    try {
+        modeloHorarios.setRowCount(0);
 
-            // Construir consulta según filtro de curso
-            StringBuilder queryBuilder = new StringBuilder(
-                    "SELECT h.id, c.anio, c.division, m.nombre as materia, "
-                    + "h.dia_semana, h.hora_inicio, h.hora_fin "
-                    + "FROM horarios_materia h "
-                    + "JOIN cursos c ON h.curso_id = c.id "
-                    + "JOIN materias m ON h.materia_id = m.id "
-                    + "WHERE h.profesor_id = ? ");
+        // Construir consulta según filtro de curso
+        StringBuilder queryBuilder = new StringBuilder(
+                "SELECT h.id, c.anio, c.division, m.nombre as materia, "
+                + "h.dia_semana, h.hora_inicio, h.hora_fin, h.es_contraturno "
+                + "FROM horarios_materia h "
+                + "JOIN cursos c ON h.curso_id = c.id "
+                + "JOIN materias m ON h.materia_id = m.id "
+                + "WHERE h.profesor_id = ? ");
 
-            // Aplicar filtro de curso si está seleccionado
-            if (comboCursos.getSelectedIndex() > 0) {
-                String cursoSeleccionado = comboCursos.getSelectedItem().toString();
-                int cursoId = mapaCursos.get(cursoSeleccionado);
-                queryBuilder.append("AND h.curso_id = ").append(cursoId).append(" ");
-            }
-
-            queryBuilder.append("ORDER BY c.anio, c.division, m.nombre");
-
-            PreparedStatement ps = conect.prepareStatement(queryBuilder.toString());
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                Object[] row = {
-                    rs.getInt("id"),
-                    rs.getInt("anio") + "°" + rs.getString("division"),
-                    rs.getString("materia"),
-                    rs.getString("dia_semana"),
-                    rs.getTime("hora_inicio").toString(),
-                    rs.getTime("hora_fin").toString()
-                };
-                modeloHorarios.addRow(row);
-            }
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al cargar horarios: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+        // Aplicar filtro de curso si está seleccionado
+        if (comboCursos.getSelectedIndex() > 0) {
+            String cursoSeleccionado = comboCursos.getSelectedItem().toString();
+            int cursoId = mapaCursos.get(cursoSeleccionado);
+            queryBuilder.append("AND h.curso_id = ").append(cursoId).append(" ");
         }
+
+        queryBuilder.append("ORDER BY c.anio, c.division, m.nombre");
+
+        PreparedStatement ps = conect.prepareStatement(queryBuilder.toString());
+        ps.setInt(1, userId);
+        ResultSet rs = ps.executeQuery();
+
+        // Asegurarnos de que el modelo tiene la columna de contraturno
+        if (modeloHorarios.getColumnCount() <= 6) {
+            modeloHorarios.addColumn("Contraturno");
+        }
+
+        while (rs.next()) {
+            Object[] row = {
+                rs.getInt("id"),
+                rs.getInt("anio") + "°" + rs.getString("division"),
+                rs.getString("materia"),
+                rs.getString("dia_semana"),
+                rs.getTime("hora_inicio").toString(),
+                rs.getTime("hora_fin").toString(),
+                rs.getBoolean("es_contraturno") ? "Sí" : "No"
+            };
+            modeloHorarios.addRow(row);
+        }
+
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this,
+                "Error al cargar horarios: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
     }
+}
 
     private void filtrarPorCurso() {
         cargarMaterias();
@@ -649,12 +671,17 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
         comboCategoria.addItem("PRIMER CICLO");
         comboCategoria.addItem("GENERAL DEL SEGUNDO CICLO");
         comboCategoria.addItem("TALLER PRIMER CICLO");
+        
+        // Añadir checkbox para contraturno
+        JCheckBox chkContraturno = new JCheckBox("Es materia de contraturno");
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
         panel.add(new JLabel("Nombre de la materia:"));
         panel.add(txtNombreMateria);
         panel.add(new JLabel("Categoría:"));
         panel.add(comboCategoria);
+        panel.add(new JLabel("Contraturno:"));
+        panel.add(chkContraturno);
 
         // Mostrar el diálogo
         int result = JOptionPane.showConfirmDialog(this, panel, "Crear Nueva Materia",
@@ -664,6 +691,7 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
             // Validar que se ingresó un nombre
             String nombreMateria = txtNombreMateria.getText().trim();
             String categoria = comboCategoria.getSelectedItem().toString();
+            boolean esContraturno = chkContraturno.isSelected();
             
             if (nombreMateria.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Debe ingresar un nombre para la materia",
@@ -681,7 +709,7 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
                 // Ya existe una materia con ese nombre
                 int idMateria = rsVerificar.getInt("id");
 
-                // Preguntar si desea reactivarla (si estaba inactiva) y actualizar su categoría
+                // Preguntar si desea reactivarla (si estaba inactiva) y actualizar sus propiedades
                 String queryEstado = "SELECT estado FROM materias WHERE id = ?";
                 PreparedStatement psEstado = conect.prepareStatement(queryEstado);
                 psEstado.setInt(1, idMateria);
@@ -689,41 +717,44 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
 
                 if (rsEstado.next() && rsEstado.getString("estado").equalsIgnoreCase("inactivo")) {
                     int confirm = JOptionPane.showConfirmDialog(this,
-                            "La materia '" + nombreMateria + "' ya existe pero está inactiva. ¿Desea reactivarla y actualizar su categoría?",
+                            "La materia '" + nombreMateria + "' ya existe pero está inactiva. ¿Desea reactivarla y actualizar sus propiedades?",
                             "Materia existente", JOptionPane.YES_NO_OPTION);
 
                     if (confirm == JOptionPane.YES_OPTION) {
-                        // Reactivar la materia y actualizar su categoría
-                        String queryActivar = "UPDATE materias SET estado = 'activo', categoria = ? WHERE id = ?";
+                        // Reactivar la materia y actualizar sus propiedades
+                        String queryActivar = "UPDATE materias SET estado = 'activo', categoria = ?, es_contraturno = ? WHERE id = ?";
                         PreparedStatement psActivar = conect.prepareStatement(queryActivar);
                         psActivar.setString(1, categoria);
-                        psActivar.setInt(2, idMateria);
+                        psActivar.setBoolean(2, esContraturno);
+                        psActivar.setInt(3, idMateria);
                         psActivar.executeUpdate();
 
-                        JOptionPane.showMessageDialog(this, "La materia ha sido reactivada y su categoría actualizada");
+                        JOptionPane.showMessageDialog(this, "La materia ha sido reactivada y sus propiedades actualizadas");
                     }
                 } else {
-                    // Si está activa, preguntar si desea actualizar su categoría
+                    // Si está activa, preguntar si desea actualizar sus propiedades
                     int confirm = JOptionPane.showConfirmDialog(this,
-                            "Ya existe una materia con ese nombre. ¿Desea actualizar su categoría?",
+                            "Ya existe una materia con ese nombre. ¿Desea actualizar sus propiedades?",
                             "Materia existente", JOptionPane.YES_NO_OPTION);
                     
                     if (confirm == JOptionPane.YES_OPTION) {
-                        String queryUpdate = "UPDATE materias SET categoria = ? WHERE id = ?";
+                        String queryUpdate = "UPDATE materias SET categoria = ?, es_contraturno = ? WHERE id = ?";
                         PreparedStatement psUpdate = conect.prepareStatement(queryUpdate);
                         psUpdate.setString(1, categoria);
-                        psUpdate.setInt(2, idMateria);
+                        psUpdate.setBoolean(2, esContraturno);
+                        psUpdate.setInt(3, idMateria);
                         psUpdate.executeUpdate();
                         
-                        JOptionPane.showMessageDialog(this, "Categoría de la materia actualizada correctamente");
+                        JOptionPane.showMessageDialog(this, "Propiedades de la materia actualizadas correctamente");
                     }
                 }
             } else {
-                // No existe, crear la materia con su categoría
-                String queryInsert = "INSERT INTO materias (nombre, estado, categoria) VALUES (?, 'activo', ?)";
+                // No existe, crear la materia con sus propiedades
+                String queryInsert = "INSERT INTO materias (nombre, estado, categoria, es_contraturno) VALUES (?, 'activo', ?, ?)";
                 PreparedStatement psInsert = conect.prepareStatement(queryInsert);
                 psInsert.setString(1, nombreMateria);
                 psInsert.setString(2, categoria);
+                psInsert.setBoolean(3, esContraturno);
                 psInsert.executeUpdate();
 
                 JOptionPane.showMessageDialog(this, "Materia creada exitosamente");
@@ -740,339 +771,387 @@ public class GestionMateriasHorariosDialog extends javax.swing.JDialog {
 }
 
     // Métodos para gestión de horarios
-    private void agregarHorario() {
-        try {
-            // Preparar los datos para el diálogo
-            JComboBox<String> comboCursoDialog = new JComboBox<>();
-            JComboBox<String> comboMateriaDialog = new JComboBox<>();
-            JComboBox<String> comboDiaDialog = new JComboBox<>(
-                    new String[]{"Lunes", "Martes", "Miércoles", "Jueves", "Viernes"});
+   private void agregarHorario() {
+    try {
+        // Preparar los datos para el diálogo
+        JComboBox<String> comboCursoDialog = new JComboBox<>();
+        JComboBox<String> comboMateriaDialog = new JComboBox<>();
+        JComboBox<String> comboDiaDialog = new JComboBox<>(
+                new String[]{"Lunes", "Martes", "Miércoles", "Jueves", "Viernes"});
 
+        JSpinner spinnerHoraInicio = new JSpinner(new SpinnerDateModel());
+        JSpinner spinnerHoraFin = new JSpinner(new SpinnerDateModel());
+
+        // Checkbox para marcar si el horario es de contraturno
+        JCheckBox chkHorarioContraturno = new JCheckBox("Este horario es de contraturno");
+
+        // Configurar los spinners de hora
+        JSpinner.DateEditor editorInicio = new JSpinner.DateEditor(spinnerHoraInicio, "HH:mm");
+        JSpinner.DateEditor editorFin = new JSpinner.DateEditor(spinnerHoraFin, "HH:mm");
+        spinnerHoraInicio.setEditor(editorInicio);
+        spinnerHoraFin.setEditor(editorFin);
+
+        // Obtener las materias asignadas al profesor
+        Map<String, Integer> mapaCursosAsignados = new HashMap<>();
+        Map<String, Map<Integer, Integer>> mapaMaterias = new HashMap<>();
+
+        String queryAsignaciones
+                = "SELECT c.id as curso_id, m.id as materia_id, "
+                + "CONCAT(c.anio, '°', c.division) as curso, m.nombre as materia "
+                + "FROM profesor_curso_materia pcm "
+                + "JOIN cursos c ON pcm.curso_id = c.id "
+                + "JOIN materias m ON pcm.materia_id = m.id "
+                + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
+                + "ORDER BY c.anio, c.division, m.nombre";
+
+        PreparedStatement psAsignaciones = conect.prepareStatement(queryAsignaciones);
+        psAsignaciones.setInt(1, userId);
+        ResultSet rsAsignaciones = psAsignaciones.executeQuery();
+
+        // Estructuras para almacenar cursos y materias por curso
+        while (rsAsignaciones.next()) {
+            String curso = rsAsignaciones.getString("curso");
+            String materia = rsAsignaciones.getString("materia");
+            int cursoId = rsAsignaciones.getInt("curso_id");
+            int materiaId = rsAsignaciones.getInt("materia_id");
+
+            // Añadir curso si es nuevo
+            if (!mapaCursosAsignados.containsKey(curso)) {
+                mapaCursosAsignados.put(curso, cursoId);
+                comboCursoDialog.addItem(curso);
+                mapaMaterias.put(curso, new HashMap<>());
+            }
+
+            // Añadir materia para este curso
+            mapaMaterias.get(curso).put(materiaId, materiaId);
+        }
+
+        // Añadir listener al combo de cursos para actualizar materias
+        comboCursoDialog.addActionListener(e -> {
+            comboMateriaDialog.removeAllItems();
+            if (comboCursoDialog.getSelectedIndex() != -1) {
+                String cursoSeleccionado = comboCursoDialog.getSelectedItem().toString();
+
+                try {
+                    // Obtener materias para este curso
+                    String queryMateriasxCurso
+                            = "SELECT m.id, m.nombre, m.es_contraturno "
+                            + "FROM profesor_curso_materia pcm "
+                            + "JOIN materias m ON pcm.materia_id = m.id "
+                            + "WHERE pcm.profesor_id = ? AND pcm.curso_id = ? AND pcm.estado = 'activo' "
+                            + "ORDER BY m.nombre";
+
+                    PreparedStatement psMateriasxCurso = conect.prepareStatement(queryMateriasxCurso);
+                    psMateriasxCurso.setInt(1, userId);
+                    psMateriasxCurso.setInt(2, mapaCursosAsignados.get(cursoSeleccionado));
+                    ResultSet rsMateriasxCurso = psMateriasxCurso.executeQuery();
+
+                    while (rsMateriasxCurso.next()) {
+                        boolean materiaEsContraturno = rsMateriasxCurso.getBoolean("es_contraturno");
+                        String nombreMateria = rsMateriasxCurso.getString("nombre");
+                        if (materiaEsContraturno) {
+                            nombreMateria += " (Contraturno)";
+                        }
+                        comboMateriaDialog.addItem(nombreMateria);
+                        
+                        // Si la materia es de contraturno, preseleccionar el checkbox
+                        if (materiaEsContraturno) {
+                            chkHorarioContraturno.setSelected(true);
+                        }
+                    }
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+        // Disparar el evento para cargar las materias del primer curso
+        if (comboCursoDialog.getItemCount() > 0) {
+            comboCursoDialog.setSelectedIndex(0);
+        }
+
+        // Crear el panel del diálogo
+        JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
+        panel.add(new JLabel("Curso:"));
+        panel.add(comboCursoDialog);
+        panel.add(new JLabel("Materia:"));
+        panel.add(comboMateriaDialog);
+        panel.add(new JLabel("Día:"));
+        panel.add(comboDiaDialog);
+        panel.add(new JLabel("Hora Inicio:"));
+        panel.add(spinnerHoraInicio);
+        panel.add(new JLabel("Hora Fin:"));
+        panel.add(spinnerHoraFin);
+        panel.add(new JLabel("Contraturno:"));
+        panel.add(chkHorarioContraturno);
+
+        // Mostrar el diálogo
+        int result = JOptionPane.showConfirmDialog(this, panel, "Agregar Horario",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            // Verificar selecciones
+            if (comboCursoDialog.getSelectedIndex() == -1
+                    || comboMateriaDialog.getSelectedIndex() == -1
+                    || comboDiaDialog.getSelectedIndex() == -1) {
+                JOptionPane.showMessageDialog(this, "Debe completar todos los campos");
+                return;
+            }
+
+            // Obtener los valores seleccionados
+            String cursoSeleccionado = comboCursoDialog.getSelectedItem().toString();
+            String materiaSeleccionada = comboMateriaDialog.getSelectedItem().toString();
+            // Limpiar si contiene "(Contraturno)" en el nombre
+            if (materiaSeleccionada.contains(" (Contraturno)")) {
+                materiaSeleccionada = materiaSeleccionada.replace(" (Contraturno)", "");
+            }
+            String diaSeleccionado = comboDiaDialog.getSelectedItem().toString();
+            java.util.Date horaInicio = (java.util.Date) spinnerHoraInicio.getValue();
+            java.util.Date horaFin = (java.util.Date) spinnerHoraFin.getValue();
+            boolean esHorarioContraturno = chkHorarioContraturno.isSelected();
+
+            // Obtener solo las horas y minutos
+            java.util.Calendar calInicio = java.util.Calendar.getInstance();
+            calInicio.setTime(horaInicio);
+            int horaInicioVal = calInicio.get(java.util.Calendar.HOUR_OF_DAY);
+            int minInicioVal = calInicio.get(java.util.Calendar.MINUTE);
+
+            java.util.Calendar calFin = java.util.Calendar.getInstance();
+            calFin.setTime(horaFin);
+            int horaFinVal = calFin.get(java.util.Calendar.HOUR_OF_DAY);
+            int minFinVal = calFin.get(java.util.Calendar.MINUTE);
+
+            // Comparar usando valores numéricos
+            int inicioMinutos = horaInicioVal * 60 + minInicioVal;
+            int finMinutos = horaFinVal * 60 + minFinVal;
+
+            if (finMinutos <= inicioMinutos) {
+                JOptionPane.showMessageDialog(this,
+                        "La hora de fin debe ser posterior a la hora de inicio\n"
+                        + "Inicio: " + horaInicioVal + ":" + minInicioVal
+                        + " - Fin: " + horaFinVal + ":" + minFinVal,
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Obtener IDs
+            int cursoId = mapaCursosAsignados.get(cursoSeleccionado);
+
+            // Obtener materia_id
+            int materiaId = -1;
+            String queryMateriaId = "SELECT id FROM materias WHERE nombre = ?";
+            PreparedStatement psMateriaId = conect.prepareStatement(queryMateriaId);
+            psMateriaId.setString(1, materiaSeleccionada);
+            ResultSet rsMateriaId = psMateriaId.executeQuery();
+
+            if (rsMateriaId.next()) {
+                materiaId = rsMateriaId.getInt("id");
+            } else {
+                JOptionPane.showMessageDialog(this, "No se encontró la materia seleccionada");
+                return;
+            }
+
+            // Convertir horas a formato SQL Time
+            Time sqlHoraInicio = new Time(horaInicio.getTime());
+            Time sqlHoraFin = new Time(horaFin.getTime());
+
+            // Verificar si ya existe un horario para este profesor, curso, materia y día
+            String queryVerificar
+                    = "SELECT id FROM horarios_materia "
+                    + "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ? AND dia_semana = ?";
+
+            PreparedStatement psVerificar = conect.prepareStatement(queryVerificar);
+            psVerificar.setInt(1, userId);
+            psVerificar.setInt(2, cursoId);
+            psVerificar.setInt(3, materiaId);
+            psVerificar.setString(4, diaSeleccionado);
+
+            ResultSet rsVerificar = psVerificar.executeQuery();
+
+            if (rsVerificar.next()) {
+                // Ya existe, preguntar si desea actualizarlo
+                int confirm = JOptionPane.showConfirmDialog(this,
+                        "Ya existe un horario para esta materia en este día. ¿Desea actualizarlo?",
+                        "Confirmación", JOptionPane.YES_NO_OPTION);
+
+                if (confirm == JOptionPane.YES_OPTION) {
+                    String queryUpdate
+                            = "UPDATE horarios_materia SET hora_inicio = ?, hora_fin = ?, es_contraturno = ? "
+                            + "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ? AND dia_semana = ?";
+
+                    PreparedStatement psUpdate = conect.prepareStatement(queryUpdate);
+                    psUpdate.setTime(1, sqlHoraInicio);
+                    psUpdate.setTime(2, sqlHoraFin);
+                    psUpdate.setBoolean(3, esHorarioContraturno);
+                    psUpdate.setInt(4, userId);
+                    psUpdate.setInt(5, cursoId);
+                    psUpdate.setInt(6, materiaId);
+                    psUpdate.setString(7, diaSeleccionado);
+                    psUpdate.executeUpdate();
+                } else {
+                    return;
+                }
+            } else {
+                // No existe, insertar nuevo horario
+                String queryInsert
+                        = "INSERT INTO horarios_materia (profesor_id, curso_id, materia_id, dia_semana, hora_inicio, hora_fin, es_contraturno) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+                PreparedStatement psInsert = conect.prepareStatement(queryInsert);
+                psInsert.setInt(1, userId);
+                psInsert.setInt(2, cursoId);
+                psInsert.setInt(3, materiaId);
+                psInsert.setString(4, diaSeleccionado);
+                psInsert.setTime(5, sqlHoraInicio);
+                psInsert.setTime(6, sqlHoraFin);
+                psInsert.setBoolean(7, esHorarioContraturno);
+                psInsert.executeUpdate();
+            }
+
+            JOptionPane.showMessageDialog(this, "Horario guardado correctamente");
+            cargarHorarios(); // Recargar la tabla
+        }
+
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this,
+                "Error al agregar horario: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
+
+    private void editarHorario() {
+    int filaSeleccionada = tablaHorarios.getSelectedRow();
+    if (filaSeleccionada == -1) {
+        JOptionPane.showMessageDialog(this, "Por favor, seleccione un horario");
+        return;
+    }
+
+    int idHorario = (int) modeloHorarios.getValueAt(filaSeleccionada, 0);
+
+    try {
+        // Obtener datos del horario seleccionado
+        String query
+                = "SELECT h.dia_semana, h.hora_inicio, h.hora_fin, h.es_contraturno, "
+                + "c.id as curso_id, m.id as materia_id, "
+                + "CONCAT(c.anio, '°', c.division) as curso, m.nombre as materia, "
+                + "m.es_contraturno as materia_es_contraturno "
+                + "FROM horarios_materia h "
+                + "JOIN cursos c ON h.curso_id = c.id "
+                + "JOIN materias m ON h.materia_id = m.id "
+                + "WHERE h.id = ?";
+
+        PreparedStatement ps = conect.prepareStatement(query);
+        ps.setInt(1, idHorario);
+        ResultSet rs = ps.executeQuery();
+
+        if (rs.next()) {
+            // Preparar componentes del diálogo
+            JLabel labelCurso = new JLabel(rs.getString("curso"));
+            JLabel labelMateria = new JLabel(rs.getString("materia"));
+
+            JComboBox<String> comboDia = new JComboBox<>(
+                    new String[]{"Lunes", "Martes", "Miércoles", "Jueves", "Viernes"});
+            comboDia.setSelectedItem(rs.getString("dia_semana"));
+
+            // Preparar spinners para las horas
             JSpinner spinnerHoraInicio = new JSpinner(new SpinnerDateModel());
             JSpinner spinnerHoraFin = new JSpinner(new SpinnerDateModel());
 
-            // Configurar los spinners de hora
             JSpinner.DateEditor editorInicio = new JSpinner.DateEditor(spinnerHoraInicio, "HH:mm");
             JSpinner.DateEditor editorFin = new JSpinner.DateEditor(spinnerHoraFin, "HH:mm");
             spinnerHoraInicio.setEditor(editorInicio);
             spinnerHoraFin.setEditor(editorFin);
 
-            // Obtener las materias asignadas al profesor
-            Map<String, Integer> mapaCursosAsignados = new HashMap<>();
-            Map<String, Map<Integer, Integer>> mapaMaterias = new HashMap<>();
+            // Establecer valores actuales
+            java.util.Date horaInicio = rs.getTime("hora_inicio");
+            java.util.Date horaFin = rs.getTime("hora_fin");
 
-            String queryAsignaciones
-                    = "SELECT c.id as curso_id, m.id as materia_id, "
-                    + "CONCAT(c.anio, '°', c.division) as curso, m.nombre as materia "
-                    + "FROM profesor_curso_materia pcm "
-                    + "JOIN cursos c ON pcm.curso_id = c.id "
-                    + "JOIN materias m ON pcm.materia_id = m.id "
-                    + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
-                    + "ORDER BY c.anio, c.division, m.nombre";
-
-            PreparedStatement psAsignaciones = conect.prepareStatement(queryAsignaciones);
-            psAsignaciones.setInt(1, userId);
-            ResultSet rsAsignaciones = psAsignaciones.executeQuery();
-
-            // Estructuras para almacenar cursos y materias por curso
-            while (rsAsignaciones.next()) {
-                String curso = rsAsignaciones.getString("curso");
-                String materia = rsAsignaciones.getString("materia");
-                int cursoId = rsAsignaciones.getInt("curso_id");
-                int materiaId = rsAsignaciones.getInt("materia_id");
-
-                // Añadir curso si es nuevo
-                if (!mapaCursosAsignados.containsKey(curso)) {
-                    mapaCursosAsignados.put(curso, cursoId);
-                    comboCursoDialog.addItem(curso);
-                    mapaMaterias.put(curso, new HashMap<>());
-                }
-
-                // Añadir materia para este curso
-                mapaMaterias.get(curso).put(materiaId, materiaId);
+            spinnerHoraInicio.setValue(horaInicio);
+            spinnerHoraFin.setValue(horaFin);
+            
+            // Obtener si el horario está marcado como contraturno
+            boolean esContraturnoBD = rs.getBoolean("es_contraturno");
+            boolean materiaEsContraturno = rs.getBoolean("materia_es_contraturno");
+            
+            // Checkbox para contraturno
+            JCheckBox chkContraturnoDia = new JCheckBox("Este horario es de contraturno");
+            chkContraturnoDia.setSelected(esContraturnoBD);
+            
+            // Si la materia es de contraturno, mostrar una nota
+            JLabel lblNotaMateria = new JLabel("");
+            if (materiaEsContraturno) {
+                lblNotaMateria.setText("Nota: Esta materia está definida como de contraturno");
+                lblNotaMateria.setForeground(Color.BLUE);
             }
 
-            // Añadir listener al combo de cursos para actualizar materias
-            comboCursoDialog.addActionListener(e -> {
-                comboMateriaDialog.removeAllItems();
-                if (comboCursoDialog.getSelectedIndex() != -1) {
-                    String cursoSeleccionado = comboCursoDialog.getSelectedItem().toString();
-
-                    try {
-                        // Obtener materias para este curso
-                        String queryMateriasxCurso
-                                = "SELECT m.id, m.nombre "
-                                + "FROM profesor_curso_materia pcm "
-                                + "JOIN materias m ON pcm.materia_id = m.id "
-                                + "WHERE pcm.profesor_id = ? AND pcm.curso_id = ? AND pcm.estado = 'activo' "
-                                + "ORDER BY m.nombre";
-
-                        PreparedStatement psMateriasxCurso = conect.prepareStatement(queryMateriasxCurso);
-                        psMateriasxCurso.setInt(1, userId);
-                        psMateriasxCurso.setInt(2, mapaCursosAsignados.get(cursoSeleccionado));
-                        ResultSet rsMateriasxCurso = psMateriasxCurso.executeQuery();
-
-                        while (rsMateriasxCurso.next()) {
-                            comboMateriaDialog.addItem(rsMateriasxCurso.getString("nombre"));
-                        }
-                    } catch (SQLException ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            });
-
-            // Disparar el evento para cargar las materias del primer curso
-            if (comboCursoDialog.getItemCount() > 0) {
-                comboCursoDialog.setSelectedIndex(0);
-            }
-
-            // Crear el panel del diálogo
+            // Crear panel del diálogo
             JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
             panel.add(new JLabel("Curso:"));
-            panel.add(comboCursoDialog);
+            panel.add(labelCurso);
             panel.add(new JLabel("Materia:"));
-            panel.add(comboMateriaDialog);
+            panel.add(labelMateria);
             panel.add(new JLabel("Día:"));
-            panel.add(comboDiaDialog);
+            panel.add(comboDia);
             panel.add(new JLabel("Hora Inicio:"));
             panel.add(spinnerHoraInicio);
             panel.add(new JLabel("Hora Fin:"));
             panel.add(spinnerHoraFin);
+            panel.add(new JLabel("Contraturno:"));
+            panel.add(chkContraturnoDia);
+            
+            // Agregar nota si aplica
+            if (materiaEsContraturno) {
+                panel.add(new JLabel(""));
+                panel.add(lblNotaMateria);
+            }
 
-            // Mostrar el diálogo
-            int result = JOptionPane.showConfirmDialog(this, panel, "Agregar Horario",
+            // Mostrar diálogo
+            int result = JOptionPane.showConfirmDialog(this, panel, "Editar Horario",
                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
             if (result == JOptionPane.OK_OPTION) {
-                // Verificar selecciones
-                if (comboCursoDialog.getSelectedIndex() == -1
-                        || comboMateriaDialog.getSelectedIndex() == -1
-                        || comboDiaDialog.getSelectedIndex() == -1) {
-                    JOptionPane.showMessageDialog(this, "Debe completar todos los campos");
-                    return;
-                }
+                // Obtener valores seleccionados
+                String diaSeleccionado = comboDia.getSelectedItem().toString();
+                java.util.Date nuevaHoraInicio = (java.util.Date) spinnerHoraInicio.getValue();
+                java.util.Date nuevaHoraFin = (java.util.Date) spinnerHoraFin.getValue();
+                boolean nuevoEsContraturno = chkContraturnoDia.isSelected();
 
-                // Obtener los valores seleccionados
-                String cursoSeleccionado = comboCursoDialog.getSelectedItem().toString();
-                String materiaSeleccionada = comboMateriaDialog.getSelectedItem().toString();
-                String diaSeleccionado = comboDiaDialog.getSelectedItem().toString();
-                java.util.Date horaInicio = (java.util.Date) spinnerHoraInicio.getValue();
-                java.util.Date horaFin = (java.util.Date) spinnerHoraFin.getValue();
-
-                // Obtener solo las horas y minutos
-                java.util.Calendar calInicio = java.util.Calendar.getInstance();
-                calInicio.setTime(horaInicio);
-                int horaInicioVal = calInicio.get(java.util.Calendar.HOUR_OF_DAY);
-                int minInicioVal = calInicio.get(java.util.Calendar.MINUTE);
-
-                java.util.Calendar calFin = java.util.Calendar.getInstance();
-                calFin.setTime(horaFin);
-                int horaFinVal = calFin.get(java.util.Calendar.HOUR_OF_DAY);
-                int minFinVal = calFin.get(java.util.Calendar.MINUTE);
-
-// Comparar usando valores numéricos
-                int inicioMinutos = horaInicioVal * 60 + minInicioVal;
-                int finMinutos = horaFinVal * 60 + minFinVal;
-
-                if (finMinutos <= inicioMinutos) {
+                // Validar que la hora fin sea posterior a la hora inicio
+                if (nuevaHoraFin.before(nuevaHoraInicio) || nuevaHoraFin.equals(nuevaHoraInicio)) {
                     JOptionPane.showMessageDialog(this,
-                            "La hora de fin debe ser posterior a la hora de inicio\n"
-                            + "Inicio: " + horaInicioVal + ":" + minInicioVal
-                            + " - Fin: " + horaFinVal + ":" + minFinVal,
+                            "La hora de fin debe ser posterior a la hora de inicio",
                             "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
 
-                // Obtener IDs
-                int cursoId = mapaCursosAsignados.get(cursoSeleccionado);
+                // Convertir a SQL Time
+                Time sqlHoraInicio = new Time(nuevaHoraInicio.getTime());
+                Time sqlHoraFin = new Time(nuevaHoraFin.getTime());
 
-                // Obtener materia_id
-                int materiaId = -1;
-                String queryMateriaId = "SELECT id FROM materias WHERE nombre = ?";
-                PreparedStatement psMateriaId = conect.prepareStatement(queryMateriaId);
-                psMateriaId.setString(1, materiaSeleccionada);
-                ResultSet rsMateriaId = psMateriaId.executeQuery();
+                // Actualizar horario
+                String queryUpdate
+                        = "UPDATE horarios_materia SET dia_semana = ?, hora_inicio = ?, hora_fin = ?, es_contraturno = ? "
+                        + "WHERE id = ?";
 
-                if (rsMateriaId.next()) {
-                    materiaId = rsMateriaId.getInt("id");
-                } else {
-                    JOptionPane.showMessageDialog(this, "No se encontró la materia seleccionada");
-                    return;
-                }
+                PreparedStatement psUpdate = conect.prepareStatement(queryUpdate);
+                psUpdate.setString(1, diaSeleccionado);
+                psUpdate.setTime(2, sqlHoraInicio);
+                psUpdate.setTime(3, sqlHoraFin);
+                psUpdate.setBoolean(4, nuevoEsContraturno);
+                psUpdate.setInt(5, idHorario);
+                psUpdate.executeUpdate();
 
-                // Convertir horas a formato SQL Time
-                Time sqlHoraInicio = new Time(horaInicio.getTime());
-                Time sqlHoraFin = new Time(horaFin.getTime());
-
-                // Verificar si ya existe un horario para este profesor, curso, materia y día
-                String queryVerificar
-                        = "SELECT id FROM horarios_materia "
-                        + "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ? AND dia_semana = ?";
-
-                PreparedStatement psVerificar = conect.prepareStatement(queryVerificar);
-                psVerificar.setInt(1, userId);
-                psVerificar.setInt(2, cursoId);
-                psVerificar.setInt(3, materiaId);
-                psVerificar.setString(4, diaSeleccionado);
-
-                ResultSet rsVerificar = psVerificar.executeQuery();
-
-                if (rsVerificar.next()) {
-                    // Ya existe, preguntar si desea actualizarlo
-                    int confirm = JOptionPane.showConfirmDialog(this,
-                            "Ya existe un horario para esta materia en este día. ¿Desea actualizarlo?",
-                            "Confirmación", JOptionPane.YES_NO_OPTION);
-
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        String queryUpdate
-                                = "UPDATE horarios_materia SET hora_inicio = ?, hora_fin = ? "
-                                + "WHERE profesor_id = ? AND curso_id = ? AND materia_id = ? AND dia_semana = ?";
-
-                        PreparedStatement psUpdate = conect.prepareStatement(queryUpdate);
-                        psUpdate.setTime(1, sqlHoraInicio);
-                        psUpdate.setTime(2, sqlHoraFin);
-                        psUpdate.setInt(3, userId);
-                        psUpdate.setInt(4, cursoId);
-                        psUpdate.setInt(5, materiaId);
-                        psUpdate.setString(6, diaSeleccionado);
-                        psUpdate.executeUpdate();
-                    } else {
-                        return;
-                    }
-                } else {
-                    // No existe, insertar nuevo horario
-                    String queryInsert
-                            = "INSERT INTO horarios_materia (profesor_id, curso_id, materia_id, dia_semana, hora_inicio, hora_fin) "
-                            + "VALUES (?, ?, ?, ?, ?, ?)";
-
-                    PreparedStatement psInsert = conect.prepareStatement(queryInsert);
-                    psInsert.setInt(1, userId);
-                    psInsert.setInt(2, cursoId);
-                    psInsert.setInt(3, materiaId);
-                    psInsert.setString(4, diaSeleccionado);
-                    psInsert.setTime(5, sqlHoraInicio);
-                    psInsert.setTime(6, sqlHoraFin);
-                    psInsert.executeUpdate();
-                }
-
-                JOptionPane.showMessageDialog(this, "Horario guardado correctamente");
+                JOptionPane.showMessageDialog(this, "Horario actualizado correctamente");
                 cargarHorarios(); // Recargar la tabla
             }
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al agregar horario: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
         }
+
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this,
+                "Error al editar horario: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
     }
-
-    private void editarHorario() {
-        int filaSeleccionada = tablaHorarios.getSelectedRow();
-        if (filaSeleccionada == -1) {
-            JOptionPane.showMessageDialog(this, "Por favor, seleccione un horario");
-            return;
-        }
-
-        int idHorario = (int) modeloHorarios.getValueAt(filaSeleccionada, 0);
-
-        try {
-            // Obtener datos del horario seleccionado
-            String query
-                    = "SELECT h.dia_semana, h.hora_inicio, h.hora_fin, "
-                    + "c.id as curso_id, m.id as materia_id, "
-                    + "CONCAT(c.anio, '°', c.division) as curso, m.nombre as materia "
-                    + "FROM horarios_materia h "
-                    + "JOIN cursos c ON h.curso_id = c.id "
-                    + "JOIN materias m ON h.materia_id = m.id "
-                    + "WHERE h.id = ?";
-
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, idHorario);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                // Preparar componentes del diálogo
-                JLabel labelCurso = new JLabel(rs.getString("curso"));
-                JLabel labelMateria = new JLabel(rs.getString("materia"));
-
-                JComboBox<String> comboDia = new JComboBox<>(
-                        new String[]{"Lunes", "Martes", "Miércoles", "Jueves", "Viernes"});
-                comboDia.setSelectedItem(rs.getString("dia_semana"));
-
-                // Preparar spinners para las horas
-                JSpinner spinnerHoraInicio = new JSpinner(new SpinnerDateModel());
-                JSpinner spinnerHoraFin = new JSpinner(new SpinnerDateModel());
-
-                JSpinner.DateEditor editorInicio = new JSpinner.DateEditor(spinnerHoraInicio, "HH:mm");
-                JSpinner.DateEditor editorFin = new JSpinner.DateEditor(spinnerHoraFin, "HH:mm");
-                spinnerHoraInicio.setEditor(editorInicio);
-                spinnerHoraFin.setEditor(editorFin);
-
-                // Establecer valores actuales
-                java.util.Date horaInicio = rs.getTime("hora_inicio");
-                java.util.Date horaFin = rs.getTime("hora_fin");
-
-                spinnerHoraInicio.setValue(horaInicio);
-                spinnerHoraFin.setValue(horaFin);
-
-                // Crear panel del diálogo
-                JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
-                panel.add(new JLabel("Curso:"));
-                panel.add(labelCurso);
-                panel.add(new JLabel("Materia:"));
-                panel.add(labelMateria);
-                panel.add(new JLabel("Día:"));
-                panel.add(comboDia);
-                panel.add(new JLabel("Hora Inicio:"));
-                panel.add(spinnerHoraInicio);
-                panel.add(new JLabel("Hora Fin:"));
-                panel.add(spinnerHoraFin);
-
-                // Mostrar diálogo
-                int result = JOptionPane.showConfirmDialog(this, panel, "Editar Horario",
-                        JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
-                if (result == JOptionPane.OK_OPTION) {
-                    // Obtener valores seleccionados
-                    String diaSeleccionado = comboDia.getSelectedItem().toString();
-                    java.util.Date nuevaHoraInicio = (java.util.Date) spinnerHoraInicio.getValue();
-                    java.util.Date nuevaHoraFin = (java.util.Date) spinnerHoraFin.getValue();
-
-                    // Validar que la hora fin sea posterior a la hora inicio
-                    if (nuevaHoraFin.before(nuevaHoraInicio) || nuevaHoraFin.equals(nuevaHoraInicio)) {
-                        JOptionPane.showMessageDialog(this,
-                                "La hora de fin debe ser posterior a la hora de inicio",
-                                "Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    // Convertir a SQL Time
-                    Time sqlHoraInicio = new Time(nuevaHoraInicio.getTime());
-                    Time sqlHoraFin = new Time(nuevaHoraFin.getTime());
-
-                    // Actualizar horario
-                    String queryUpdate
-                            = "UPDATE horarios_materia SET dia_semana = ?, hora_inicio = ?, hora_fin = ? "
-                            + "WHERE id = ?";
-
-                    PreparedStatement psUpdate = conect.prepareStatement(queryUpdate);
-                    psUpdate.setString(1, diaSeleccionado);
-                    psUpdate.setTime(2, sqlHoraInicio);
-                    psUpdate.setTime(3, sqlHoraFin);
-                    psUpdate.setInt(4, idHorario);
-                    psUpdate.executeUpdate();
-
-                    JOptionPane.showMessageDialog(this, "Horario actualizado correctamente");
-                    cargarHorarios(); // Recargar la tabla
-                }
-            }
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al editar horario: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
+}
 
     private void eliminarHorario() {
         int filaSeleccionada = tablaHorarios.getSelectedRow();

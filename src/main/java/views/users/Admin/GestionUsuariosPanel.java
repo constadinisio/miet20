@@ -164,14 +164,17 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
      * @return Descripción textual del rol
      */
     private String convertirRol(int rolPrincipal) {
+    // Primero, obtener la descripción del rol principal 
+    String descripcionRol = convertirRolIndividual(rolPrincipal);
+    
+    // Solo intentar obtener roles adicionales si hay una fila seleccionada
+    int filaSeleccionada = tablaUsuarios.getSelectedRow();
+    if (filaSeleccionada != -1) {
         try {
-            // Primero, obtener la descripción del rol principal
-            String descripcionRol = convertirRolIndividual(rolPrincipal);
-
             // Luego, verificar si hay roles adicionales
             String query = "SELECT ur.rol_id FROM usuario_roles ur WHERE ur.usuario_id = ?";
             PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, (int) tablaUsuarios.getValueAt(tablaUsuarios.getSelectedRow(), 0));
+            ps.setInt(1, (int) tablaUsuarios.getValueAt(filaSeleccionada, 0));
             ResultSet rs = ps.executeQuery();
 
             StringBuilder rolesAdicionales = new StringBuilder();
@@ -190,13 +193,13 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
             if (rolesAdicionales.length() > 0) {
                 descripcionRol += " + " + rolesAdicionales.toString();
             }
-
-            return descripcionRol;
         } catch (SQLException ex) {
             // En caso de error, simplemente mostrar el rol principal
-            return convertirRolIndividual(rolPrincipal);
         }
     }
+    
+    return descripcionRol;
+}
 
     private String convertirRolIndividual(int rol) {
         switch (rol) {

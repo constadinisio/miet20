@@ -16,6 +16,7 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
 import javax.swing.JFileChooser;  // Para el selector de archivos
@@ -183,50 +184,76 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
      * Define la configuración de la tabla usada en la interfaz.
      */
     @Override
-    protected void configurarTabla() {
-        if (tableModel == null) {
-            tableModel = new DefaultTableModel();
-        }
+    
+protected void configurarTabla() {
+    if (tableModel == null) {
+        tableModel = new DefaultTableModel();
+    }
 
-        // Configurar columnas
-        tableModel.addColumn("Alumno");
-        tableModel.addColumn("DNI");
+    // Configurar columnas
+    tableModel.addColumn("Alumno");
+    tableModel.addColumn("DNI");
 
-        // Agregar columnas para cada día de la semana (turno y contraturno)
-        LocalDate diaActual = fecha; // Empezar desde el lunes
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM (EEE)");
-        LocalDate hoy = LocalDate.now();
+    // Agregar columnas para cada día de la semana (turno y contraturno)
+    LocalDate diaActual = fecha; // Empezar desde el lunes
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM (EEE)");
+    LocalDate hoy = LocalDate.now();
 
-        for (int i = 0; i < 5; i++) { // De lunes a viernes
-            String nombreColumna = diaActual.format(formatter);
-            tableModel.addColumn(nombreColumna);
-            tableModel.addColumn(nombreColumna + " (Cont)");
-            diaActual = diaActual.plusDays(1);
-        }
+    for (int i = 0; i < 5; i++) { // De lunes a viernes
+        String nombreColumna = diaActual.format(formatter);
+        tableModel.addColumn(nombreColumna);
+        tableModel.addColumn(nombreColumna + " (Cont)");
+        diaActual = diaActual.plusDays(1);
+    }
 
-        if (tablaAsistencia != null) {
-            tablaAsistencia.setModel(tableModel);
+    if (tablaAsistencia != null) {
+        tablaAsistencia.setModel(tableModel);
 
-            // Configurar el editor para las columnas de asistencia
-            for (int i = 2; i < tablaAsistencia.getColumnCount(); i++) {
-                TableColumn column = tablaAsistencia.getColumnModel().getColumn(i);
-                column.setCellRenderer(new DefaultTableCellRenderer() {
-                    @Override
-                    public Component getTableCellRendererComponent(JTable table, Object value,
-                            boolean isSelected, boolean hasFocus, int row, int column) {
-                        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        // Obtener el día de hoy para resaltarlo
+        final int diaHoy = LocalDate.now().getDayOfWeek().getValue() - 1; // 0 para lunes, 4 para viernes
+        final int columnaHoyNormal = 2 + (diaHoy * 2);
+        final int columnaHoyContraturno = columnaHoyNormal + 1;
 
-                        if (!isSelected) {
-                            String estado = value != null ? value.toString() : "NC";
-                            c.setBackground(colorEstados.getOrDefault(estado, Color.WHITE));
+        // Configurar el renderizador para las columnas de asistencia
+        for (int i = 2; i < tablaAsistencia.getColumnCount(); i++) {
+            final int columnaIndex = i;
+            TableColumn column = tablaAsistencia.getColumnModel().getColumn(i);
+            
+            // Configurar el renderizador para colores y resaltado
+            column.setCellRenderer(new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                        boolean isSelected, boolean hasFocus, int row, int column) {
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                    if (!isSelected) {
+                        String estado = value != null ? value.toString() : "NC";
+                        c.setBackground(colorEstados.getOrDefault(estado, Color.WHITE));
+                        
+                        // Resaltar si es el día actual
+                        if (columnaIndex == columnaHoyNormal || columnaIndex == columnaHoyContraturno) {
+                            Font boldFont = c.getFont().deriveFont(Font.BOLD);
+                            c.setFont(boldFont);
+                            
+                            // Agregar un borde para resaltar más
+                            if (c instanceof JComponent) {
+                                ((JComponent) c).setBorder(BorderFactory.createLineBorder(Color.BLUE, 1));
+                            }
                         }
-
-                        return c;
                     }
-                });
-            }
+
+                    return c;
+                }
+            });
+            
+            // Configurar el editor para poder seleccionar el estado
+            // Añadir el editor de estado de asistencia
+            String[] opciones = {"P", "A", "T", "AP", "NC"};
+            JComboBox<String> comboEstados = new JComboBox<>(opciones);
+            column.setCellEditor(new DefaultCellEditor(comboEstados));
         }
     }
+}
 
     /**
      * Define los colores asociados a los diferentes estados de asistencia.
