@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="miet20" default="jar" basedir=".">
+    
+    <!-- ==== CONFIGURACIONES ==== -->
+    <property name="src.dir" location="src"/>
+    <property name="build.dir" location="build"/>
+    <property name="classes.dir" location="${build.dir}/classes"/>
+    <property name="dist.dir" location="dist"/>
+    <property name="main.class" value="main.java.Main"/> <!-- Cambiá esto si tu clase main tiene otro nombre -->
+    <property name="libs.dir" location="lib"/>
+    <property name="jar.name" value="et20-plataforma.jar"/>
+    <property name="resources.dir" location="${src.dir}/main/resources"/>
+
+    <!-- ==== CLASSPATH ==== -->
+    <path id="project.classpath">
+        <fileset dir="${libs.dir}" includes="**/*.jar"/>
+    </path>
+
+    <!-- ==== LIMPIAR ==== -->
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+    </target>
+
+    <!-- ==== COMPILAR ==== -->
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" includeantruntime="false" classpathref="project.classpath"/>
+        
+        <!-- Copiar archivos de recursos -->
+        <copy todir="${classes.dir}/main/resources">
+            <fileset dir="${resources.dir}" includes="**/*"/>
+        </copy>
+    </target>
+
+    <!-- ==== CREAR JAR ==== -->
+    <target name="jar" depends="compile">
+        <mkdir dir="${dist.dir}"/>
+        <jar destfile="${dist.dir}/${jar.name}" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main.class}"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <!-- Incluir las librerías en el jar -->
+            <zipgroupfileset dir="${libs.dir}" includes="*.jar"/>
+        </jar>
+    </target>
+
+</project>
