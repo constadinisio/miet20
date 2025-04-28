@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 
 public class ActualizadorApp {
     // Versión actual de la aplicación
-    public static final String VERSION_ACTUAL = "1.2.1";
+    public static final String VERSION_ACTUAL = "1.2.2";
     
     // Ruta base del servidor (red local)
     private static final String SERVER_BASE_URL = "http://10.120.1.109/miet20/actualizaciones/";

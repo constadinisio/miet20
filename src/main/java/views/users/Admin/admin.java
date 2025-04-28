@@ -11,6 +11,7 @@ import main.java.database.Conexion;
 import main.java.views.login.LoginForm;
 import java.sql.*;
 import main.java.utils.MenuBarManager;
+import main.java.utils.ResourceManager;
 import main.java.utils.uiUtils;
 
 /**
@@ -61,8 +62,8 @@ private javax.swing.JLabel lblRoles;
 
         // Escalar las imágenes
         
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, "main/resources/images/logo_et20_max.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, "main/resources/images/5c994f25d361a_1200.jpg");
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo1, ResourceManager.getImagePath("logo_et20_max.png"));
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome1, ResourceManager.getImagePath("5c994f25d361a_1200.jpg"));
 
         // Inicializar paneles de funcionalidad
         mainPanel = new javax.swing.JPanel();
@@ -185,7 +186,7 @@ private int obtenerIdDesdeBaseDeDatos(String nombre, String apellido) {
             } catch (IOException e) {
                 e.printStackTrace();
                 // Si hay error, mantener una imagen por defecto
-                labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource("src/main/resources/images/icons8-user-96.png")));
+                labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource(ResourceManager.getImagePath("icons8-user-96.png"))));
             }
         }
     }

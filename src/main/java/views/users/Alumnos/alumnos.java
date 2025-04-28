@@ -9,6 +9,7 @@ import javax.swing.ImageIcon;
 import java.io.IOException;
 import main.java.database.Conexion;
 import main.java.utils.MenuBarManager;
+import main.java.utils.ResourceManager;
 import main.java.utils.uiUtils;
 
 /**
@@ -38,8 +39,8 @@ public class alumnos extends javax.swing.JFrame {
         initComponents();
         uiUtils.configurarVentana(this);
         probar_conexion();  // Usamos la conexión aquí
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "main/resources/images/logo_et20_max.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "main/resources/images/5c994f25d361a_1200.jpg");
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, ResourceManager.getImagePath("logo_et20_max.png"));
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, ResourceManager.getImagePath("5c994f25d361a_1200.jpg"));
 
         // Inicializar el gestor de roles
         new MenuBarManager(alumnoId, this);
@@ -318,7 +319,7 @@ public class alumnos extends javax.swing.JFrame {
             } catch (IOException e) {
                 e.printStackTrace();
                 // Si hay error, mantener una imagen por defecto
-                labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource("main/resources/images/icons8-user-96.png")));
+                labelFotoPerfil.setIcon(new ImageIcon(getClass().getResource(ResourceManager.getImagePath("icons8-user-96.png"))));
             }
         }
     }

@@ -11,6 +11,7 @@ import main.java.views.users.Preceptor.AsistenciaPreceptorPanel;
 import java.util.HashMap;
 import java.util.Map;
 import main.java.utils.MenuBarManager;
+import main.java.utils.ResourceManager;
 import main.java.utils.RolesPanelManager;
 
 /**
@@ -53,7 +54,7 @@ public class preceptor extends javax.swing.JFrame {
         probar_conexion();
 
         // Escalar imágenes
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "/main/resources/images/logo_et20_max.png");
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, ResourceManager.getImagePath("logo_et20_max.png"));
 
         // Configurar layout de panelPrincipal para que sea responsivo
         panelPrincipal.setLayout(new BorderLayout());

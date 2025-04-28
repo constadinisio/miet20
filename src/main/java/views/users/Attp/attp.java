@@ -9,6 +9,7 @@ import javax.swing.JOptionPane;
 import main.java.views.users.Attp.menu.Prestamos;
 import main.java.database.Conexion;
 import main.java.utils.MenuBarManager;
+import main.java.utils.ResourceManager;
 import main.java.utils.RolesPanelManager;
 import main.java.utils.uiUtils;
 
@@ -49,8 +50,8 @@ public class attp extends javax.swing.JFrame {
         uiUtils.configurarVentana(this);
         probar_conexion();
 
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "/main/resources/images/logo_et20_max.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, "/main/resources/images/5c994f25d361a_1200.jpg");
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, ResourceManager.getImagePath("logo_et20_max.png"));
+        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, ResourceManager.getImagePath("5c994f25d361a_1200.jpg"));
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setLocationRelativeTo(null);
 

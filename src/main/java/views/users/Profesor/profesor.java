@@ -14,6 +14,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import main.java.utils.MenuBarManager;
+import main.java.utils.ResourceManager;
 import main.java.utils.ResponsiveImageLabel;
 import main.java.utils.RolesPanelManager;
 import main.java.utils.uiUtils;
@@ -55,8 +56,8 @@ public class profesor extends javax.swing.JFrame {
         getContentPane().add(scrollPane, BorderLayout.CENTER);
 
         // Otras configuraciones
-        imagenLogo = new ResponsiveImageLabel("/main/resources/images/logo et20 buena calidad.png");
-        fondoHome = new ResponsiveImageLabel("/main/resources/images/5c994f25d361a_1200.jpg");
+        imagenLogo = new ResponsiveImageLabel(ResourceManager.getImagePath("logo_et20_max.png"));
+        fondoHome = new ResponsiveImageLabel(ResourceManager.getImagePath("5c994f25d361a_1200.jpg"));
 
         // Guardar referencia al fondo original
         fondoHomeOriginal = fondoHome;

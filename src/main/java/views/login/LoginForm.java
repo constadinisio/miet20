@@ -1,17 +1,30 @@
 package main.java.views.login;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.net.URL;
 import java.sql.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import main.java.views.users.Admin.admin;
 import main.java.views.users.Alumnos.alumnos;
 import main.java.views.users.Preceptor.preceptor;
 import main.java.views.users.Profesor.profesor;
 import main.java.views.users.Attp.attp;
 import main.java.database.Conexion;
+import main.java.utils.ResourceManager;
+import main.java.utils.ResponsiveBannerPanel;
 import main.java.utils.uiUtils;
 
 /**
@@ -46,13 +59,16 @@ public class LoginForm extends javax.swing.JFrame {
      */
     public LoginForm() {
         initComponents();
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, "/main/resources/images/logo_et20_min.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(bannerImg1, "/main/resources/images/banner-et20.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(bannerImg2, "/main/resources/images/banner-et20.png");
+
+        // Usar ResourceManager para las imágenes
+        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, ResourceManager.getImagePath("logo_et20_min.png"));
+        rsscalelabel.RSScaleLabel.setScaleLabel(bannerImg1, ResourceManager.getImagePath("banner-et20.png"));
+        rsscalelabel.RSScaleLabel.setScaleLabel(bannerImg2, ResourceManager.getImagePath("banner-et20.png"));
 
         // Configurar el campo de contraseña para mostrar texto plano inicialmente
         campoContraseña.setText("****************");
         campoContraseña.setEchoChar((char) 0);
+
         // Desactivar el comportamiento por defecto del botón X
         setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
 
@@ -63,11 +79,79 @@ public class LoginForm extends javax.swing.JFrame {
                 cerrarPrograma();
             }
         });
-        
+
+        // Hacer que el login sea completamente responsivo y centrado
+        aplicarDiseñoResponsivoCentrado();
+
         uiUtils.configurarVentana(this);
-        
     }
 
+    /**
+     * Aplica un diseño responsivo y centrado a todo el formulario de login
+     * Reemplaza el AbsoluteLayout con un enfoque basado en BorderLayout y
+     * GridBagLayout
+     */
+    private void aplicarDiseñoResponsivoCentrado() {
+    // 1. Preservar referencias a los componentes originales
+    // (en caso de que ya no estén accesibles después de remover todo)
+    if (imagenLogo == null || jPanel1 == null) {
+        System.err.println("Error: Componentes críticos son nulos");
+        return;
+    }
+    
+    // 2. Limpiar el contenedor principal
+    getContentPane().removeAll();
+    getContentPane().setLayout(new BorderLayout());
+    
+    // 3. Crear un panel principal con color de fondo específico
+    JPanel mainPanel = new JPanel(new BorderLayout());
+    mainPanel.setBackground(new Color(249, 245, 232)); // Mantener el color original
+    
+    // 4. Crear paneles para los banners superior e inferior usando la utilidad
+    ResponsiveBannerPanel topBannerPanel = new ResponsiveBannerPanel(ResourceManager.getImagePath("banner-et20.png"));
+    ResponsiveBannerPanel bottomBannerPanel = new ResponsiveBannerPanel(ResourceManager.getImagePath("banner-et20.png"));
+    
+    // 5. Crear un panel central para el contenido (logo y formulario)
+    JPanel centerPanel = new JPanel(new GridBagLayout());
+    centerPanel.setOpaque(false);
+    
+    // 6. Crear un panel que contendrá el logo y el formulario, uno encima del otro
+    JPanel contentPanel = new JPanel();
+    contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+    contentPanel.setOpaque(false);
+    
+    // 7. Ajustar el contenedor del logo para que esté centrado
+    JPanel logoContainer = new JPanel(new FlowLayout(FlowLayout.CENTER));
+    logoContainer.setOpaque(false);
+    logoContainer.add(imagenLogo);
+    
+    // 8. Asegurarse que el formulario esté configurado correctamente
+    jPanel1.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    
+    // 9. Añadir elementos al panel de contenido en el orden correcto
+    contentPanel.add(Box.createVerticalStrut(20)); // Espacio superior
+    contentPanel.add(logoContainer);
+    contentPanel.add(Box.createVerticalStrut(20)); // Espacio entre logo y formulario
+    contentPanel.add(jPanel1);
+    contentPanel.add(Box.createVerticalStrut(20)); // Espacio inferior
+    
+    // 10. Añadir el panel de contenido al panel central
+    centerPanel.add(contentPanel);
+    
+    // 11. Montar la estructura completa en un orden específico
+    mainPanel.add(topBannerPanel, BorderLayout.NORTH);
+    mainPanel.add(centerPanel, BorderLayout.CENTER);
+    mainPanel.add(bottomBannerPanel, BorderLayout.SOUTH);
+    
+    // 12. Agregar el panel principal al contenedor
+    getContentPane().add(mainPanel, BorderLayout.CENTER);
+    
+    // 13. Importante: forzar actualización de la jerarquía de componentes
+    mainPanel.revalidate();
+    mainPanel.repaint();
+    getContentPane().revalidate();
+    getContentPane().repaint();
+}
     /**
      * Método para cerrar la aplicación de manera segura. Realiza logout y
      * termina la ejecución del programa.
@@ -102,8 +186,8 @@ public class LoginForm extends javax.swing.JFrame {
         botonLogin = new javax.swing.JButton();
         botonGoogle = new javax.swing.JButton();
         bannerImg2 = new javax.swing.JLabel();
-        bannerImg1 = new javax.swing.JLabel();
         imagenLogo = new javax.swing.JLabel();
+        bannerImg1 = new javax.swing.JLabel();
 
         jLabel5.setText("jLabel5");
 
@@ -123,7 +207,6 @@ public class LoginForm extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setBackground(new java.awt.Color(255, 255, 204));
         setExtendedState(6);
-        getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         panelLogin.setBackground(new java.awt.Color(249, 245, 232));
         panelLogin.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -237,20 +320,20 @@ public class LoginForm extends javax.swing.JFrame {
                     .addContainerGap(117, Short.MAX_VALUE)))
         );
 
-        panelLogin.add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 250, -1, -1));
+        panelLogin.add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 290, -1, -1));
 
         bannerImg2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/main/resources/images/banner-et20.png"))); // NOI18N
         panelLogin.add(bannerImg2, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 790, 760, -1));
 
-        bannerImg1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/main/resources/images/banner-et20.png"))); // NOI18N
-        panelLogin.add(bannerImg1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 760, -1));
-
         imagenLogo.setIcon(new javax.swing.ImageIcon(getClass().getResource("/main/resources/images/logo_et20_min.png"))); // NOI18N
         imagenLogo.setAutoscrolls(true);
         imagenLogo.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
-        panelLogin.add(imagenLogo, new org.netbeans.lib.awtextra.AbsoluteConstraints(330, 100, 130, 120));
+        panelLogin.add(imagenLogo, new org.netbeans.lib.awtextra.AbsoluteConstraints(330, 90, 150, 160));
 
-        getContentPane().add(panelLogin, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 760, 860));
+        bannerImg1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/main/resources/images/banner-et20.png"))); // NOI18N
+        panelLogin.add(bannerImg1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 760, -1));
+
+        getContentPane().add(panelLogin, java.awt.BorderLayout.CENTER);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents

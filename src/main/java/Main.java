@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import main.java.utils.ResponsiveUtils;
+import main.java.utils.ResourceManager;
 import main.java.updater.ActualizadorApp;
 import main.java.views.login.GoogleAuthenticator;
 import main.java.views.login.LoginForm;
@@ -16,6 +17,18 @@ public class Main {
 
         // Verificar actualizaciones antes de iniciar la aplicación
         verificarYActualizarAplicacion();
+        
+        //Llamado al ResourceManager para que se ejecute y haga la comprobación de las imagenes
+         try {
+            // Inicializar el gestor de recursos
+            ResourceManager.initialize();
+        } catch (Exception e) {
+            // Solo mostrar un diálogo en caso de error crítico
+            JOptionPane.showMessageDialog(null, 
+                "Error al inicializar recursos: " + e.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        
         // Configurar UI responsiva
         setupResponsiveUI();
 
@@ -24,6 +37,8 @@ public class Main {
 
         // Iniciar la aplicación
         iniciarAplicacion();
+        
+        
     }
 
     private static void configurarLookAndFeel() {
