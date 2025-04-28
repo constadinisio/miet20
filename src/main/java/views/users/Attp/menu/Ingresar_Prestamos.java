@@ -34,10 +34,26 @@ public class Ingresar_Prestamos extends javax.swing.JFrame {
      * - Componentes de interfaz gráfica
      * - Verifica conexión a base de datos
      */
-    public Ingresar_Prestamos() {
-        initComponents();
-        probar_conexion();
-    }
+   // Variable para almacenar el ID del ATTP
+private int attpId;
+
+/**
+ * Constructor principal de la interfaz de ingreso de préstamos con ID de ATTP.
+ *
+ * @param attpId ID del usuario ATTP para mantener la sesión
+ */
+public Ingresar_Prestamos(int attpId) {
+    this.attpId = attpId;
+    initComponents();
+    probar_conexion();
+}
+
+/**
+ * Constructor sin parámetros para mantener compatibilidad.
+ */
+public Ingresar_Prestamos() {
+    this(-1); // Usa un valor por defecto o inválido
+}
     
     /**
      * Verifica la conexión a la base de datos.
@@ -234,8 +250,8 @@ public class Ingresar_Prestamos extends javax.swing.JFrame {
 
     private void Boton_BackActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_BackActionPerformed
         this.setVisible(false);
-        Prestamos Prestamo = new Prestamos();
-        Prestamo.setVisible(true);        // TODO add your handling code here:
+        Prestamos Prestamo = new Prestamos(this.attpId);
+        Prestamo.setVisible(true);       
     }//GEN-LAST:event_Boton_BackActionPerformed
 
     private void Boton_IngresoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_IngresoActionPerformed

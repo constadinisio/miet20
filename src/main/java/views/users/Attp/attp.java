@@ -45,24 +45,40 @@ public class attp extends javax.swing.JFrame {
      */
     public attp(int attpId) {
         this.attpId = attpId;
-        this.profesorId = profesorId;
-        initComponents();
-        uiUtils.configurarVentana(this);
-        probar_conexion();
+    initComponents();
+    uiUtils.configurarVentana(this);
+    probar_conexion();
 
-        rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, ResourceManager.getImagePath("logo_et20_max.png"));
-        rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, ResourceManager.getImagePath("5c994f25d361a_1200.jpg"));
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setLocationRelativeTo(null);
+    rsscalelabel.RSScaleLabel.setScaleLabel(imagenLogo, ResourceManager.getImagePath("logo_et20_max.png"));
+    rsscalelabel.RSScaleLabel.setScaleLabel(fondoHome, ResourceManager.getImagePath("5c994f25d361a_1200.jpg"));
+    setExtendedState(JFrame.MAXIMIZED_BOTH);
+    setLocationRelativeTo(null);
 
-        // Inicializar el gestor de roles
-        new MenuBarManager(attpId, this);
-    }
+    // Inicializar el gestor de roles
+    new MenuBarManager(attpId, this);
+}
     // Mantén el constructor sin parámetros para compatibilidad
 
     public attp() {
         this(-1); // Usa un valor por defecto o inválido
     }
+    
+    /**
+ * Carga la información del usuario ATTP desde la base de datos.
+ *
+ * @param attpId ID del usuario ATTP
+ */
+/**
+ * Carga la información del usuario ATTP desde la base de datos.
+ *
+ * @param attpId ID del usuario ATTP
+ */
+/**
+ * Carga la información del usuario ATTP desde la base de datos.
+ *
+ * @param attpId ID del usuario ATTP
+ */
+
 
     private int obtenerIdAttpActual() {
         // Implementa la lógica para obtener el ID del ATTP actual
@@ -173,10 +189,45 @@ public class attp extends javax.swing.JFrame {
         }
     }
 
-    public void updateLabels(String nombreCompleto) {
-        labelNomApe.setText(nombreCompleto);
-        labelRol.setText("Rol: Profesor");
+    /**
+ * Actualiza las etiquetas de nombre y rol.
+ *
+ * @param nombreCompleto Nombre completo del usuario
+ */
+public void updateLabels(String nombreCompleto) {
+    labelNomApe.setText(nombreCompleto);
+    labelRol.setText("Rol: ATTP");
+    
+    // Si querías cargar datos adicionales desde la BD basados en el ID
+    cargarDatosAdicionales();
+}
+
+/**
+ * Carga datos adicionales del usuario desde la base de datos si es necesario
+ */
+private void cargarDatosAdicionales() {
+    if (this.attpId <= 0) return;
+    
+    try {
+        String query = "SELECT rol FROM usuarios WHERE id = 5";
+        PreparedStatement ps = conect.prepareStatement(query);
+        ps.setInt(1, this.attpId);
+        ResultSet rs = ps.executeQuery();
+        
+        if (rs.next()) {
+            String rol = rs.getString("rol");
+            if (rol != null && !rol.isEmpty()) {
+                labelRol.setText("Rol: " + rol);
+            }
+        }
+        
+        rs.close();
+        ps.close();
+    } catch (SQLException ex) {
+        System.err.println("Error al cargar datos adicionales: " + ex.getMessage());
     }
+}
+
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -316,47 +367,41 @@ public class attp extends javax.swing.JFrame {
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel4Layout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                        .addComponent(labelRol)
-                        .addGap(254, 254, 254))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                        .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(Boton_stock, javax.swing.GroupLayout.PREFERRED_SIZE, 136, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(Boton_Registros, javax.swing.GroupLayout.PREFERRED_SIZE, 136, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(Boton_prestamos, javax.swing.GroupLayout.PREFERRED_SIZE, 136, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(60, 60, 60))
-                    .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addComponent(labelNomApe)
-                        .addGap(79, 79, 79)
-                        .addComponent(labelFotoPerfil)
-                        .addContainerGap())))
+                    .addComponent(Boton_stock, javax.swing.GroupLayout.PREFERRED_SIZE, 136, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(Boton_Registros, javax.swing.GroupLayout.PREFERRED_SIZE, 136, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(Boton_prestamos, javax.swing.GroupLayout.PREFERRED_SIZE, 136, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(60, 60, 60))
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addGap(14, 14, 14)
-                .addComponent(jButton1)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addGap(67, 67, 67)
+                        .addComponent(labelFotoPerfil))
+                    .addComponent(jButton1)
+                    .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addComponent(labelRol, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 216, Short.MAX_VALUE)
+                        .addComponent(labelNomApe, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addGap(0, 0, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addGap(114, 114, 114)
-                        .addComponent(labelNomApe))
-                    .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addGap(27, 27, 27)
-                        .addComponent(labelFotoPerfil, javax.swing.GroupLayout.PREFERRED_SIZE, 102, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap()
+                .addComponent(labelFotoPerfil, javax.swing.GroupLayout.PREFERRED_SIZE, 102, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(labelRol)
-                .addGap(30, 30, 30)
+                .addComponent(labelNomApe, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(labelRol, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(Boton_stock, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(11, 11, 11)
                 .addComponent(Boton_prestamos, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(Boton_Registros, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 71, Short.MAX_VALUE)
                 .addComponent(jButton1)
                 .addGap(15, 15, 15))
         );
@@ -371,7 +416,7 @@ public class attp extends javax.swing.JFrame {
                     .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addGap(0, 0, 0)
                 .addComponent(panelPrincipal, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addGap(0, 11, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -391,20 +436,20 @@ public class attp extends javax.swing.JFrame {
 
     private void Boton_RegistrosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_RegistrosActionPerformed
         this.setVisible(false);
-        Registros registros = new Registros();
-        registros.setVisible(true);
+    Registros registros = new Registros(this.attpId);
+    registros.setVisible(true);
     }//GEN-LAST:event_Boton_RegistrosActionPerformed
 
     private void Boton_stockActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_stockActionPerformed
         this.setVisible(false);
-        Stock stock = new Stock();
-        stock.setVisible(true);        // TODO add your handling code here:
+    Stock stock = new Stock(this.attpId);
+    stock.setVisible(true);
     }//GEN-LAST:event_Boton_stockActionPerformed
 
     private void Boton_prestamosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_prestamosActionPerformed
         this.setVisible(false);
-        Prestamos prestamos = new Prestamos();
-        prestamos.setVisible(true);        // TODO add your handling code here:
+    Prestamos prestamos = new Prestamos(this.attpId);
+    prestamos.setVisible(true);
     }//GEN-LAST:event_Boton_prestamosActionPerformed
 
     public static void main(String args[]) {

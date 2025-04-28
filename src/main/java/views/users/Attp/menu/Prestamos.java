@@ -37,11 +37,26 @@ public class Prestamos extends javax.swing.JFrame {
      * - Verifica conexión a base de datos 
      * - Carga datos de préstamos
      */
-    public Prestamos() {
-        initComponents();
-        mostrardatos();
-        probar_conexion();
-    }
+    private int attpId;
+
+/**
+ * Constructor principal de la interfaz de préstamos con ID de ATTP.
+ *
+ * @param attpId ID del usuario ATTP para mantener la sesión
+ */
+public Prestamos(int attpId) {
+    this.attpId = attpId;
+    initComponents();
+    mostrardatos();
+    probar_conexion();
+}
+
+/**
+ * Constructor sin parámetros para mantener compatibilidad.
+ */
+public Prestamos() {
+    this(-1); // Usa un valor por defecto o inválido
+}
 
     /**
      * Verifica la conexión a la base de datos.
@@ -204,9 +219,26 @@ public class Prestamos extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void Boton_Volver4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_Volver4ActionPerformed
-        this.setVisible(false);
-        attp attp = new attp();
-        attp.setVisible(true);
+         this.setVisible(false);
+    attp Attp = new attp(this.attpId);
+    
+    // Obtener nombre y apellido para actualizar las etiquetas
+    try {
+        String query = "SELECT nombre, apellido FROM usuarios WHERE id = ?";
+        PreparedStatement ps = conect.prepareStatement(query);
+        ps.setInt(1, this.attpId);
+        ResultSet rs = ps.executeQuery();
+        
+        if (rs.next()) {
+            String nombre = rs.getString("nombre");
+            String apellido = rs.getString("apellido");
+            Attp.updateLabels(nombre + " " + apellido);
+        }
+    } catch (SQLException ex) {
+        System.err.println("Error al cargar datos de usuario: " + ex.getMessage());
+    }
+    
+    Attp.setVisible(true);
     }//GEN-LAST:event_Boton_Volver4ActionPerformed
 
     private void Boton_Modificar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_Modificar2ActionPerformed

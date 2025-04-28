@@ -53,11 +53,18 @@ public class Stock extends javax.swing.JFrame {
      * - Carga de datos 
      * - Verificación de conexión
      */
-    public Stock() {
-        initComponents();
-        mostrardatos();
-        probar_conexion();
-    }
+    private int attpId;
+    public Stock(int attpId) {
+    this.attpId = attpId;
+    initComponents();
+    mostrardatos();
+    probar_conexion();
+}
+
+// Constructor sin parámetros para compatibilidad
+public Stock() {
+    this(-1); // Valor por defecto
+}
 
     /**
      * Carga y muestra los datos de stock en la tabla.
@@ -240,9 +247,26 @@ public class Stock extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void Boton_Volver2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_Volver2ActionPerformed
-        this.setVisible(false);
-        attp Attp = new attp();
-        Attp.setVisible(true);
+         this.setVisible(false);
+    attp Attp = new attp(this.attpId);
+    
+    // Obtener nombre y apellido para actualizar las etiquetas
+    try {
+        String query = "SELECT nombre, apellido FROM usuarios WHERE id = ?";
+        PreparedStatement ps = conect.prepareStatement(query);
+        ps.setInt(1, this.attpId);
+        ResultSet rs = ps.executeQuery();
+        
+        if (rs.next()) {
+            String nombre = rs.getString("nombre");
+            String apellido = rs.getString("apellido");
+            Attp.updateLabels(nombre + " " + apellido);
+        }
+    } catch (SQLException ex) {
+        System.err.println("Error al cargar datos de usuario: " + ex.getMessage());
+    }
+    
+    Attp.setVisible(true);
     }//GEN-LAST:event_Boton_Volver2ActionPerformed
 
     private void TablastockAncestorAdded(javax.swing.event.AncestorEvent evt) {//GEN-FIRST:event_TablastockAncestorAdded

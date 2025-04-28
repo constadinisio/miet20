@@ -158,7 +158,8 @@ private int obtenerIdDesdeBaseDeDatos(String nombre, String apellido) {
         System.err.println("Error al obtener ID: " + ex.getMessage());
     }
     return -1; // ID no encontrado
-}
+} 
+
 
     /**
      * Actualiza las etiquetas de nombre y rol.
