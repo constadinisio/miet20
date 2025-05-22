@@ -16,10 +16,11 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
-import javax.swing.JFileChooser;  // Para el selector de archivos
+import javax.swing.JFileChooser;
 import javax.swing.table.TableRowSorter;
 import javax.swing.table.TableModel;
 import javax.swing.event.DocumentListener;
@@ -33,21 +34,17 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import main.java.utils.ResponsiveUtils;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
-import users.common.EstadoAsistenciaEditor;
 
 /**
  * Panel de asistencia para preceptores, que permite gestionar y visualizar la
  * asistencia de los alumnos de un curso específico.
- *
- * Características principales: - Carga y muestra asistencias por curso -
- * Permite agregar y editar observaciones de asistencia - Exportación de datos a
- * Excel - Filtrado y búsqueda de alumnos
  *
  * @author [Nicolas Bogarin]
  * @author [Constantino Di Nisio]
@@ -59,27 +56,29 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
     // ID del curso asociado al preceptor
     private int cursoId;
 
+    // Mapa de colores para los diferentes estados de asistencia
+    private Map<String, Color> colorEstados;
+
+    // Modelo de tabla
+    protected DefaultTableModel tableModel;
+
     /**
      * Constructor del panel de asistencia para preceptores.
-     *
-     * Inicializa componentes, configura la interfaz y carga datos iniciales: -
-     * Conexión a base de datos - Configuración de componentes visuales - Carga
-     * de datos del curso - Configuración de eventos
      *
      * @param preceptorId Identificador del preceptor
      * @param cursoId Identificador del curso
      */
     public AsistenciaPreceptorPanel(int preceptorId, int cursoId) {
-        // Implementación original del constructor
-        // Inicializa conexión, componentes, fechas y configuraciones
+        // Constructor base
         super();
 
+        // Inicializar conexión a base de datos
         conect = Conexion.getInstancia().verificarConexion();
-
         if (conect == null) {
             JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
         }
 
+        // Inicializar componentes y variables
         initComponents();
         this.usuarioId = preceptorId;
         this.cursoId = cursoId;
@@ -90,9 +89,10 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
             fecha = fecha.minusDays(1);
         }
 
-        // Configurar tamaños y layouts
-        setPreferredSize(new Dimension(1200, 800)); // Ajusta según necesites
+        // Establecer un tamaño preferido grande para forzar scrollbars
+        setPreferredSize(new Dimension(1500, 1200));
 
+        // Inicializar componentes y cargar datos
         inicializarBase();
         cargarDatosCurso();
         cargarAsistencias();
@@ -100,37 +100,20 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         agregarFiltroBusqueda();
         agregarObservaciones();
         configurarDateChooser();
-    }
+        configurarBotonesNavegacion();
 
-    public void ajustarPanelParaScroll() {
-        // Asegurarnos que el panel tenga un tamaño preferido adecuado
-        setPreferredSize(new Dimension(900, 700)); // Ajustar según necesidades
+        // Aplicar configuraciones para scrolling y responsividad
+        configurarScrollingYTabla();
+        hacerPanelResponsive();
 
-        // Asegurarnos que todos los sub-paneles sean visibles
-        if (jPanel1 != null) {
-            jPanel1.setVisible(true);
-        }
-        if (jPanel2 != null) {
-            jPanel2.setVisible(true);
-        }
-        if (jPanel3 != null) {
-            jPanel3.setVisible(true);
-        }
-        if (panelObservacionesCompleto != null) {
-            panelObservacionesCompleto.setVisible(true);
-        }
-        if (panelEstadisticas != null) {
-            panelEstadisticas.setVisible(true);
-        }
+        // Asegurar visibilidad
+        setVisible(true);
 
-        // Si el panel usa GroupLayout, necesitamos asegurarnos que tenga tamaño adecuado
-        // Esto es crítico si estás usando el diseñador de NetBeans con GroupLayout
-        validate();
+        System.out.println("Panel de asistencia creado. Tamaño: " + getPreferredSize());
     }
 
     /**
-     * Carga los datos del curso asociado al preceptor. Recupera el año y
-     * división del curso desde la base de datos.
+     * Carga los datos del curso asociado al preceptor.
      */
     private void cargarDatosCurso() {
         try {
@@ -149,8 +132,7 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
     }
 
     /**
-     * Inicializa la estructura base de la tabla de asistencia. Configura el
-     * modelo de tabla, colores y componentes visuales.
+     * Inicializa la estructura base de la tabla de asistencia.
      */
     private void inicializarBase() {
         // Inicializar tabla y modelo
@@ -160,6 +142,11 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         }
         inicializarColores();
         configurarTabla();
+    }
+
+    @Override
+    public boolean puedeEditarCelda(int row, int column) {
+        return column == 2;  // Solo la columna de estado es editable
     }
 
     /**
@@ -174,93 +161,95 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         colorEstados.put("NC", Color.WHITE);
     }
 
-    // Agregar este método a la clase AsistenciaPreceptorPanel
-    @Override
-    public Dimension getPreferredSize() {
-        return new Dimension(800, 600); // Tamaño base que permitirá scroll si es necesario
-    }
-
     /**
-     * Define la configuración de la tabla usada en la interfaz.
+     * Configura la tabla de asistencias.
      */
-    @Override
-    
-protected void configurarTabla() {
-    if (tableModel == null) {
-        tableModel = new DefaultTableModel();
-    }
+    protected void configurarTabla() {
+        if (tableModel == null) {
+            tableModel = new DefaultTableModel();
+        }
 
-    // Configurar columnas
-    tableModel.addColumn("Alumno");
-    tableModel.addColumn("DNI");
+        // Configurar columnas
+        tableModel.addColumn("Nº");  // Número incremental para mostrar en lugar del ID real
+        tableModel.addColumn("Alumno");
+        tableModel.addColumn("DNI");
+        tableModel.addColumn("ID"); // Columna oculta para almacenar el ID real del alumno
 
-    // Agregar columnas para cada día de la semana (turno y contraturno)
-    LocalDate diaActual = fecha; // Empezar desde el lunes
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM (EEE)");
-    LocalDate hoy = LocalDate.now();
+        // Agregar columnas para cada día de la semana (turno y contraturno)
+        LocalDate diaActual = fecha; // Empezar desde el lunes
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM (EEE)");
 
-    for (int i = 0; i < 5; i++) { // De lunes a viernes
-        String nombreColumna = diaActual.format(formatter);
-        tableModel.addColumn(nombreColumna);
-        tableModel.addColumn(nombreColumna + " (Cont)");
-        diaActual = diaActual.plusDays(1);
-    }
+        for (int i = 0; i < 5; i++) { // De lunes a viernes
+            String nombreColumna = diaActual.format(formatter);
+            tableModel.addColumn(nombreColumna);
+            tableModel.addColumn(nombreColumna + " (Cont)");
+            diaActual = diaActual.plusDays(1);
+        }
 
-    if (tablaAsistencia != null) {
-        tablaAsistencia.setModel(tableModel);
+        if (tablaAsistencia != null) {
+            tablaAsistencia.setModel(tableModel);
 
-        // Obtener el día de hoy para resaltarlo
-        final int diaHoy = LocalDate.now().getDayOfWeek().getValue() - 1; // 0 para lunes, 4 para viernes
-        final int columnaHoyNormal = 2 + (diaHoy * 2);
-        final int columnaHoyContraturno = columnaHoyNormal + 1;
+            // Obtener el día de hoy para resaltarlo
+            final int diaHoy = LocalDate.now().getDayOfWeek().getValue() - 1; // 0 para lunes, 4 para viernes
+            final int columnaHoyNormal = 4 + (diaHoy * 2); // Ahora es 4 por las columnas añadidas
+            final int columnaHoyContraturno = columnaHoyNormal + 1;
 
-        // Configurar el renderizador para las columnas de asistencia
-        for (int i = 2; i < tablaAsistencia.getColumnCount(); i++) {
-            final int columnaIndex = i;
-            TableColumn column = tablaAsistencia.getColumnModel().getColumn(i);
-            
-            // Configurar el renderizador para colores y resaltado
-            column.setCellRenderer(new DefaultTableCellRenderer() {
-                @Override
-                public Component getTableCellRendererComponent(JTable table, Object value,
-                        boolean isSelected, boolean hasFocus, int row, int column) {
-                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            // Configurar el renderizador para las columnas de asistencia
+            for (int i = 4; i < tablaAsistencia.getColumnCount(); i++) { // Empezar desde 4 por las columnas añadidas
+                final int columnaIndex = i;
+                TableColumn column = tablaAsistencia.getColumnModel().getColumn(i);
 
-                    if (!isSelected) {
-                        String estado = value != null ? value.toString() : "NC";
-                        c.setBackground(colorEstados.getOrDefault(estado, Color.WHITE));
-                        
-                        // Resaltar si es el día actual
-                        if (columnaIndex == columnaHoyNormal || columnaIndex == columnaHoyContraturno) {
-                            Font boldFont = c.getFont().deriveFont(Font.BOLD);
-                            c.setFont(boldFont);
-                            
-                            // Agregar un borde para resaltar más
-                            if (c instanceof JComponent) {
-                                ((JComponent) c).setBorder(BorderFactory.createLineBorder(Color.BLUE, 1));
+                // Configurar el renderizador para colores y resaltado
+                column.setCellRenderer(new DefaultTableCellRenderer() {
+                    @Override
+                    public Component getTableCellRendererComponent(JTable table, Object value,
+                            boolean isSelected, boolean hasFocus, int row, int column) {
+                        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                        if (!isSelected) {
+                            String estado = value != null ? value.toString() : "NC";
+                            c.setBackground(colorEstados.getOrDefault(estado, Color.WHITE));
+
+                            // Resaltar si es el día actual
+                            if (columnaIndex == columnaHoyNormal || columnaIndex == columnaHoyContraturno) {
+                                Font boldFont = c.getFont().deriveFont(Font.BOLD);
+                                c.setFont(boldFont);
+
+                                // Agregar un borde para resaltar más
+                                if (c instanceof JComponent) {
+                                    ((JComponent) c).setBorder(BorderFactory.createLineBorder(Color.BLUE, 1));
+                                }
                             }
                         }
-                    }
 
-                    return c;
-                }
-            });
-            
-            // Configurar el editor para poder seleccionar el estado
-            // Añadir el editor de estado de asistencia
-            String[] opciones = {"P", "A", "T", "AP", "NC"};
-            JComboBox<String> comboEstados = new JComboBox<>(opciones);
-            column.setCellEditor(new DefaultCellEditor(comboEstados));
+                        return c;
+                    }
+                });
+
+                // Configurar el editor para poder seleccionar el estado
+                String[] opciones = {"P", "A", "T", "AP", "NC"};
+                JComboBox<String> comboEstados = new JComboBox<>(opciones);
+                column.setCellEditor(new DefaultCellEditor(comboEstados));
+            }
+
+            // Ocultar la columna ID real
+            tablaAsistencia.getColumnModel().getColumn(3).setMinWidth(0);
+            tablaAsistencia.getColumnModel().getColumn(3).setMaxWidth(0);
+            tablaAsistencia.getColumnModel().getColumn(3).setWidth(0);
+
+            // Ajustar anchos de columnas
+            tablaAsistencia.getColumnModel().getColumn(0).setPreferredWidth(40);  // Nº incremental
+            tablaAsistencia.getColumnModel().getColumn(1).setPreferredWidth(200); // Nombre
+            tablaAsistencia.getColumnModel().getColumn(2).setPreferredWidth(100); // DNI
         }
     }
-}
 
     /**
-     * Define los colores asociados a los diferentes estados de asistencia.
+     * Configura eventos para los componentes.
      */
     private void configurarEventos() {
         // Configurar event listener para el dateChooser
-        if (dateChooser.getDate() != null) {
+        if (dateChooser != null && dateChooser.getDate() != null) {
             fecha = dateChooser.getDate().toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate();
@@ -272,7 +261,10 @@ protected void configurarTabla() {
         }
     }
 
-    protected void cargarAsistencias() {
+    /**
+     * Carga las asistencias desde la base de datos.
+     */
+    public void cargarAsistencias() {
         int intentos = 0;
         final int MAX_INTENTOS = 3;
         while (intentos < MAX_INTENTOS) {
@@ -298,17 +290,21 @@ protected void configurarTabla() {
                 ResultSet rsAlumnos = psAlumnos.executeQuery();
 
                 // Crear filas en la tabla para cada alumno
+                int numeroFila = 1;
                 while (rsAlumnos.next()) {
-                    Object[] rowData = new Object[12]; // 2 columnas fijas + 5 días x 2 turnos
-                    rowData[0] = rsAlumnos.getString("apellido") + ", " + rsAlumnos.getString("nombre");
-                    rowData[1] = rsAlumnos.getString("dni");
+                    Object[] rowData = new Object[14]; // 4 columnas fijas + 5 días x 2 turnos
+                    rowData[0] = numeroFila; // Número incremental para mostrar
+                    rowData[1] = rsAlumnos.getString("apellido") + ", " + rsAlumnos.getString("nombre");
+                    rowData[2] = rsAlumnos.getString("dni");
+                    rowData[3] = rsAlumnos.getInt("id"); // Guardar el ID real del alumno (columna oculta)
 
                     // Inicializar todos los estados como NC
-                    for (int i = 2; i < rowData.length; i++) {
+                    for (int i = 4; i < rowData.length; i++) {
                         rowData[i] = "NC";
                     }
 
                     tableModel.addRow(rowData);
+                    numeroFila++; // Incrementar para la siguiente fila
                 }
 
                 // Ahora, cargar asistencias de toda la semana (incluidas todas las fechas entre inicio y fin)
@@ -327,7 +323,7 @@ protected void configurarTabla() {
 
                 while (rsAsistencias.next()) {
                     contadorAsistencias++;
-                    String dni = rsAsistencias.getString("dni");
+                    int alumnoId = rsAsistencias.getInt("alumno_id");
                     LocalDate fechaAsistencia = rsAsistencias.getDate("fecha").toLocalDate();
                     String estado = rsAsistencias.getString("estado");
                     boolean esContraturno = rsAsistencias.getBoolean("es_contraturno");
@@ -335,16 +331,17 @@ protected void configurarTabla() {
                     // Calcular la columna correspondiente
                     // Primero, calcular el offset de días desde el inicio de la semana
                     int diaOffset = fechaAsistencia.getDayOfWeek().getValue() - 1; // 0 para lunes, 4 para viernes
-                    int columnaBase = 2 + (diaOffset * 2); // 2 columnas iniciales + 2 por cada día
+                    int columnaBase = 4 + (diaOffset * 2); // 4 columnas iniciales + 2 por cada día
                     int columna = columnaBase + (esContraturno ? 1 : 0); // Agregar 1 si es contraturno
 
-                    System.out.println("Cargando: DNI=" + dni + ", Fecha=" + fechaAsistencia
+                    System.out.println("Cargando: ID=" + alumnoId + ", Fecha=" + fechaAsistencia
                             + ", Estado=" + estado + ", Contraturno=" + esContraturno
                             + ", Día=" + diaOffset + ", Columna=" + columna);
 
-                    // Buscar la fila por DNI y actualizar el estado
+                    // Buscar la fila por ID y actualizar el estado
                     for (int i = 0; i < tableModel.getRowCount(); i++) {
-                        if (tableModel.getValueAt(i, 1).toString().equals(dni)) {
+                        int idFila = Integer.parseInt(tableModel.getValueAt(i, 3).toString());
+                        if (idFila == alumnoId) {
                             tableModel.setValueAt(estado, i, columna);
                             break;
                         }
@@ -397,6 +394,9 @@ protected void configurarTabla() {
         }
     }
 
+    /**
+     * Configura el selector de fecha.
+     */
     private void configurarDateChooser() {
         // Establecer la fecha inicial
         dateChooser.setDate(java.sql.Date.valueOf(fecha));
@@ -430,88 +430,204 @@ protected void configurarTabla() {
         });
     }
 
+    /**
+     * Añade área para observaciones.
+     */
     private void agregarObservaciones() {
-        JPanel panelObservaciones = new JPanel();
-        JTextArea txtObservaciones = new JTextArea(3, 40);
-        JButton btnGuardarObs = new JButton("Guardar Observación");
+        // Este método implementa la funcionalidad de observaciones
+        // (Ya implementado a través del diseño del form en initComponents)
+    }
 
-        btnGuardarObs.addActionListener(e -> {
-            int fila = tablaAsistencia.getSelectedRow();
-            if (fila == -1) {
-                JOptionPane.showMessageDialog(this, "Seleccione un alumno");
-                return;
+    /**
+     * Configura los botones de navegación entre semanas.
+     */
+    private void configurarBotonesNavegacion() {
+        JPanel panelNavegacion = new JPanel(new FlowLayout(FlowLayout.CENTER));
+
+        JButton btnSemanaAnterior = new JButton("<<< Semana Anterior");
+        JButton btnSemanaSiguiente = new JButton("Semana Siguiente >>>");
+
+        btnSemanaAnterior.addActionListener(e -> {
+            fecha = fecha.minusDays(7);
+            // Actualizar el dateChooser para mantener sincronización
+            dateChooser.setDate(java.sql.Date.valueOf(fecha));
+            tableModel.setRowCount(0);
+            tableModel.setColumnCount(0);
+            configurarTabla();
+            cargarAsistencias();
+        });
+
+        btnSemanaSiguiente.addActionListener(e -> {
+            fecha = fecha.plusDays(7);
+            // Actualizar el dateChooser para mantener sincronización
+            dateChooser.setDate(java.sql.Date.valueOf(fecha));
+            tableModel.setRowCount(0);
+            tableModel.setColumnCount(0);
+            configurarTabla();
+            cargarAsistencias();
+        });
+
+        panelNavegacion.add(btnSemanaAnterior);
+        panelNavegacion.add(btnSemanaSiguiente);
+
+        // Añadir este panel al panel de asistencias (implementación específica según el diseño del panel)
+    }
+
+    /**
+     * Añade funcionalidad de búsqueda y filtrado.
+     */
+    private void agregarFiltroBusqueda() {
+        txtBuscar.setPreferredSize(new Dimension(300, 30)); // Tamaño más grande
+        btnBuscar.setPreferredSize(new Dimension(100, 30));
+        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+            public void changedUpdate(DocumentEvent e) {
+                realizarBusqueda();
             }
 
-            try {
-                String query = "INSERT INTO observaciones_asistencia (alumno_id, fecha, observacion, creado_por) VALUES (?, ?, ?, ?)";
-                PreparedStatement ps = conect.prepareStatement(query);
-                ps.setInt(1, Integer.parseInt(tableModel.getValueAt(fila, 1).toString())); // DNI/ID
-                ps.setDate(2, java.sql.Date.valueOf(fecha));
-                ps.setString(3, txtObservaciones.getText());
-                ps.setInt(4, usuarioId);
-                ps.executeUpdate();
+            public void removeUpdate(DocumentEvent e) {
+                realizarBusqueda();
+            }
 
-                JOptionPane.showMessageDialog(this, "Observación guardada");
-                txtObservaciones.setText("");
+            public void insertUpdate(DocumentEvent e) {
+                realizarBusqueda();
+            }
+        });
+    }
 
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Error al guardar observación: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+    /**
+     * Realiza la búsqueda según el texto ingresado.
+     */
+    private void realizarBusqueda() {
+        String texto = txtBuscar.getText().toLowerCase();
+        if (texto.isEmpty()) {
+            tablaAsistencia.setRowSorter(null);
+            return;
+        }
+
+        // Convertir texto de búsqueda a sin tildes
+        texto = texto.replaceAll("[áàäâã]", "a")
+                .replaceAll("[éèëê]", "e")
+                .replaceAll("[íìïî]", "i")
+                .replaceAll("[óòöôõ]", "o")
+                .replaceAll("[úùüû]", "u");
+
+        TableRowSorter<TableModel> sorter = new TableRowSorter<>(tableModel);
+        final String textoBusqueda = texto;
+
+        sorter.setRowFilter(new RowFilter<TableModel, Integer>() {
+            @Override
+            public boolean include(Entry<? extends TableModel, ? extends Integer> entry) {
+                String valor = entry.getStringValue(1).toLowerCase() // Columna Alumno
+                        .replaceAll("[áàäâã]", "a")
+                        .replaceAll("[éèëê]", "e")
+                        .replaceAll("[íìïî]", "i")
+                        .replaceAll("[óòöôõ]", "o")
+                        .replaceAll("[úùüû]", "u");
+                return valor.contains(textoBusqueda);
             }
         });
 
-        panelObservaciones.add(new JScrollPane(txtObservaciones));
-        panelObservaciones.add(btnGuardarObs);
-        add(panelObservaciones, BorderLayout.EAST);
+        tablaAsistencia.setRowSorter(sorter);
     }
 
-    private void exportarDatos() {
+    /**
+     * Guarda las asistencias en la base de datos.
+     */
+    @Override
+    protected void guardarAsistencias() {
         try {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Guardar Excel");
-            fileChooser.setFileFilter(new FileNameExtensionFilter("Excel files", "xlsx"));
+            System.out.println("Iniciando guardado de asistencias para todos los días visibles en la tabla...");
 
-            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                File file = fileChooser.getSelectedFile();
-                if (!file.getName().endsWith(".xlsx")) {
-                    file = new File(file.getAbsolutePath() + ".xlsx");
+            // Obtener el lunes de la semana actual
+            LocalDate inicioDeSemana = fecha;
+            while (inicioDeSemana.getDayOfWeek() != DayOfWeek.MONDAY) {
+                inicioDeSemana = inicioDeSemana.minusDays(1);
+            }
+
+            // Recorrer cada día de la semana visible en la tabla (columnas 4+)
+            for (int dia = 0; dia < 5; dia++) { // Lunes a viernes
+                LocalDate fechaActual = inicioDeSemana.plusDays(dia);
+                int columnaBase = 4 + (dia * 2); // Columna para el turno normal
+                int columnaContraturno = columnaBase + 1; // Columna para el contraturno
+
+                // Verificar que las columnas existen en la tabla
+                if (columnaBase >= tableModel.getColumnCount()) {
+                    continue; // No hay más columnas para procesar
                 }
 
-                XSSFWorkbook workbook = new XSSFWorkbook();
-                XSSFSheet sheet = workbook.createSheet("Asistencia");
+                System.out.println("Procesando día: " + fechaActual + " (columnas " + columnaBase + ", " + columnaContraturno + ")");
 
-                // Crear encabezados
-                Row headerRow = sheet.createRow(0);
-                for (int i = 0; i < tableModel.getColumnCount(); i++) {
-                    Cell cell = headerRow.createCell(i);
-                    cell.setCellValue(tableModel.getColumnName(i));
-                }
+                // Eliminar registros existentes para esta fecha
+                String deleteQuery = "DELETE FROM asistencia_general WHERE fecha = ? AND curso_id = ?";
+                PreparedStatement deletePs = conect.prepareStatement(deleteQuery);
+                deletePs.setDate(1, java.sql.Date.valueOf(fechaActual));
+                deletePs.setInt(2, cursoId);
+                int registrosEliminados = deletePs.executeUpdate();
+                System.out.println("Registros eliminados para " + fechaActual + ": " + registrosEliminados);
 
-                // Agregar datos
-                for (int i = 0; i < tableModel.getRowCount(); i++) {
-                    Row row = sheet.createRow(i + 1);
-                    for (int j = 0; j < tableModel.getColumnCount(); j++) {
-                        Cell cell = row.createCell(j);
-                        cell.setCellValue(tableModel.getValueAt(i, j).toString());
+                // Insertar nuevos registros para cada alumno
+                String insertQuery = "INSERT INTO asistencia_general "
+                        + "(alumno_id, curso_id, fecha, estado, creado_por, es_contraturno) "
+                        + "VALUES (?, ?, ?, ?, ?, ?)";
+                PreparedStatement insertPs = conect.prepareStatement(insertQuery);
+
+                int registrosInsertados = 0;
+
+                // Para cada alumno en la tabla
+                for (int fila = 0; fila < tableModel.getRowCount(); fila++) {
+                    int alumnoId = Integer.parseInt(tableModel.getValueAt(fila, 3).toString()); // ID del alumno (columna oculta)
+
+                    // Procesar turno normal
+                    if (columnaBase < tableModel.getColumnCount()) {
+                        String estadoNormal = tableModel.getValueAt(fila, columnaBase).toString();
+                        if (!estadoNormal.equals("NC")) {
+                            insertPs.setInt(1, alumnoId);
+                            insertPs.setInt(2, cursoId);
+                            insertPs.setDate(3, java.sql.Date.valueOf(fechaActual));
+                            insertPs.setString(4, estadoNormal);
+                            insertPs.setInt(5, usuarioId);
+                            insertPs.setBoolean(6, false); // Es turno normal
+                            insertPs.executeUpdate();
+                            registrosInsertados++;
+                        }
+                    }
+
+                    // Procesar contraturno si existe la columna
+                    if (columnaContraturno < tableModel.getColumnCount()) {
+                        String estadoContraturno = tableModel.getValueAt(fila, columnaContraturno).toString();
+                        if (!estadoContraturno.equals("NC")) {
+                            insertPs.setInt(1, alumnoId);
+                            insertPs.setInt(2, cursoId);
+                            insertPs.setDate(3, java.sql.Date.valueOf(fechaActual));
+                            insertPs.setString(4, estadoContraturno);
+                            insertPs.setInt(5, usuarioId);
+                            insertPs.setBoolean(6, true); // Es contraturno
+                            insertPs.executeUpdate();
+                            registrosInsertados++;
+                        }
                     }
                 }
 
-                // Guardar archivo
-                FileOutputStream fileOut = new FileOutputStream(file);
-                workbook.write(fileOut);
-                fileOut.close();
-                workbook.close();
-
-                JOptionPane.showMessageDialog(this, "Datos exportados exitosamente");
+                System.out.println("Registros insertados para " + fechaActual + ": " + registrosInsertados);
             }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al exportar: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+
+            JOptionPane.showMessageDialog(this, "Asistencias guardadas exitosamente para toda la semana");
+
+            // Recargar para mostrar los cambios
+            cargarAsistencias();
+
+        } catch (SQLException ex) {
+            System.out.println("Error al guardar asistencias: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al guardar asistencias: " + ex.getMessage());
         }
     }
 
+    /**
+     * Actualiza las estadísticas de asistencia.
+     *
+     * @param fechaSeleccionada Fecha para la cual se mostrarán las estadísticas
+     */
     private void actualizarEstadisticas(LocalDate fechaSeleccionada) {
         try {
             // Limpiar el panel de estadísticas
@@ -632,223 +748,9 @@ protected void configurarTabla() {
         }
     }
 
-    private void mostrarEstadisticas() {
-        JPanel panelEstadisticas = new JPanel();
-        int presentes = 0, ausentes = 0, tarde = 0;
-
-        for (int i = 0; i < tableModel.getRowCount(); i++) {
-            String estado = (String) tableModel.getValueAt(i, 2);
-            switch (estado) {
-                case "P":
-                    presentes++;
-                    break;
-                case "A":
-                    ausentes++;
-                    break;
-                case "T":
-                    tarde++;
-                    break;
-            }
-        }
-
-        int total = tableModel.getRowCount();
-        double porcentajePresentes = (presentes * 100.0) / total;
-
-        JLabel lblEstadisticas = new JLabel(String.format(
-                "Presentes: %d (%2.1f%%) | Ausentes: %d | Tarde: %d",
-                presentes, porcentajePresentes, ausentes, tarde));
-
-        panelEstadisticas.add(lblEstadisticas);
-        add(panelEstadisticas, BorderLayout.SOUTH);
-    }
-
-    private void agregarFiltroBusqueda() {
-
-        txtBuscar.setPreferredSize(new Dimension(300, 30)); // Tamaño más grande
-        btnBuscar.setPreferredSize(new Dimension(100, 30));
-        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
-            public void changedUpdate(DocumentEvent e) {
-                realizarBusqueda();
-            }
-
-            public void removeUpdate(DocumentEvent e) {
-                realizarBusqueda();
-            }
-
-            public void insertUpdate(DocumentEvent e) {
-                realizarBusqueda();
-            }
-        });
-    }
-
-    private void realizarBusqueda() {
-        String texto = txtBuscar.getText().toLowerCase();
-        if (texto.isEmpty()) {
-            tablaAsistencia.setRowSorter(null);
-            return;
-        }
-
-        // Convertir texto de búsqueda a sin tildes
-        texto = texto.replaceAll("[áàäâã]", "a")
-                .replaceAll("[éèëê]", "e")
-                .replaceAll("[íìïî]", "i")
-                .replaceAll("[óòöôõ]", "o")
-                .replaceAll("[úùüû]", "u");
-
-        TableRowSorter<TableModel> sorter = new TableRowSorter<>(tableModel);
-        final String textoBusqueda = texto;
-
-        sorter.setRowFilter(new RowFilter<TableModel, Integer>() {
-            @Override
-            public boolean include(Entry<? extends TableModel, ? extends Integer> entry) {
-                String valor = entry.getStringValue(0).toLowerCase()
-                        .replaceAll("[áàäâã]", "a")
-                        .replaceAll("[éèëê]", "e")
-                        .replaceAll("[íìïî]", "i")
-                        .replaceAll("[óòöôõ]", "o")
-                        .replaceAll("[úùüû]", "u");
-                return valor.contains(textoBusqueda);
-            }
-        });
-
-        tablaAsistencia.setRowSorter(sorter);
-    }
-
-    private void filtrarTabla(String texto) {
-        texto = texto.toLowerCase();
-        TableRowSorter<TableModel> sorter = new TableRowSorter<>(tableModel);
-        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + texto, 0)); // Filtra por columna nombre
-        tablaAsistencia.setRowSorter(sorter);
-    }
-
-    @Override
-    protected void guardarAsistencias() {
-        try {
-            System.out.println("Iniciando guardado de asistencias para todos los días visibles en la tabla...");
-
-            // Obtener el lunes de la semana actual
-            LocalDate inicioDeSemana = fecha;
-            while (inicioDeSemana.getDayOfWeek() != DayOfWeek.MONDAY) {
-                inicioDeSemana = inicioDeSemana.minusDays(1);
-            }
-
-            // Recorrer cada día de la semana visible en la tabla (columnas 2+)
-            for (int dia = 0; dia < 5; dia++) { // Lunes a viernes
-                LocalDate fechaActual = inicioDeSemana.plusDays(dia);
-                int columnaBase = 2 + (dia * 2); // Columna para el turno normal
-                int columnaContraturno = columnaBase + 1; // Columna para el contraturno
-
-                // Verificar que las columnas existen en la tabla
-                if (columnaBase >= tableModel.getColumnCount()) {
-                    continue; // No hay más columnas para procesar
-                }
-
-                System.out.println("Procesando día: " + fechaActual + " (columnas " + columnaBase + ", " + columnaContraturno + ")");
-
-                // Eliminar registros existentes para esta fecha
-                String deleteQuery = "DELETE FROM asistencia_general WHERE fecha = ? AND curso_id = ?";
-                PreparedStatement deletePs = conect.prepareStatement(deleteQuery);
-                deletePs.setDate(1, java.sql.Date.valueOf(fechaActual));
-                deletePs.setInt(2, cursoId);
-                int registrosEliminados = deletePs.executeUpdate();
-                System.out.println("Registros eliminados para " + fechaActual + ": " + registrosEliminados);
-
-                // Insertar nuevos registros para cada alumno
-                String insertQuery = "INSERT INTO asistencia_general "
-                        + "(alumno_id, curso_id, fecha, estado, creado_por, es_contraturno) "
-                        + "VALUES (?, ?, ?, ?, ?, ?)";
-                PreparedStatement insertPs = conect.prepareStatement(insertQuery);
-
-                int registrosInsertados = 0;
-
-                // Para cada alumno en la tabla
-                for (int fila = 0; fila < tableModel.getRowCount(); fila++) {
-                    String dni = tableModel.getValueAt(fila, 1).toString();
-
-                    // Obtener ID del alumno
-                    String queryId = "SELECT id FROM usuarios WHERE dni = ?";
-                    PreparedStatement psId = conect.prepareStatement(queryId);
-                    psId.setString(1, dni);
-                    ResultSet rsId = psId.executeQuery();
-
-                    if (rsId.next()) {
-                        int alumnoId = rsId.getInt("id");
-
-                        // Procesar turno normal
-                        if (columnaBase < tableModel.getColumnCount()) {
-                            String estadoNormal = tableModel.getValueAt(fila, columnaBase).toString();
-                            if (!estadoNormal.equals("NC")) {
-                                insertPs.setInt(1, alumnoId);
-                                insertPs.setInt(2, cursoId);
-                                insertPs.setDate(3, java.sql.Date.valueOf(fechaActual));
-                                insertPs.setString(4, estadoNormal);
-                                insertPs.setInt(5, usuarioId);
-                                insertPs.setBoolean(6, false); // Es turno normal
-                                insertPs.executeUpdate();
-                                registrosInsertados++;
-                            }
-                        }
-
-                        // Procesar contraturno si existe la columna
-                        if (columnaContraturno < tableModel.getColumnCount()) {
-                            String estadoContraturno = tableModel.getValueAt(fila, columnaContraturno).toString();
-                            if (!estadoContraturno.equals("NC")) {
-                                insertPs.setInt(1, alumnoId);
-                                insertPs.setInt(2, cursoId);
-                                insertPs.setDate(3, java.sql.Date.valueOf(fechaActual));
-                                insertPs.setString(4, estadoContraturno);
-                                insertPs.setInt(5, usuarioId);
-                                insertPs.setBoolean(6, true); // Es contraturno
-                                insertPs.executeUpdate();
-                                registrosInsertados++;
-                            }
-                        }
-                    }
-                }
-
-                System.out.println("Registros insertados para " + fechaActual + ": " + registrosInsertados);
-            }
-
-            JOptionPane.showMessageDialog(this, "Asistencias guardadas exitosamente para toda la semana");
-
-            // Recargar para mostrar los cambios
-            cargarAsistencias();
-
-        } catch (SQLException ex) {
-            System.out.println("Error al guardar asistencias: " + ex.getMessage());
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error al guardar asistencias: " + ex.getMessage());
-        }
-    }
-
-    private LocalDate getDiaSeleccionado() {
-        // Obtener la columna seleccionada actualmente
-        int columnaSeleccionada = tablaAsistencia.getSelectedColumn();
-
-        // Si no hay columna seleccionada o es una columna no de asistencia, usar la fecha actual
-        if (columnaSeleccionada < 2) {
-            LocalDate hoy = LocalDate.now();
-            // Si hoy está en la semana actual, usar hoy, sino usar el lunes
-            if (hoy.isAfter(fecha.minusDays(1)) && hoy.isBefore(fecha.plusDays(5))) {
-                int diaOffset = hoy.getDayOfWeek().getValue() - 1; // 0=lunes, 1=martes, etc.
-                return fecha.plusDays(diaOffset);
-            } else {
-                return fecha; // Usar el lunes como predeterminado
-            }
-        }
-
-        // Calcular el día de la semana basado en la columna
-        int diaOffset = (columnaSeleccionada - 2) / 2; // 0=lunes, 1=martes, etc.
-
-        // Calcular la fecha: fecha base (lunes) + offset
-        LocalDate diaSeleccionado = fecha.plusDays(diaOffset);
-        return diaSeleccionado;
-    }
-
-    protected boolean puedeEditarCelda(int row, int column) {
-        return column == 2;  // Solo la columna de estado es editable
-    }
-
+    /**
+     * Guarda una nueva observación para un alumno.
+     */
     private void guardarNuevaObservacion() {
         int fila = tablaAsistencia.getSelectedRow();
         if (fila == -1) {
@@ -863,37 +765,29 @@ protected void configurarTabla() {
         }
 
         try {
-            // Primero obtener el ID del alumno usando su DNI
-            String dni = tableModel.getValueAt(fila, 1).toString();
-            String queryId = "SELECT id FROM usuarios WHERE dni = ?";
-            PreparedStatement psId = conect.prepareStatement(queryId);
-            psId.setString(1, dni);
-            ResultSet rs = psId.executeQuery();
+            // Obtener el ID del alumno directamente de la tabla
+            int alumnoId = Integer.parseInt(tableModel.getValueAt(fila, 3).toString());
 
-            if (rs.next()) {
-                int alumnoId = rs.getInt("id");
+            // Guardar la observación
+            String query = "INSERT INTO observaciones_asistencia (alumno_id, fecha, observacion, creado_por) VALUES (?, ?, ?, ?)";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, alumnoId);
+            ps.setDate(2, java.sql.Date.valueOf(fecha));
+            ps.setString(3, observacion);
+            ps.setInt(4, usuarioId);
+            ps.executeUpdate();
 
-                // Ahora sí, guardar la observación usando el ID correcto
-                String query = "INSERT INTO observaciones_asistencia (alumno_id, fecha, observacion, creado_por) VALUES (?, ?, ?, ?)";
-                PreparedStatement ps = conect.prepareStatement(query);
-                ps.setInt(1, alumnoId); // Usamos el ID en lugar del DNI
-                ps.setDate(2, java.sql.Date.valueOf(fecha));
-                ps.setString(3, observacion);
-                ps.setInt(4, usuarioId);
-                ps.executeUpdate();
-
-                JOptionPane.showMessageDialog(this, "Observación guardada exitosamente");
-                txtNuevaObservacion.setText("");
-                cargarObservacionesAlumno();
-            } else {
-                JOptionPane.showMessageDialog(this, "No se pudo encontrar el ID del alumno");
-            }
-
+            JOptionPane.showMessageDialog(this, "Observación guardada exitosamente");
+            txtNuevaObservacion.setText("");
+            cargarObservacionesAlumno();
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error al guardar observación: " + ex.getMessage());
         }
     }
 
+    /**
+     * Carga las observaciones existentes de un alumno.
+     */
     private void cargarObservacionesAlumno() {
         int fila = tablaAsistencia.getSelectedRow();
         if (fila == -1) {
@@ -902,39 +796,34 @@ protected void configurarTabla() {
         }
 
         try {
-            // Primero obtener el ID del alumno usando su DNI
-            String dni = tableModel.getValueAt(fila, 1).toString();
-            String queryId = "SELECT id FROM usuarios WHERE dni = ?";
-            PreparedStatement psId = conect.prepareStatement(queryId);
-            psId.setString(1, dni);
-            ResultSet rsId = psId.executeQuery();
+            // Obtener el ID del alumno directamente de la tabla
+            int alumnoId = Integer.parseInt(tableModel.getValueAt(fila, 3).toString());
 
-            if (rsId.next()) {
-                int alumnoId = rsId.getInt("id");
+            // Buscar las observaciones con el ID
+            String query = "SELECT id, fecha, observacion FROM observaciones_asistencia WHERE alumno_id = ? ORDER BY fecha DESC";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, alumnoId);
+            ResultSet rs = ps.executeQuery();
 
-                // Ahora buscar las observaciones con el ID correcto
-                String query = "SELECT id, fecha, observacion FROM observaciones_asistencia WHERE alumno_id = ? ORDER BY fecha DESC";
-                PreparedStatement ps = conect.prepareStatement(query);
-                ps.setInt(1, alumnoId);
-                ResultSet rs = ps.executeQuery();
-
-                StringBuilder observaciones = new StringBuilder();
-                while (rs.next()) {
-                    observaciones.append("ID: ").append(rs.getInt("id"))
-                            .append(" | Fecha: ").append(rs.getDate("fecha"))
-                            .append("\n")
-                            .append(rs.getString("observacion"))
-                            .append("\n\n");
-                }
-
-                txtObservacionesExistentes.setText(observaciones.toString());
+            StringBuilder observaciones = new StringBuilder();
+            while (rs.next()) {
+                observaciones.append("ID: ").append(rs.getInt("id"))
+                        .append(" | Fecha: ").append(rs.getDate("fecha"))
+                        .append("\n")
+                        .append(rs.getString("observacion"))
+                        .append("\n\n");
             }
+
+            txtObservacionesExistentes.setText(observaciones.toString());
 
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error al cargar observaciones: " + ex.getMessage());
         }
     }
 
+    /**
+     * Edita una observación existente.
+     */
     private void editarObservacionSeleccionada() {
         String texto = txtObservacionesExistentes.getText();
         if (texto.isEmpty()) {
@@ -942,7 +831,7 @@ protected void configurarTabla() {
             return;
         }
 
-        // Obtener ID de la observación seleccionada (puedes mejorar esto con una lista o tabla)
+        // Obtener ID de la observación
         String idStr = JOptionPane.showInputDialog("Ingrese el ID de la observación a editar:");
         if (idStr == null || idStr.isEmpty()) {
             return;
@@ -977,207 +866,9 @@ protected void configurarTabla() {
         }
     }
 
-    private void importarAsistenciaProfesor() {
-        try {
-            // Verificar si hay datos de asistencia de profesores para este curso
-            String queryVerificar = "SELECT COUNT(*) as total FROM asistencia_materia "
-                    + "WHERE curso_id = ? AND fecha BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AND CURRENT_DATE()";
-
-            PreparedStatement psVerificar = conect.prepareStatement(queryVerificar);
-            psVerificar.setInt(1, cursoId);
-            ResultSet rsVerificar = psVerificar.executeQuery();
-
-            if (rsVerificar.next() && rsVerificar.getInt("total") == 0) {
-                JOptionPane.showMessageDialog(this,
-                        "No hay asistencias registradas por profesores para este curso en los últimos 30 días.",
-                        "Información", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-
-            // Obtener las materias disponibles para este curso
-            String queryMaterias = "SELECT m.id, m.nombre FROM materias m "
-                    + "JOIN profesor_curso_materia pcm ON m.id = pcm.materia_id "
-                    + "WHERE pcm.curso_id = ? "
-                    + "GROUP BY m.id, m.nombre "
-                    + "ORDER BY m.nombre";
-
-            PreparedStatement psMaterias = conect.prepareStatement(queryMaterias);
-            psMaterias.setInt(1, cursoId);
-            ResultSet rsMaterias = psMaterias.executeQuery();
-
-            // Crear un mapa de nombres de materias a IDs
-            Map<String, Integer> materiasMap = new HashMap<>();
-            List<String> materiasList = new ArrayList<>();
-
-            while (rsMaterias.next()) {
-                String nombre = rsMaterias.getString("nombre");
-                int id = rsMaterias.getInt("id");
-                materiasMap.put(nombre, id);
-                materiasList.add(nombre);
-            }
-
-            if (materiasList.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "No hay materias asignadas a este curso.",
-                        "Información", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-
-            // Panel para selección de materia y fecha
-            JPanel panelSeleccion = new JPanel();
-            panelSeleccion.setLayout(new GridLayout(4, 1, 5, 5));
-
-            JLabel lblMateria = new JLabel("Seleccione la materia:");
-            JComboBox<String> comboMaterias = new JComboBox<>(materiasList.toArray(new String[0]));
-
-            JLabel lblFecha = new JLabel("Seleccione la fecha:");
-            JDateChooser dateChooserImport = new JDateChooser();
-            dateChooserImport.setDate(java.sql.Date.valueOf(LocalDate.now()));
-
-            panelSeleccion.add(lblMateria);
-            panelSeleccion.add(comboMaterias);
-            panelSeleccion.add(lblFecha);
-            panelSeleccion.add(dateChooserImport);
-
-            int resultado = JOptionPane.showConfirmDialog(this, panelSeleccion,
-                    "Importar Asistencia de Profesor", JOptionPane.OK_CANCEL_OPTION);
-
-            if (resultado != JOptionPane.OK_OPTION) {
-                return; // Cancelado
-            }
-
-            // Obtener la materia y fecha seleccionadas
-            String materiaSeleccionada = (String) comboMaterias.getSelectedItem();
-            if (materiaSeleccionada == null) {
-                JOptionPane.showMessageDialog(this, "Debe seleccionar una materia.");
-                return;
-            }
-
-            int materiaId = materiasMap.get(materiaSeleccionada);
-
-            if (dateChooserImport.getDate() == null) {
-                JOptionPane.showMessageDialog(this, "Debe seleccionar una fecha válida.");
-                return;
-            }
-
-            LocalDate fechaImportar = dateChooserImport.getDate().toInstant()
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDate();
-
-            System.out.println("Importando asistencia de materia: " + materiaSeleccionada + " (" + materiaId + ")");
-            System.out.println("Fecha seleccionada: " + fechaImportar);
-
-            // Verificar si hay asistencias para la fecha y materia seleccionadas
-            String queryCheck = "SELECT COUNT(*) as total FROM asistencia_materia "
-                    + "WHERE curso_id = ? AND materia_id = ? AND fecha = ?";
-
-            PreparedStatement psCheck = conect.prepareStatement(queryCheck);
-            psCheck.setInt(1, cursoId);
-            psCheck.setInt(2, materiaId);
-            psCheck.setDate(3, java.sql.Date.valueOf(fechaImportar));
-            ResultSet rsCheck = psCheck.executeQuery();
-
-            if (rsCheck.next() && rsCheck.getInt("total") == 0) {
-                JOptionPane.showMessageDialog(this,
-                        "No hay asistencias registradas para la materia " + materiaSeleccionada
-                        + " en el día " + fechaImportar.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                        "Información", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-
-            // Determinar qué columna corresponde a la fecha seleccionada
-            int diaOffset = fechaImportar.getDayOfWeek().getValue() - 1; // 0 para lunes, 4 para viernes
-
-            // Determinar si es una fecha que está en la tabla actual
-            LocalDate inicioSemana = fecha;
-            while (inicioSemana.getDayOfWeek() != DayOfWeek.MONDAY) {
-                inicioSemana = inicioSemana.minusDays(1);
-            }
-
-            if (fechaImportar.isBefore(inicioSemana) || fechaImportar.isAfter(inicioSemana.plusDays(4))) {
-                JOptionPane.showMessageDialog(this,
-                        "La fecha seleccionada no está en la semana actual. "
-                        + "Cambie a la semana correspondiente para importar esta asistencia.",
-                        "Información", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-
-            // La columna base para el día (2 = lunes, 3 = martes, etc.)
-            int columnaBase = 2 + (diaOffset * 2); // 2 columnas iniciales + 2 por cada día
-            int columnaContraturno = columnaBase + 1;
-
-            // Opciones para importar en turno normal o contraturno
-            String[] opcionesTurno = {"Turno normal", "Contraturno"};
-            int seleccionTurno = JOptionPane.showOptionDialog(this,
-                    "¿En qué turno desea importar la asistencia?",
-                    "Seleccionar Turno",
-                    JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
-                    null, opcionesTurno, opcionesTurno[0]);
-
-            if (seleccionTurno == -1) {
-                return; // Cancelado
-            }
-
-            int columnaDestino = (seleccionTurno == 0) ? columnaBase : columnaContraturno;
-
-            // Consultar asistencias del profesor para esa materia y fecha
-            String query = "SELECT am.alumno_id, am.estado, u.dni "
-                    + "FROM asistencia_materia am "
-                    + "JOIN usuarios u ON am.alumno_id = u.id "
-                    + "WHERE am.curso_id = ? AND am.materia_id = ? AND am.fecha = ?";
-
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, cursoId);
-            ps.setInt(2, materiaId);
-            ps.setDate(3, java.sql.Date.valueOf(fechaImportar));
-
-            ResultSet rs = ps.executeQuery();
-            int contadorActualizados = 0;
-
-            while (rs.next()) {
-                String dni = rs.getString("dni");
-                String estado = rs.getString("estado");
-
-                // Buscar la fila correspondiente a este DNI
-                for (int i = 0; i < tableModel.getRowCount(); i++) {
-                    if (tableModel.getValueAt(i, 1).toString().equals(dni)) {
-                        tableModel.setValueAt(estado, i, columnaDestino);
-
-                        // Forzar repintado de la celda para que se aplique el color
-                        Rectangle rect = tablaAsistencia.getCellRect(i, columnaDestino, true);
-                        tablaAsistencia.repaint(rect);
-
-                        contadorActualizados++;
-                        break;
-                    }
-                }
-            }
-
-            if (contadorActualizados > 0) {
-                JOptionPane.showMessageDialog(this,
-                        "Se importaron " + contadorActualizados + " asistencias de la materia "
-                        + materiaSeleccionada + " para el día "
-                        + fechaImportar.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                        "Importación Exitosa", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "No se encontraron coincidencias de asistencias para importar.",
-                        "Información", JOptionPane.INFORMATION_MESSAGE);
-            }
-
-        } catch (SQLException ex) {
-            System.out.println("Error al importar asistencias de profesor: " + ex.getMessage());
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error al importar asistencias: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception ex) {
-            System.out.println("Error inesperado: " + ex.getMessage());
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error inesperado: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
+    /**
+     * Elimina una observación existente.
+     */
     private void eliminarObservacionSeleccionada() {
         String texto = txtObservacionesExistentes.getText();
         if (texto.isEmpty()) {
@@ -1211,6 +902,128 @@ protected void configurarTabla() {
         } catch (SQLException | NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Error al eliminar observación: " + ex.getMessage());
         }
+    }
+
+    /**
+     * Configura aspectos responsive del panel.
+     */
+    private void hacerPanelResponsive() {
+        // Aplicar utilidades responsive
+        ResponsiveUtils.makeResponsive(this);
+
+        // Aplicar a subpaneles si existen
+        if (jPanel1 != null) {
+            ResponsiveUtils.makeResponsive(jPanel1);
+        }
+        if (jPanel2 != null) {
+            ResponsiveUtils.makeResponsive(jPanel2);
+        }
+        if (jPanel3 != null) {
+            ResponsiveUtils.makeResponsive(jPanel3);
+        }
+        if (panelObservacionesCompleto != null) {
+            ResponsiveUtils.makeResponsive(panelObservacionesCompleto);
+        }
+        if (panelEstadisticas != null) {
+            ResponsiveUtils.makeResponsive(panelEstadisticas);
+        }
+
+        // Agregar listener para ajustes dinámicos
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent evt) {
+                ajustarComponentesSegunTamano();
+            }
+        });
+    }
+
+    /**
+     * Configura el scrolling y la tabla para asegurar visibilidad.
+     */
+    public void configurarScrollingYTabla() {
+        // Establecer un tamaño grande para este panel
+        setPreferredSize(new Dimension(1500, 1200));
+        setMinimumSize(new Dimension(1000, 900));
+
+        // Configurar la tabla y su ScrollPane
+        if (tablaAsistencia != null && scrollPane != null) {
+            // Configurar viewport para la tabla
+            tablaAsistencia.setPreferredScrollableViewportSize(new Dimension(900, 400));
+            tablaAsistencia.setFillsViewportHeight(true);
+
+            // ScrollPane con barras siempre visibles
+            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+            scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+            scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+
+            // Modo de redimensionamiento para permitir scroll horizontal
+            tablaAsistencia.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        }
+
+        // Asegurar visibilidad y tamaño de paneles internos
+        if (jPanel1 != null) {
+            jPanel1.setVisible(true);
+        }
+
+        if (jPanel2 != null) {
+            jPanel2.setVisible(true);
+            jPanel2.setPreferredSize(new Dimension(900, 400));
+        }
+
+        if (jPanel3 != null) {
+            jPanel3.setVisible(true);
+        }
+
+        // Configuración especial para el panel de observaciones
+        if (panelObservacionesCompleto != null) {
+            panelObservacionesCompleto.setVisible(true);
+            panelObservacionesCompleto.setPreferredSize(new Dimension(400, 600));
+            panelObservacionesCompleto.setName("panelObservaciones");
+
+            // Asegurar que todos los componentes sean visibles
+            for (Component comp : panelObservacionesCompleto.getComponents()) {
+                comp.setVisible(true);
+            }
+        }
+
+        if (panelEstadisticas != null) {
+            panelEstadisticas.setVisible(true);
+        }
+
+        // Forzar actualización
+        revalidate();
+        repaint();
+
+        System.out.println("Panel configurado con tamaño: " + getPreferredSize().width + "x" + getPreferredSize().height);
+    }
+
+    /**
+     * Ajusta los componentes según el tamaño del panel.
+     */
+    private void ajustarComponentesSegunTamano() {
+        int anchoTotal = getWidth();
+
+        // Ajustar panel de observaciones
+        if (panelObservacionesCompleto != null) {
+            int anchoObservaciones = Math.max(250, anchoTotal < 1000 ? anchoTotal / 4 : anchoTotal / 3);
+            panelObservacionesCompleto.setPreferredSize(new Dimension(
+                    anchoObservaciones, panelObservacionesCompleto.getHeight()));
+        }
+
+        // Ajustar tabla
+        if (tablaAsistencia != null && tablaAsistencia.getColumnCount() > 0) {
+            // Ajustar altura de filas
+            tablaAsistencia.setRowHeight(anchoTotal < 800 ? 25 : 30);
+        }
+
+        // Actualizar UI
+        revalidate();
+        repaint();
+    }
+
+    public JDateChooser getDateChooser() {
+        return this.dateChooser;
     }
 
     /**
@@ -1574,7 +1387,7 @@ protected void configurarTabla() {
     }//GEN-LAST:event_btnGuardarActionPerformed
 
     private void btnImportarDeMateriaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnImportarDeMateriaActionPerformed
-        importarAsistenciaProfesor();
+        //importarAsistenciaProfesor();
     }//GEN-LAST:event_btnImportarDeMateriaActionPerformed
 
 

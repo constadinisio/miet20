@@ -6,12 +6,9 @@ import java.sql.*;
 import javax.swing.*;
 import main.java.database.Conexion;
 import main.java.views.login.LoginForm;
-import main.java.views.users.Admin.admin;
-import main.java.views.users.Alumnos.alumnos;
-import main.java.views.users.Preceptor.preceptor;
-import main.java.views.users.Profesor.profesor;
-import main.java.views.users.Attp.attp;
 import main.java.updater.ActualizadorApp;
+import main.java.views.users.common.RolPanelManagerFactory;
+import main.java.views.users.common.VentanaInicio;
 
 /**
  * Clase utilitaria para crear y gestionar la barra de menú común que incluye la
@@ -291,9 +288,10 @@ public class MenuBarManager {
     }
 
     /**
-     * Abre la pantalla correspondiente al rol seleccionado.
+     * Cambia la visualización al rol seleccionado. Versión adaptada para
+     * VentanaInicio.
      *
-     * @param rolId ID del rol seleccionado
+     * @param rolId ID del rol
      */
     private void abrirPantallaPorRol(int rolId) {
         try {
@@ -303,7 +301,7 @@ public class MenuBarManager {
                 return;
             }
 
-            String query = "SELECT nombre, apellido, mail FROM usuarios WHERE id = ?";
+            String query = "SELECT nombre, apellido, mail, anio, division, foto_url FROM usuarios WHERE id = ?";
             PreparedStatement ps = conect.prepareStatement(query);
             ps.setInt(1, userId);
             ResultSet rs = ps.executeQuery();
@@ -312,50 +310,79 @@ public class MenuBarManager {
                 String nombre = rs.getString("nombre");
                 String apellido = rs.getString("apellido");
                 String nombreCompleto = nombre + " " + apellido;
+                String fotoUrl = rs.getString("foto_url");
+                System.out.println("Cambiando a rol: " + rolId + " - Usuario: " + nombreCompleto);
 
-                System.out.println("Abriendo pantalla para rol: " + rolId + " - Usuario: " + nombreCompleto);
+                // Si la ventana actual es VentanaInicio
+                if (currentFrame instanceof VentanaInicio) {
+                    VentanaInicio ventana = (VentanaInicio) currentFrame;
 
-                // Cerrar ventana actual
-                if (currentFrame != null) {
-                    currentFrame.dispose();
-                }
+                    // Actualizar el gestor de paneles según el nuevo rol
+                    ventana.setRolPanelManager(RolPanelManagerFactory.createManager(ventana, userId, rolId));
 
-                // Abrir la pantalla correspondiente según el rol
-                switch (rolId) {
-                    case 1: // Administrador
-                        admin adminForm = new admin(nombre, apellido, "Administrador");
-                        adminForm.setVisible(true);
-                        System.out.println("Pantalla de Administrador abierta");
-                        break;
-                    case 2: // Preceptor
-                        preceptor preceptorForm = new preceptor(userId);
-                        preceptorForm.updateLabels(nombreCompleto);
-                        preceptorForm.setVisible(true);
-                        System.out.println("Pantalla de Preceptor abierta");
-                        break;
-                    case 3: // Profesor
-                        profesor profesorForm = new profesor(userId);
-                        profesorForm.updateLabels(nombreCompleto);
-                        profesorForm.setVisible(true);
-                        System.out.println("Pantalla de Profesor abierta");
-                        break;
-                    case 4: // Alumno
-                        alumnos alumnoForm = new alumnos(userId);
-                        alumnoForm.setVisible(true);
-                        System.out.println("Pantalla de Alumno abierta");
-                        break;
-                    case 5: // ATTP
-                        attp attpForm = new attp(userId);
-                        attpForm.updateLabels(nombreCompleto);
-                        attpForm.setVisible(true);
-                        System.out.println("Pantalla de ATTP abierta");
-                        break;
-                    default:
-                        JOptionPane.showMessageDialog(null,
-                                "Rol no reconocido (ID: " + rolId + ")",
-                                "Error", JOptionPane.ERROR_MESSAGE);
-                        System.err.println("Rol no reconocido: " + rolId);
-                        break;
+                    // Actualizar al nuevo rol usando métodos públicos
+                    ventana.setUserRol(rolId);
+
+                    // Reconfigurar los botones
+                    ventana.configurePanelBotones();
+
+                    // Actualizar etiquetas según el rol
+                    if (rolId == 4) { // Alumno
+                        // Obtener curso y división
+                        int anio = rs.getInt("anio");
+                        String division = rs.getString("division");
+                        String cursoDiv = anio + "°" + division;
+
+                        // Actualizar etiquetas de alumno
+                        ventana.updateAlumnoLabels(nombreCompleto, obtenerTextoRol(rolId), cursoDiv);
+                    } else {
+                        // Actualizar etiquetas estándar
+                        ventana.updateLabels(nombreCompleto, obtenerTextoRol(rolId));
+                    }
+
+                    // Actualizar foto de perfil si existe
+                    if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                        ventana.updateFotoPerfil(fotoUrl);
+                    }
+
+                    // Restaurar la vista principal para el nuevo rol
+                    ventana.restaurarVistaPrincipal();
+
+                    System.out.println("Rol cambiado a: " + obtenerTextoRol(rolId));
+                } else {
+                    // Cerrar ventana actual y crear nueva ventana unificada
+                    if (currentFrame != null) {
+                        currentFrame.dispose();
+                    }
+
+                    // Crear nueva instancia de VentanaInicio
+                    VentanaInicio nuevaVentana = new VentanaInicio(userId, rolId);
+
+                    // Actualizar etiquetas según el rol
+                    if (rolId == 4) { // Alumno
+                        // Obtener curso y división
+                        int anio = rs.getInt("anio");
+                        String division = rs.getString("division");
+                        String cursoDiv = anio + "°" + division;
+
+                        // Actualizar etiquetas de alumno
+                        nuevaVentana.updateAlumnoLabels(nombreCompleto, obtenerTextoRol(rolId), cursoDiv);
+                    } else {
+                        // Actualizar etiquetas estándar
+                        nuevaVentana.updateLabels(nombreCompleto, obtenerTextoRol(rolId));
+                    }
+
+                    // Actualizar foto de perfil si existe
+                    if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                        nuevaVentana.updateFotoPerfil(fotoUrl);
+                    }
+
+                    // Actualizar referencia a la ventana actual
+                    currentFrame = nuevaVentana;
+
+                    // Mostrar la nueva ventana
+                    nuevaVentana.setVisible(true);
+                    System.out.println("Pantalla de " + obtenerTextoRol(rolId) + " abierta");
                 }
             } else {
                 System.err.println("No se encontró el usuario con ID: " + userId);
@@ -372,6 +399,28 @@ public class MenuBarManager {
         }
     }
 
+    /**
+     * Obtiene el texto descriptivo del rol.
+     *
+     * @param rol Código numérico del rol
+     * @return Descripción textual del rol
+     */
+    private String obtenerTextoRol(int rol) {
+        switch (rol) {
+            case 1:
+                return "Administrador";
+            case 2:
+                return "Preceptor";
+            case 3:
+                return "Profesor";
+            case 4:
+                return "Estudiante";
+            case 5:
+                return "ATTP";
+            default:
+                return "Usuario";
+        }
+    }
     /**
      * Cierra la sesión actual y vuelve a la pantalla de login.
      */

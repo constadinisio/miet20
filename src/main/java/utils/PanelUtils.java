@@ -59,10 +59,6 @@ public class PanelUtils {
         if (!(container.getLayout() instanceof BorderLayout)) {
             container.setLayout(new BorderLayout());
         }
-
-        // Ajustar el panel para scroll
-        panel.ajustarPanelParaScroll();
-
         // Crear un panel contenedor con BoxLayout vertical para preservar la estructura
         JPanel wrapperPanel = new JPanel();
         wrapperPanel.setLayout(new BoxLayout(wrapperPanel, BoxLayout.Y_AXIS));

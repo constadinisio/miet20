@@ -4,6 +4,7 @@
  */
 package main.java.views.users.Profesor;
 
+
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.sql.Connection;
@@ -17,49 +18,70 @@ import java.time.LocalTime;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import main.java.database.Conexion;
+import main.java.views.users.common.VentanaInicio;
 
 /**
+ * Panel para gestionar el libro de temas de un profesor.
+ * Adaptado para funcionar con la nueva arquitectura VentanaInicio.
  *
  * @author nico_
  */
 public class libroTema extends javax.swing.JPanel {
 
-    
     private Connection conect;
     private int profesorId;
-    private profesor profMenu;
+    
+    // Referencia a la ventana principal (reemplaza la referencia a profesor)
+    private VentanaInicio ventanaPrincipal;
 
+    /**
+     * Constructor simple para usar desde el diseñador
+     */
+    public libroTema() {
+        initComponents();
+    }
+
+    /**
+     * Constructor para uso desde VentanaInicio
+     * 
+     * @param panelPrincipal Panel donde se mostrará este componente
+     * @param profesorId ID del profesor
+     * @param ventanaPrincipal Referencia a la ventana principal
+     */
+    public libroTema(JPanel panelPrincipal, int profesorId, VentanaInicio ventanaPrincipal) {
+        initComponents();
+        this.ventanaPrincipal = ventanaPrincipal;
+        this.profesorId = profesorId;
+        probar_conexion();
+        
+        try {
+            // Intenta cargar las imágenes si existen y el componente está inicializado
+            if (bannerColor1 != null && bannerColor2 != null) {
+                java.io.File file = new java.io.File("src/main/resources/images/banner-et20.png");
+                if (file.exists()) {
+                    rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, file.getAbsolutePath());
+                    rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, file.getAbsolutePath());
+                } else {
+                    System.err.println("Archivo de imagen no encontrado: " + file.getAbsolutePath());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al cargar las imágenes: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Configura el ID del profesor.
+     * 
+     * @param profesorId ID del profesor
+     */
     public void setProfesorId(int profesorId) {
         this.profesorId = profesorId;
     }
 
-    public libroTema(profesor menuAnterior) {
-        initComponents();
-        this.profMenu = menuAnterior;
-    }
-
-    public libroTema(JPanel panelPrincipal, int profesorId, profesor menuAnterior) {
-    initComponents();
-    this.profMenu = menuAnterior;
-    this.profesorId = profesorId;
-    probar_conexion();
-    
-    try {
-        // Intenta cargar las imágenes si existen y el componente está inicializado
-        if (bannerColor1 != null && bannerColor2 != null) {
-            java.io.File file = new java.io.File("src/main/resources/images/banner-et20.png");
-            if (file.exists()) {
-                rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, file.getAbsolutePath());
-                rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, file.getAbsolutePath());
-            } else {
-                System.err.println("Archivo de imagen no encontrado: " + file.getAbsolutePath());
-            }
-        }
-    } catch (Exception e) {
-        System.err.println("Error al cargar las imágenes: " + e.getMessage());
-    }
-}
-
+    /**
+     * Verifica la conexión a la base de datos.
+     */
     private void probar_conexion() {
         conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
@@ -67,6 +89,9 @@ public class libroTema extends javax.swing.JPanel {
         }
     }
 
+    /**
+     * Registra la firma de asistencia del profesor según el horario actual.
+     */
     public void firmarAsistencia() {
         try {
             LocalDate fechaActual = LocalDate.now();
@@ -103,46 +128,74 @@ public class libroTema extends javax.swing.JPanel {
         }
     }
 
+    /**
+     * Vuelve a la vista principal.
+     * Adaptado para usar VentanaInicio en lugar de profesor.
+     */
     private void accionVolver() {
-        Conexion.getInstancia().verificarConexion();
-        this.setVisible(false);
-        profMenu.setVisible(true);
+        if (ventanaPrincipal != null) {
+            // Obtener el contenedor padre (panel principal)
+            Container parent = this.getParent();
+            if (parent != null) {
+                // Eliminar este panel
+                parent.remove(this);
+                
+                // Restaurar la vista principal de VentanaInicio
+                ventanaPrincipal.restaurarVistaPrincipal();
+                
+                // Actualizar la interfaz
+                parent.revalidate();
+                parent.repaint();
+            }
+        } else {
+            System.err.println("Error: ventanaPrincipal es null");
+            
+            // Alternativa de emergencia: simplemente ocultar este panel
+            this.setVisible(false);
+        }
     }
     
+    /**
+     * Abre el panel de contenidos.
+     * Adaptado para usar VentanaInicio en lugar de profesor.
+     */
     private void abrirContenidos() {
-        
-    // Verificar la conexión a la base de datos
-    Conexion.getInstancia().verificarConexion();
-    
-    // Crear una nueva instancia de tablaContenidos pasándole this como referencia
-    // para que pueda volver al panel libroTema cuando sea necesario
-    tablaContenidos tablaCont = new tablaContenidos(this);
-    
-    // Configurar el ID del profesor si es necesario
-    // tablaCont.setProfesorId(this.profesorId);
-    
-    // Obtener el panel padre (el que contiene a libroTema)
-    Container parent = this.getParent();
-    
-    // Ocultar el panel actual
-    this.setVisible(false);
-    
-    // Si el padre es un contenedor con layout, podemos hacer esto:
-    if (parent != null) {
-        // Eliminar el componente actual (libroTema)
-        parent.remove(this);
-        
-        // Agregar el nuevo panel al contenedor padre
-        parent.add(tablaCont, BorderLayout.CENTER);
-        
-        // Actualizar la interfaz
-        parent.revalidate();
-        parent.repaint();
-    }
-    
-    // Hacer visible el nuevo panel
-    tablaCont.setVisible(true);
-
+        try {
+            // Verificar la conexión a la base de datos
+            Conexion.getInstancia().verificarConexion();
+            
+            // Crear una nueva instancia de tablaContenidos
+            // 1. Usando la nueva arquitectura:
+            tablaContenidos tablaCont = new tablaContenidos(profesorId, ventanaPrincipal);
+            
+            // Obtener el panel padre (el que contiene a libroTema)
+            Container parent = this.getParent();
+            
+            // Ocultar el panel actual
+            this.setVisible(false);
+            
+            // Si el padre es un contenedor con layout, podemos hacer esto:
+            if (parent != null) {
+                // Eliminar el componente actual (libroTema)
+                parent.remove(this);
+                
+                // Agregar el nuevo panel al contenedor padre
+                parent.add(tablaCont, BorderLayout.CENTER);
+                
+                // Actualizar la interfaz
+                parent.revalidate();
+                parent.repaint();
+            }
+            
+            // Hacer visible el nuevo panel
+            tablaCont.setVisible(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, 
+                    "Error al abrir contenidos: " + e.getMessage(), 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents

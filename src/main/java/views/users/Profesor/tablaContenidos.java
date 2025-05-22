@@ -4,192 +4,111 @@
  */
 package main.java.views.users.Profesor;
 
-import java.sql.*;
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import main.java.database.Conexion;
-import javax.swing.table.DefaultTableModel;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.LocalDate;
-import java.time.LocalTime;
+
+import java.awt.BorderLayout;
+import java.awt.Container;
+import javax.swing.JPanel;
+import main.java.views.users.common.VentanaInicio;
 
 /**
- *
+ * Panel para gestionar la tabla de contenidos.
+ * Adaptado para funcionar con la nueva arquitectura VentanaInicio.
+ * 
  * @author nico_
  */
 public class tablaContenidos extends javax.swing.JPanel {
+    
+    private int profesorId;
+    
+    // Referencia a la ventana principal (reemplaza la referencia a profesor/libroTema)
+    private VentanaInicio ventanaPrincipal;
+    
+    // Panel de libro de temas anterior (para volver)
+    private libroTema panelLibroTema;
 
-    private Connection conect;
-    private libroTema libroAnterior;
-
+    /**
+     * Constructor para el diseñador.
+     */
     public tablaContenidos() {
         initComponents();
-        cargarTabla();
-        probar_conexion();
-        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, "src/main/resources/images/banner-et20.png");
-        rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, "src/main/resources/images/banner-et20.png");
+    }
 
+    /**
+     * Constructor adaptado para usar desde libroTema.
+     * 
+     * @param panelLibroTema Panel de libro de temas desde el que se invoca
+     */
+    public tablaContenidos(libroTema panelLibroTema) {
+        initComponents();
+        this.panelLibroTema = panelLibroTema;
+    }
+    
+    /**
+     * Constructor adaptado para la nueva arquitectura con VentanaInicio.
+     * 
+     * @param profesorId ID del profesor
+     * @param ventanaPrincipal Referencia a la ventana principal
+     */
+    public tablaContenidos(int profesorId, VentanaInicio ventanaPrincipal) {
+        initComponents();
+        this.profesorId = profesorId;
+        this.ventanaPrincipal = ventanaPrincipal;
+    }
+
+    /**
+     * Acción para volver al panel de libro de temas.
+     * Adaptado para usar VentanaInicio.
+     */
+    private void volverALibroTema() {
         try {
-            // Intenta cargar las imágenes si existen y el componente está inicializado
-            if (bannerColor1 != null && bannerColor2 != null) {
-                java.io.File file = new java.io.File("src/main/resources/images/banner-et20.png");
-                if (file.exists()) {
-                    rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor1, file.getAbsolutePath());
-                    rsscalelabel.RSScaleLabel.setScaleLabel(bannerColor2, file.getAbsolutePath());
-                } else {
-                    System.err.println("Archivo de imagen no encontrado: " + file.getAbsolutePath());
+            if (ventanaPrincipal != null) {
+                // Crear una nueva instancia de libro de temas
+                libroTema libro = new libroTema(
+                        ventanaPrincipal.getPanelPrincipal(), 
+                        profesorId, 
+                        ventanaPrincipal
+                );
+                
+                // Obtener el panel padre
+                Container parent = this.getParent();
+                
+                // Ocultar el panel actual
+                this.setVisible(false);
+                
+                if (parent != null) {
+                    // Eliminar el componente actual
+                    parent.remove(this);
+                    
+                    // Agregar el nuevo panel
+                    parent.add(libro, BorderLayout.CENTER);
+                    
+                    // Actualizar la interfaz
+                    parent.revalidate();
+                    parent.repaint();
                 }
+                
+                // Hacer visible el nuevo panel
+                libro.setVisible(true);
+            } else if (panelLibroTema != null) {
+                // Modo de compatibilidad con la implementación anterior
+                Container parent = this.getParent();
+                this.setVisible(false);
+                
+                if (parent != null) {
+                    parent.remove(this);
+                    parent.add(panelLibroTema, BorderLayout.CENTER);
+                    parent.revalidate();
+                    parent.repaint();
+                }
+                
+                panelLibroTema.setVisible(true);
+            } else {
+                System.err.println("Error: no hay referencias para volver atrás");
             }
         } catch (Exception e) {
-            System.err.println("Error al cargar las imágenes: " + e.getMessage());
-        }
-    }
-
-    public tablaContenidos(libroTema libroAnterior) {
-        initComponents();
-        this.libroAnterior = libroAnterior;
-        // Inicialización básica
-    }
-
-    private void probar_conexion() {
-        conect = Conexion.getInstancia().verificarConexion();
-        if (conect == null) {
-            JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void añadirContenido() {
-        String contenido = lblContenidoVisto.getText();
-        String observaciones = lblObservaciones.getText();
-        String fecha = lblFechaContenido.getText();
-        LocalDate fechaActual = LocalDate.now();
-        LocalTime horaActual = LocalTime.now();
-
-        if (contenido.isEmpty() || fecha == null) {
-            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        Connection connection = null;
-        PreparedStatement stmt = null;
-
-        try {
-            Conexion.getInstancia().verificarConexion();
-
-            if (conect == null || conect.isClosed()) {
-                JOptionPane.showMessageDialog(this, "Error de conexión.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Preparar statement
-            String sql = "INSERT INTO contenidos_libro (fecha, contenido, observaciones, fecha_creacion) VALUES (?, ?, ?, ?)";
-            stmt = conect.prepareStatement(sql);
-            stmt.setString(1, fecha);
-            stmt.setString(2, contenido);
-            stmt.setString(3, observaciones);
-            stmt.setDate(4, Date.valueOf(fechaActual));
-
-            // Ejecutar inserción
-            int filasAfectadas = stmt.executeUpdate(); // Cambio clave: usar executeUpdate()
-
-            if (filasAfectadas > 0) {
-                cargarTabla();
-                JOptionPane.showMessageDialog(this, "Contenido añadido correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this, "No se pudo añadir el contenido.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error al registrar: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
-        } finally {
-            // Cerrar recursos
-            try {
-                if (stmt != null) {
-                    stmt.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            System.err.println("Error al volver a libro de temas: " + e.getMessage());
         }
-    }
-
-    private void cargarTabla() {
-        DefaultTableModel model = new DefaultTableModel();
-        model.addColumn("ID");
-        model.addColumn("Fecha");
-        model.addColumn("Contenido");
-        model.addColumn("Observaciones");
-        model.addColumn("Fecha Creación");
-
-        tableContenido.setModel(model);
-
-        String sql = "SELECT id, fecha, contenido, observaciones, fecha_creacion FROM contenidos_libro";
-
-        try (Connection conn = Conexion.getInstancia().verificarConexion(); PreparedStatement stmt = conn.prepareStatement(sql); ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                Object[] fila = {
-                    rs.getInt("id"),
-                    rs.getString("fecha"),
-                    rs.getString("contenido"),
-                    rs.getString("observaciones"),
-                    rs.getTimestamp("fecha_creacion")
-                };
-                model.addRow(fila);
-            }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Error al cargar datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void eliminarContenido() {
-        String id = lblIdContenido.getText();
-        if (id.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Debe ingresar un ID para eliminar.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        try (PreparedStatement stmt = conect.prepareStatement("DELETE FROM contenidos_libro WHERE id = ?");) {
-            stmt.setInt(1, Integer.parseInt(id));
-            stmt.executeUpdate();
-            cargarTabla();
-            JOptionPane.showMessageDialog(this, "Contenido eliminado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Error al eliminar en la base de datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void modificarContenido() {
-        String id = lblIdContenido.getText();
-        String contenido = lblContenidoVisto.getText();
-        String observaciones = lblObservaciones.getText();
-        String fecha = lblFechaContenido.getText();
-        LocalTime horaActual = LocalTime.now();
-
-        if (id.isEmpty() || contenido.isEmpty() || fecha == null) {
-            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios para modificar.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try (PreparedStatement stmt = conect.prepareStatement("UPDATE contenidos_libro SET fechacontenido = ?, contenido = ?, observaciones = ?, fecha_modificacion = ? WHERE id = ?");) {
-
-            stmt.setString(1, fecha);
-            stmt.setString(2, contenido);
-            stmt.setString(3, observaciones);
-            stmt.setInt(4, Integer.parseInt(id));
-            stmt.setTime(5, Time.valueOf(horaActual));
-            stmt.executeUpdate();
-            cargarTabla();
-            JOptionPane.showMessageDialog(this, "Contenido modificado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Error al modificar en la base de datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void accionVolver() {
-        libroAnterior.setVisible(true);
-        this.setVisible(false);
     }
 
     @SuppressWarnings("unchecked")
@@ -369,19 +288,19 @@ public class tablaContenidos extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnVolverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnVolverActionPerformed
-        accionVolver();
+        volverALibroTema();
     }//GEN-LAST:event_btnVolverActionPerformed
 
     private void btnModificarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnModificarActionPerformed
-        modificarContenido();
+      //  modificarContenido();
     }//GEN-LAST:event_btnModificarActionPerformed
 
     private void btnAñadirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAñadirActionPerformed
-        añadirContenido();
+      //  añadirContenido();
     }//GEN-LAST:event_btnAñadirActionPerformed
 
     private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
-        eliminarContenido();
+       // eliminarContenido();
     }//GEN-LAST:event_btnEliminarActionPerformed
 
 

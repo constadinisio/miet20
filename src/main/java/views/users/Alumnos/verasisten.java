@@ -282,8 +282,7 @@ public class verasisten extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void botregActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botregActionPerformed
-        alumnos log = new alumnos();
-        log.setVisible(true);
+        
         this.setVisible(false);
     }//GEN-LAST:event_botregActionPerformed
 

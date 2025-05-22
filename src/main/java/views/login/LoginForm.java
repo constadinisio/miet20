@@ -2,30 +2,19 @@ package main.java.views.login;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagLayout;
-import java.awt.Image;
-import java.awt.Toolkit;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.net.URL;
 import java.sql.*;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import main.java.views.users.Admin.admin;
-import main.java.views.users.Alumnos.alumnos;
-import main.java.views.users.Preceptor.preceptor;
-import main.java.views.users.Profesor.profesor;
-import main.java.views.users.Attp.attp;
 import main.java.database.Conexion;
 import main.java.utils.ResourceManager;
 import main.java.utils.ResponsiveBannerPanel;
 import main.java.utils.uiUtils;
+import main.java.views.users.common.VentanaInicio;
 
 /**
  * Clase principal de inicio de sesión para la plataforma educativa. Gestiona la
@@ -92,66 +81,67 @@ public class LoginForm extends javax.swing.JFrame {
      * GridBagLayout
      */
     private void aplicarDiseñoResponsivoCentrado() {
-    // 1. Preservar referencias a los componentes originales
-    // (en caso de que ya no estén accesibles después de remover todo)
-    if (imagenLogo == null || jPanel1 == null) {
-        System.err.println("Error: Componentes críticos son nulos");
-        return;
+        // 1. Preservar referencias a los componentes originales
+        // (en caso de que ya no estén accesibles después de remover todo)
+        if (imagenLogo == null || jPanel1 == null) {
+            System.err.println("Error: Componentes críticos son nulos");
+            return;
+        }
+
+        // 2. Limpiar el contenedor principal
+        getContentPane().removeAll();
+        getContentPane().setLayout(new BorderLayout());
+
+        // 3. Crear un panel principal con color de fondo específico
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(new Color(249, 245, 232)); // Mantener el color original
+
+        // 4. Crear paneles para los banners superior e inferior usando la utilidad
+        ResponsiveBannerPanel topBannerPanel = new ResponsiveBannerPanel(ResourceManager.getImagePath("banner-et20.png"));
+        ResponsiveBannerPanel bottomBannerPanel = new ResponsiveBannerPanel(ResourceManager.getImagePath("banner-et20.png"));
+
+        // 5. Crear un panel central para el contenido (logo y formulario)
+        JPanel centerPanel = new JPanel(new GridBagLayout());
+        centerPanel.setOpaque(false);
+
+        // 6. Crear un panel que contendrá el logo y el formulario, uno encima del otro
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setOpaque(false);
+
+        // 7. Ajustar el contenedor del logo para que esté centrado
+        JPanel logoContainer = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        logoContainer.setOpaque(false);
+        logoContainer.add(imagenLogo);
+
+        // 8. Asegurarse que el formulario esté configurado correctamente
+        jPanel1.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // 9. Añadir elementos al panel de contenido en el orden correcto
+        contentPanel.add(Box.createVerticalStrut(20)); // Espacio superior
+        contentPanel.add(logoContainer);
+        contentPanel.add(Box.createVerticalStrut(20)); // Espacio entre logo y formulario
+        contentPanel.add(jPanel1);
+        contentPanel.add(Box.createVerticalStrut(20)); // Espacio inferior
+
+        // 10. Añadir el panel de contenido al panel central
+        centerPanel.add(contentPanel);
+
+        // 11. Montar la estructura completa en un orden específico
+        mainPanel.add(topBannerPanel, BorderLayout.NORTH);
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        mainPanel.add(bottomBannerPanel, BorderLayout.SOUTH);
+
+        // 12. Agregar el panel principal al contenedor
+        getContentPane().add(mainPanel, BorderLayout.CENTER);
+
+        // 13. Importante: forzar actualización de la jerarquía de componentes
+        mainPanel.revalidate();
+        mainPanel.repaint();
+        getContentPane().revalidate();
+        getContentPane().repaint();
     }
-    
-    // 2. Limpiar el contenedor principal
-    getContentPane().removeAll();
-    getContentPane().setLayout(new BorderLayout());
-    
-    // 3. Crear un panel principal con color de fondo específico
-    JPanel mainPanel = new JPanel(new BorderLayout());
-    mainPanel.setBackground(new Color(249, 245, 232)); // Mantener el color original
-    
-    // 4. Crear paneles para los banners superior e inferior usando la utilidad
-    ResponsiveBannerPanel topBannerPanel = new ResponsiveBannerPanel(ResourceManager.getImagePath("banner-et20.png"));
-    ResponsiveBannerPanel bottomBannerPanel = new ResponsiveBannerPanel(ResourceManager.getImagePath("banner-et20.png"));
-    
-    // 5. Crear un panel central para el contenido (logo y formulario)
-    JPanel centerPanel = new JPanel(new GridBagLayout());
-    centerPanel.setOpaque(false);
-    
-    // 6. Crear un panel que contendrá el logo y el formulario, uno encima del otro
-    JPanel contentPanel = new JPanel();
-    contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-    contentPanel.setOpaque(false);
-    
-    // 7. Ajustar el contenedor del logo para que esté centrado
-    JPanel logoContainer = new JPanel(new FlowLayout(FlowLayout.CENTER));
-    logoContainer.setOpaque(false);
-    logoContainer.add(imagenLogo);
-    
-    // 8. Asegurarse que el formulario esté configurado correctamente
-    jPanel1.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-    
-    // 9. Añadir elementos al panel de contenido en el orden correcto
-    contentPanel.add(Box.createVerticalStrut(20)); // Espacio superior
-    contentPanel.add(logoContainer);
-    contentPanel.add(Box.createVerticalStrut(20)); // Espacio entre logo y formulario
-    contentPanel.add(jPanel1);
-    contentPanel.add(Box.createVerticalStrut(20)); // Espacio inferior
-    
-    // 10. Añadir el panel de contenido al panel central
-    centerPanel.add(contentPanel);
-    
-    // 11. Montar la estructura completa en un orden específico
-    mainPanel.add(topBannerPanel, BorderLayout.NORTH);
-    mainPanel.add(centerPanel, BorderLayout.CENTER);
-    mainPanel.add(bottomBannerPanel, BorderLayout.SOUTH);
-    
-    // 12. Agregar el panel principal al contenedor
-    getContentPane().add(mainPanel, BorderLayout.CENTER);
-    
-    // 13. Importante: forzar actualización de la jerarquía de componentes
-    mainPanel.revalidate();
-    mainPanel.repaint();
-    getContentPane().revalidate();
-    getContentPane().repaint();
-}
+
     /**
      * Método para cerrar la aplicación de manera segura. Realiza logout y
      * termina la ejecución del programa.
@@ -333,7 +323,7 @@ public class LoginForm extends javax.swing.JFrame {
         bannerImg1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/main/resources/images/banner-et20.png"))); // NOI18N
         panelLogin.add(bannerImg1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 760, -1));
 
-        getContentPane().add(panelLogin, java.awt.BorderLayout.CENTER);
+        getContentPane().add(panelLogin, java.awt.BorderLayout.LINE_END);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -510,7 +500,11 @@ public class LoginForm extends javax.swing.JFrame {
             verificarDatosComplementarios(session);
 
         } catch (Exception ex) {
-            manejarErrorAutenticacion(ex);
+            JOptionPane.showMessageDialog(this,
+                    "Error durante la autenticación: " + ex.getMessage(),
+                    "Error de Autenticación",
+                    JOptionPane.ERROR_MESSAGE);
+            System.out.println(ex.getMessage());
         }
     }
 
@@ -526,30 +520,8 @@ public class LoginForm extends javax.swing.JFrame {
 
         // Configurar qué hacer cuando todos los datos estén completos
         datosManager.setOnCompletionCallback(() -> {
-            // Este código se ejecutará después de que todos los datos estén completos
-            switch (session.getRol()) {
-                case 5: // ATTP
-                    manejarLoginATTP(session);
-                    break;
-                case 4: // Alumno
-                    manejarLoginAlumno(session);
-                    break;
-                case 3: // Profesor
-                    manejarLoginProfesor(session);
-                    break;
-                case 2: // Preceptor
-                    manejarLoginPreceptor(session);
-                    break;
-                case 1: // Admin
-                    manejarLoginAdmin(session);
-                    break;
-                case 0: // Pendiente
-                    mostrarMensajePendiente();
-                    break;
-                default:
-                    mostrarMensajeAccesoDenegado();
-                    break;
-            }
+            // Usar el método unificado en lugar de los específicos por rol
+            manejarLoginUsuario(session);
         });
 
         // Iniciar el proceso de verificación
@@ -569,120 +541,97 @@ public class LoginForm extends javax.swing.JFrame {
         return true;
     }
 
-// En LoginForm.java, en el método manejarLoginAlumno
-    private void manejarLoginAlumno(UserSession session) {
+    /**
+     * Maneja la autenticación general para cualquier tipo de usuario. Este
+     * método sustituye a todos los métodos específicos de cada rol.
+     *
+     * @param session Sesión de usuario autenticado
+     */
+    /**
+     * Maneja la autenticación general para cualquier tipo de usuario. Este
+     * método sustituye a todos los métodos específicos de cada rol.
+     *
+     * @param session Sesión de usuario autenticado
+     */
+    private void manejarLoginUsuario(UserSession session) {
         try {
-            // Obtener el ID del alumno
-            int alumnoId = obtenerUsuarioId(session.getEmail());
-            if (alumnoId != -1) {
-                alumnos alumnoForm = new alumnos(alumnoId); // Pasar el ID aquí
-                updateUserInterface(alumnoForm, session);
-                alumnoForm.setVisible(true);
-                this.dispose();
+            // Crear la ventana unificada con el ID y rol del usuario
+            VentanaInicio ventana = new VentanaInicio(session.getUserId(), session.getRol());
+
+            // Actualizar la información del usuario según su rol
+            if (session.getRol() == 4) { // Alumno
+                // Para alumnos, obtenemos también el curso/división
+                String cursoDiv = obtenerCursoDivisionAlumno(session.getUserId());
+                ventana.updateAlumnoLabels(session.getNombre() + " " + session.getApellido(),
+                        obtenerTextoRol(session.getRol()),
+                        cursoDiv);
             } else {
-                JOptionPane.showMessageDialog(null,
-                        "Error al obtener el ID del alumno",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                // Para otros roles, actualizar información básica
+                ventana.updateLabels(session.getNombre() + " " + session.getApellido(),
+                        obtenerTextoRol(session.getRol()));
             }
-        } catch (SQLException ex) {
+
+            // Actualizar la foto de perfil si existe
+            if (session.getFotoUrl() != null && !session.getFotoUrl().isEmpty()) {
+                ventana.updateFotoPerfil(session.getFotoUrl());
+            }
+
+            ventana.setVisible(true);
+            this.dispose();
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(null,
-                    "Error al cargar la interfaz del alumno: " + ex.getMessage(),
+                    "Error al cargar la interfaz: " + ex.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
     }
 
-// En LoginForm.java, en el método manejarLoginATTP
-    private void manejarLoginATTP(UserSession session) {
-        try {
-            // Obtener el ID del ATTP
-            int attpId = obtenerUsuarioId(session.getEmail());
-            if (attpId != -1) {
-                attp attpForm = new attp(attpId); // Pasar el ID aquí
-                attpForm.updateLabels(session.getNombre() + " " + session.getApellido());
-                attpForm.setVisible(true);
-                this.dispose();
-            } else {
-                JOptionPane.showMessageDialog(null,
-                        "Error al obtener el ID del ATTP",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null,
-                    "Error al cargar la interfaz del ATTP: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+    /**
+     * Obtiene el texto descriptivo del rol.
+     *
+     * @param rol Código numérico del rol
+     * @return Descripción textual del rol
+     */
+    private String obtenerTextoRol(int rol) {
+        switch (rol) {
+            case 1:
+                return "Administrador";
+            case 2:
+                return "Preceptor";
+            case 3:
+                return "Profesor";
+            case 4:
+                return "Estudiante";
+            case 5:
+                return "ATTP";
+            default:
+                return "Usuario";
         }
     }
 
-    private void manejarLoginProfesor(UserSession session) {
+    /**
+     * Obtiene la información de curso y división para un alumno.
+     *
+     * @param alumnoId ID del alumno
+     * @return String con formato "Año°División"
+     */
+    private String obtenerCursoDivisionAlumno(int alumnoId) {
         try {
-            // Obtener el ID del profesor
-            int profesorId = obtenerUsuarioId(session.getEmail());
-            if (profesorId != -1) {
-                profesor profesorForm = new profesor(profesorId);
-                profesorForm.updateLabels(session.getNombre() + " " + session.getApellido());
-                profesorForm.setVisible(true);
-                this.dispose();
+            String query = "SELECT anio, division FROM usuarios WHERE id = ?";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, alumnoId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("anio") + "°" + rs.getString("division");
             } else {
-                JOptionPane.showMessageDialog(null,
-                        "Error al obtener el ID del profesor",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                return "Sin asignar";
             }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null,
-                    "Error al cargar la interfaz del profesor: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            System.err.println("Error al obtener curso/división: " + e.getMessage());
+            return "Error";
         }
-    }
-
-    private void manejarLoginPreceptor(UserSession session) {
-        try {
-            // Obtener el ID del preceptor
-            int preceptorId = obtenerUsuarioId(session.getEmail());
-            if (preceptorId != -1) {
-                preceptor preceptorForm = new preceptor(preceptorId);
-                preceptorForm.updateLabels(session.getNombre() + " " + session.getApellido());
-                preceptorForm.setVisible(true);
-                this.dispose();
-            } else {
-                JOptionPane.showMessageDialog(null,
-                        "Error al obtener el ID del preceptor",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null,
-                    "Error al cargar la interfaz del preceptor: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void manejarLoginAdmin(UserSession session) {
-        // TODO: Implementar cuando esté lista la interfaz de admin
-
-        admin adminForm = new admin(session.getNombre(), session.getApellido(), "Administrador");
-        adminForm.setVisible(true);
-        this.dispose();
-    }
-
-    private void mostrarMensajePendiente() {
-        JOptionPane.showMessageDialog(null,
-                "Tu cuenta está pendiente de aprobación por el administrador.",
-                "Cuenta Pendiente",
-                JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void mostrarMensajeAccesoDenegado() {
-        JOptionPane.showMessageDialog(null,
-                "No tienes permisos para acceder al sistema.",
-                "Acceso Denegado",
-                JOptionPane.WARNING_MESSAGE);
     }
 
     private void manejarErrorAutenticacion(Exception ex) {
@@ -720,61 +669,8 @@ public class LoginForm extends javax.swing.JFrame {
             // Si hay error en el hashing, retornar la contraseña sin hashear (no ideal)
             return password;
         }
-    }
-
-    private void updateUserInterface(JFrame form, UserSession session) {
-        try {
-            PreparedStatement stmt = conect.prepareStatement(
-                    "SELECT nombre, apellido, anio, division, foto_url FROM usuarios WHERE mail = ?"
-            );
-            stmt.setString(1, session.getEmail());
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                // Obtener nombre y apellido
-                String nombreCompleto = rs.getString("nombre") + " " + rs.getString("apellido");
-
-                // Convertir rol numérico a texto
-                String rolTexto;
-                switch (session.getRol()) {
-                    case 5:
-                        rolTexto = "ATTP";
-                        break;
-                    case 4:
-                        rolTexto = "Estudiante";
-                        break;
-                    case 3:
-                        rolTexto = "Profesor";
-                        break;
-                    case 2:
-                        rolTexto = "Preceptor";
-                        break;
-                    case 1:
-                        rolTexto = "Administrador";
-                        break;
-                    default:
-                        rolTexto = "Sin asignar";
-                }
-
-                // Obtener curso y división
-                String cursoDiv = rs.getString("anio") + "°" + rs.getString("division");
-
-                // Actualizar la interfaz
-                if (form instanceof alumnos alumnoForm) {
-                    alumnoForm.updateLabels(nombreCompleto, rolTexto, cursoDiv);
-                    alumnoForm.updateFotoPerfil(session.getFotoUrl());  // Usar el nuevo método
-                } else if (form instanceof admin adminForm) {
-                    adminForm.updateLabels(nombreCompleto, rolTexto);
-                    adminForm.updateFotoPerfil(session.getFotoUrl());  // Usar el nuevo método
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null,
-                    "Error al cargar datos del usuario: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
+    
+   
     }//GEN-LAST:event_botonGoogleActionPerformed
 
     public static void main(String args[]) {
