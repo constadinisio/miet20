@@ -20,6 +20,7 @@ import main.java.views.users.Attp.menu.StockPanel;
 
 /**
  * Gestor de paneles específico para el rol de ATTP.
+ * Versión actualizada que usa el sistema responsive.
  */
 public class AttpPanelManager implements RolPanelManager {
 
@@ -79,6 +80,8 @@ public class AttpPanelManager implements RolPanelManager {
     @Override
     public void handleButtonAction(String actionCommand) {
         try {
+            System.out.println("Acción ATTP: " + actionCommand);
+            
             switch (actionCommand) {
                 case "stock":
                     mostrarPanelStock();
@@ -97,36 +100,36 @@ public class AttpPanelManager implements RolPanelManager {
                     break;
             }
         } catch (Exception ex) {
+            System.err.println("Error en handleButtonAction ATTP: " + ex.getMessage());
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana,
                     "Error al procesar la acción: " + ex.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
             ventana.restaurarVistaPrincipal();
         }
     }
 
     /**
-     * Muestra el panel de stock.
+     * Muestra el panel de stock usando el sistema responsive.
      */
     private void mostrarPanelStock() {
         try {
-            // Obtener panel principal
+            System.out.println("Creando StockPanel...");
+            StockPanel panel = new StockPanel(ventana, attpId);
+            
+            // Usar el sistema responsive automático
             JPanel panelPrincipal = ventana.getPanelPrincipal();
             panelPrincipal.removeAll();
-            panelPrincipal.setLayout(new BorderLayout());
-
-            // Crear instancia del panel Stock
-            StockPanel panel = new StockPanel(ventana, attpId);
-
-            // Añadir al panel principal
             panelPrincipal.add(panel, BorderLayout.CENTER);
-
-            // Actualizar vista
             panelPrincipal.revalidate();
             panelPrincipal.repaint();
+            
+            System.out.println("StockPanel cargado exitosamente");
 
         } catch (Exception ex) {
+            System.err.println("Error al cargar StockPanel: " + ex.getMessage());
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar panel de stock: " + ex.getMessage(),
                     "Error",
@@ -136,26 +139,25 @@ public class AttpPanelManager implements RolPanelManager {
     }
 
     /**
-     * Muestra el panel de préstamos.
+     * Muestra el panel de préstamos usando el sistema responsive.
      */
     private void mostrarPanelPrestamos() {
         try {
-            // Obtener panel principal
+            System.out.println("Creando PrestamosPanel...");
+            PrestamosPanel panel = new PrestamosPanel(ventana, attpId);
+            
+            // Usar el sistema responsive automático
             JPanel panelPrincipal = ventana.getPanelPrincipal();
             panelPrincipal.removeAll();
-            panelPrincipal.setLayout(new BorderLayout());
-
-            // Crear instancia del panel Prestamos
-            PrestamosPanel panel = new PrestamosPanel(ventana, attpId);
-
-            // Añadir al panel principal
             panelPrincipal.add(panel, BorderLayout.CENTER);
-
-            // Actualizar vista
             panelPrincipal.revalidate();
             panelPrincipal.repaint();
+            
+            System.out.println("PrestamosPanel cargado exitosamente");
 
         } catch (Exception ex) {
+            System.err.println("Error al cargar PrestamosPanel: " + ex.getMessage());
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar panel de préstamos: " + ex.getMessage(),
                     "Error",
@@ -165,26 +167,25 @@ public class AttpPanelManager implements RolPanelManager {
     }
 
     /**
-     * Muestra el panel de registros.
+     * Muestra el panel de registros usando el sistema responsive.
      */
     private void mostrarPanelRegistros() {
         try {
-            // Obtener panel principal
+            System.out.println("Creando RegistrosPanel...");
+            RegistrosPanel panel = new RegistrosPanel(ventana, attpId);
+            
+            // Usar el sistema responsive automático
             JPanel panelPrincipal = ventana.getPanelPrincipal();
             panelPrincipal.removeAll();
-            panelPrincipal.setLayout(new BorderLayout());
-
-            // Crear instancia del panel Registros
-            RegistrosPanel panel = new RegistrosPanel(ventana, attpId);
-
-            // Añadir al panel principal
             panelPrincipal.add(panel, BorderLayout.CENTER);
-
-            // Actualizar vista
             panelPrincipal.revalidate();
             panelPrincipal.repaint();
+            
+            System.out.println("RegistrosPanel cargado exitosamente");
 
         } catch (Exception ex) {
+            System.err.println("Error al cargar RegistrosPanel: " + ex.getMessage());
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar panel de registros: " + ex.getMessage(),
                     "Error",
@@ -194,26 +195,25 @@ public class AttpPanelManager implements RolPanelManager {
     }
 
     /**
-     * Muestra el panel de registro de netbooks.
+     * Muestra el panel de registro de netbooks usando el sistema responsive.
      */
     private void mostrarPanelNetbooks() {
         try {
-            // Obtener panel principal
+            System.out.println("Creando NetbookRegistrationPanel...");
+            NetbookRegistrationPanel panel = new NetbookRegistrationPanel(ventana, attpId);
+            
+            // Usar el sistema responsive automático
             JPanel panelPrincipal = ventana.getPanelPrincipal();
             panelPrincipal.removeAll();
-            panelPrincipal.setLayout(new BorderLayout());
-
-            // Crear instancia del panel de registro de netbooks
-            NetbookRegistrationPanel panel = new NetbookRegistrationPanel(ventana, attpId);
-
-            // Añadir al panel principal
             panelPrincipal.add(panel, BorderLayout.CENTER);
-
-            // Actualizar vista
             panelPrincipal.revalidate();
             panelPrincipal.repaint();
+            
+            System.out.println("NetbookRegistrationPanel cargado exitosamente");
 
         } catch (Exception ex) {
+            System.err.println("Error al cargar NetbookRegistrationPanel: " + ex.getMessage());
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar panel de registro de netbooks: " + ex.getMessage(),
                     "Error",
