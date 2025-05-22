@@ -28,6 +28,7 @@ import main.java.views.users.common.VentanaInicio;
 
 /**
  * Gestor de paneles específico para el rol de Profesor.
+ * Versión corregida que maneja correctamente los IDs de curso y materia.
  */
 public class ProfesorPanelManager implements RolPanelManager {
     
@@ -102,11 +103,12 @@ public class ProfesorPanelManager implements RolPanelManager {
                     break;
             }
         } catch (Exception ex) {
+            System.err.println("Error en handleButtonAction: " + ex.getMessage());
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana, 
                     "Error al cargar el panel: " + ex.getMessage(), 
                     "Error", 
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
             ventana.restaurarVistaPrincipal();
         }
     }
@@ -116,29 +118,63 @@ public class ProfesorPanelManager implements RolPanelManager {
      */
     private void mostrarPanelNotas() {
         try {
+            System.out.println("Cargando panel de notas para profesor ID: " + profesorId);
+            
+            // Crear el panel completo que será mostrado
+            JPanel panelCompleto = new JPanel(new BorderLayout());
+            
             // Panel superior para selección
             JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
             JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
             JComboBox<String> comboMaterias = new JComboBox<>();
-            Map<String, int[]> materiaIds = new HashMap<>();
+            
+            // Estructura mejorada para almacenar los datos
+            Map<String, MateriaInfo> materiaInfoMap = new HashMap<>();
 
-            String query
-                    = "SELECT DISTINCT c.id as curso_id, CONCAT(c.anio, '°', c.division) as curso, "
-                    + "m.id as materia_id, m.nombre as materia "
-                    + "FROM cursos c "
-                    + "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id "
-                    + "JOIN materias m ON pcm.materia_id = m.id "
-                    + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
-                    + "ORDER BY c.anio, c.division, m.nombre";
+            String query = """
+                SELECT DISTINCT 
+                    c.id as curso_id, 
+                    CONCAT(c.anio, '°', c.division) as curso, 
+                    m.id as materia_id, 
+                    m.nombre as materia 
+                FROM cursos c 
+                JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id 
+                JOIN materias m ON pcm.materia_id = m.id 
+                WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' 
+                ORDER BY c.anio, c.division, m.nombre
+                """;
 
             PreparedStatement ps = conect.prepareStatement(query);
             ps.setInt(1, profesorId);
             ResultSet rs = ps.executeQuery();
 
+            int contadorMaterias = 0;
             while (rs.next()) {
                 String item = rs.getString("curso") + " - " + rs.getString("materia");
                 comboMaterias.addItem(item);
-                materiaIds.put(item, new int[]{rs.getInt("curso_id"), rs.getInt("materia_id")});
+                
+                // Crear objeto con la información completa
+                MateriaInfo info = new MateriaInfo(
+                    rs.getInt("curso_id"),
+                    rs.getInt("materia_id"),
+                    rs.getString("curso"),
+                    rs.getString("materia")
+                );
+                materiaInfoMap.put(item, info);
+                contadorMaterias++;
+                
+                System.out.println("Cargada materia: " + item + " - Curso ID: " + 
+                                 info.cursoId + ", Materia ID: " + info.materiaId);
+            }
+            
+            System.out.println("Total materias cargadas: " + contadorMaterias);
+
+            if (contadorMaterias == 0) {
+                JOptionPane.showMessageDialog(ventana,
+                        "No se encontraron materias asignadas para este profesor.",
+                        "Sin materias",
+                        JOptionPane.INFORMATION_MESSAGE);
+                return;
             }
 
             // Agregar radio buttons para elegir el tipo de panel de notas
@@ -157,51 +193,103 @@ public class ProfesorPanelManager implements RolPanelManager {
             JButton btnCargar = new JButton("Cargar");
             panelSeleccion.add(btnCargar);
 
-            // Obtener panel principal
-            JPanel panelPrincipal = ventana.getPanelPrincipal();
-            panelPrincipal.removeAll();
-            panelPrincipal.setLayout(new BorderLayout());
-            panelPrincipal.add(panelSeleccion, BorderLayout.NORTH);
+            // Agregar panel de selección al panel completo
+            panelCompleto.add(panelSeleccion, BorderLayout.NORTH);
+
+            // Panel central donde se mostrará el contenido
+            JPanel panelContenido = new JPanel(new BorderLayout());
+            panelCompleto.add(panelContenido, BorderLayout.CENTER);
 
             // Listener para el botón
             btnCargar.addActionListener(e -> {
                 String seleccion = (String) comboMaterias.getSelectedItem();
                 if (seleccion != null) {
                     try {
-                        int[] ids = materiaIds.get(seleccion);
-                        int cursoId = ids[0];
-                        int materiaId = ids[1];
-
-                        // Remover el panel anterior si existe
-                        if (panelPrincipal.getComponentCount() > 1) {
-                            panelPrincipal.remove(1);
+                        System.out.println("Procesando selección: " + seleccion);
+                        
+                        MateriaInfo info = materiaInfoMap.get(seleccion);
+                        if (info == null) {
+                            JOptionPane.showMessageDialog(ventana, 
+                                "Error: No se encontró información para la selección: " + seleccion);
+                            return;
                         }
+                        
+                        System.out.println("Info encontrada - Curso ID: " + info.cursoId + 
+                                         ", Materia ID: " + info.materiaId);
+
+                        // OCULTAR el panel de selección después de cargar
+                        panelSeleccion.setVisible(false);
+
+                        // Limpiar el panel de contenido
+                        panelContenido.removeAll();
+
+                        // Crear panel de navegación con información del curso seleccionado
+                        JPanel panelNavegacion = new JPanel(new BorderLayout());
+                        panelNavegacion.setBackground(new Color(51, 153, 255));
+                        panelNavegacion.setPreferredSize(new Dimension(0, 40));
+
+                        JLabel lblInfo = new JLabel("Notas - " + seleccion);
+                        lblInfo.setForeground(Color.WHITE);
+                        lblInfo.setFont(new Font("Arial", Font.BOLD, 14));
+                        lblInfo.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+                        JButton btnCambiarMateria = new JButton("Cambiar Materia");
+                        btnCambiarMateria.setFont(new Font("Arial", Font.PLAIN, 12));
+                        btnCambiarMateria.setPreferredSize(new Dimension(120, 30));
+                        btnCambiarMateria.addActionListener(evt -> {
+                            // Mostrar nuevamente el panel de selección
+                            panelSeleccion.setVisible(true);
+                            // Limpiar el contenido
+                            panelContenido.removeAll();
+                            panelContenido.revalidate();
+                            panelContenido.repaint();
+                        });
+
+                        panelNavegacion.add(lblInfo, BorderLayout.WEST);
+                        panelNavegacion.add(btnCambiarMateria, BorderLayout.EAST);
+
+                        panelContenido.add(panelNavegacion, BorderLayout.NORTH);
 
                         // Cargar el panel correspondiente según la selección
                         if (rbTrabajos.isSelected()) {
-                            // Crear el panel de notas
-                            NotasProfesorPanel panelNotas = new NotasProfesorPanel(profesorId, cursoId, materiaId);
-                            panelPrincipal.add(panelNotas, BorderLayout.CENTER);
+                            System.out.println("Creando NotasProfesorPanel...");
+                            NotasProfesorPanel panelNotas = new NotasProfesorPanel(
+                                profesorId, info.cursoId, info.materiaId);
+                            panelContenido.add(panelNotas, BorderLayout.CENTER);
                         } else {
+                            System.out.println("Creando NotasBimestralesPanel...");
                             NotasBimestralesPanel panelBimestral = new NotasBimestralesPanel(
-                                    profesorId, cursoId, materiaId
-                            );
-                            panelPrincipal.add(panelBimestral, BorderLayout.CENTER);
+                                profesorId, info.cursoId, info.materiaId);
+                            panelContenido.add(panelBimestral, BorderLayout.CENTER);
                         }
 
-                        panelPrincipal.revalidate();
-                        panelPrincipal.repaint();
+                        panelContenido.revalidate();
+                        panelContenido.repaint();
+                        panelCompleto.revalidate();
+                        panelCompleto.repaint();
+                        System.out.println("Panel de notas cargado exitosamente y selector ocultado");
+                        
                     } catch (Exception ex) {
+                        System.err.println("Error al cargar panel de notas: " + ex.getMessage());
                         ex.printStackTrace();
-                        JOptionPane.showMessageDialog(ventana, "Error al cargar panel: " + ex.getMessage());
+                        JOptionPane.showMessageDialog(ventana, 
+                            "Error al cargar panel: " + ex.getMessage() + 
+                            "\nDetalles: " + ex.getClass().getName() +
+                            "\nSelección: " + seleccion);
                     }
                 }
             });
 
+            // Mostrar el panel completo
+            JPanel panelPrincipal = ventana.getPanelPrincipal();
+            panelPrincipal.removeAll();
+            panelPrincipal.add(panelCompleto, BorderLayout.CENTER);
             panelPrincipal.revalidate();
             panelPrincipal.repaint();
 
         } catch (SQLException ex) {
+            System.err.println("Error SQL al cargar notas: " + ex.getMessage());
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar los cursos: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
@@ -213,31 +301,63 @@ public class ProfesorPanelManager implements RolPanelManager {
      */
     private void mostrarPanelAsistencias() {
         try {
+            System.out.println("Cargando panel de asistencias para profesor ID: " + profesorId);
+            
+            // Crear el panel completo que será mostrado
+            JPanel panelCompleto = new JPanel(new BorderLayout());
+            
             // Panel superior para selección
             JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
             JLabel lblSeleccion = new JLabel("Seleccione Curso y Materia:");
             JComboBox<String> comboMaterias = new JComboBox<>();
-            Map<String, int[]> materiaIds = new HashMap<>();
+            
+            // Estructura mejorada para almacenar los datos
+            Map<String, MateriaInfo> materiaInfoMap = new HashMap<>();
 
-            String query
-                    = "SELECT DISTINCT c.id as curso_id, CONCAT(c.anio, '°', c.division) as curso, "
-                    + "m.id as materia_id, m.nombre as materia "
-                    + "FROM cursos c "
-                    + "JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id "
-                    + "JOIN materias m ON pcm.materia_id = m.id "
-                    + "WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' "
-                    + "ORDER BY c.anio, c.division, m.nombre";
+            String query = """
+                SELECT DISTINCT 
+                    c.id as curso_id, 
+                    CONCAT(c.anio, '°', c.division) as curso, 
+                    m.id as materia_id, 
+                    m.nombre as materia 
+                FROM cursos c 
+                JOIN profesor_curso_materia pcm ON c.id = pcm.curso_id 
+                JOIN materias m ON pcm.materia_id = m.id 
+                WHERE pcm.profesor_id = ? AND pcm.estado = 'activo' 
+                ORDER BY c.anio, c.division, m.nombre
+                """;
 
             PreparedStatement ps = conect.prepareStatement(query);
             ps.setInt(1, profesorId);
             ResultSet rs = ps.executeQuery();
 
+            int contadorMaterias = 0;
             while (rs.next()) {
                 String item = rs.getString("curso") + " - " + rs.getString("materia");
                 comboMaterias.addItem(item);
-                int cursoId = rs.getInt("curso_id");
-                int materiaId = rs.getInt("materia_id");
-                materiaIds.put(item, new int[]{cursoId, materiaId});
+                
+                // Crear objeto con la información completa
+                MateriaInfo info = new MateriaInfo(
+                    rs.getInt("curso_id"),
+                    rs.getInt("materia_id"),
+                    rs.getString("curso"),
+                    rs.getString("materia")
+                );
+                materiaInfoMap.put(item, info);
+                contadorMaterias++;
+                
+                System.out.println("Cargada materia para asistencias: " + item + 
+                                 " - Curso ID: " + info.cursoId + ", Materia ID: " + info.materiaId);
+            }
+            
+            System.out.println("Total materias para asistencias: " + contadorMaterias);
+
+            if (contadorMaterias == 0) {
+                JOptionPane.showMessageDialog(ventana,
+                        "No se encontraron materias asignadas para este profesor.",
+                        "Sin materias",
+                        JOptionPane.INFORMATION_MESSAGE);
+                return;
             }
 
             comboMaterias.setPreferredSize(new Dimension(300, 30));
@@ -248,52 +368,97 @@ public class ProfesorPanelManager implements RolPanelManager {
             JButton btnCargar = new JButton("Cargar");
             panelSeleccion.add(btnCargar);
 
-            // Obtener panel principal
-            JPanel panelPrincipal = ventana.getPanelPrincipal();
-            panelPrincipal.removeAll();
-            panelPrincipal.setLayout(new BorderLayout());
-            panelPrincipal.add(panelSeleccion, BorderLayout.NORTH);
+            // Agregar panel de selección al panel completo
+            panelCompleto.add(panelSeleccion, BorderLayout.NORTH);
+
+            // Panel central donde se mostrará el contenido
+            JPanel panelContenido = new JPanel(new BorderLayout());
+            panelCompleto.add(panelContenido, BorderLayout.CENTER);
 
             // Listener para el botón
             btnCargar.addActionListener(e -> {
                 String seleccion = (String) comboMaterias.getSelectedItem();
                 if (seleccion != null) {
                     try {
-                        int[] ids = materiaIds.get(seleccion);
+                        System.out.println("Procesando selección de asistencias: " + seleccion);
                         
-                        if (ids == null) {
-                            JOptionPane.showMessageDialog(ventana, "No se encontraron IDs asociados a la selección: " + seleccion);
+                        MateriaInfo info = materiaInfoMap.get(seleccion);
+                        if (info == null) {
+                            JOptionPane.showMessageDialog(ventana, 
+                                "Error: No se encontró información para la selección: " + seleccion);
                             return;
                         }
                         
-                        // Remover el panel anterior si existe
-                        if (panelPrincipal.getComponentCount() > 1) {
-                            panelPrincipal.remove(1);
-                        }
+                        System.out.println("Info encontrada para asistencias - Curso ID: " + info.cursoId + 
+                                         ", Materia ID: " + info.materiaId);
+                        
+                        // OCULTAR el panel de selección después de cargar
+                        panelSeleccion.setVisible(false);
 
+                        // Limpiar el panel de contenido
+                        panelContenido.removeAll();
+
+                        // Crear panel de navegación con información del curso seleccionado
+                        JPanel panelNavegacion = new JPanel(new BorderLayout());
+                        panelNavegacion.setBackground(new Color(51, 153, 255));
+                        panelNavegacion.setPreferredSize(new Dimension(0, 40));
+
+                        JLabel lblInfo = new JLabel("Asistencias - " + seleccion);
+                        lblInfo.setForeground(Color.WHITE);
+                        lblInfo.setFont(new Font("Arial", Font.BOLD, 14));
+                        lblInfo.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+                        JButton btnCambiarMateria = new JButton("Cambiar Materia");
+                        btnCambiarMateria.setFont(new Font("Arial", Font.PLAIN, 12));
+                        btnCambiarMateria.setPreferredSize(new Dimension(120, 30));
+                        btnCambiarMateria.addActionListener(evt -> {
+                            // Mostrar nuevamente el panel de selección
+                            panelSeleccion.setVisible(true);
+                            // Limpiar el contenido
+                            panelContenido.removeAll();
+                            panelContenido.revalidate();
+                            panelContenido.repaint();
+                        });
+
+                        panelNavegacion.add(lblInfo, BorderLayout.WEST);
+                        panelNavegacion.add(btnCambiarMateria, BorderLayout.EAST);
+
+                        panelContenido.add(panelNavegacion, BorderLayout.NORTH);
+
+                        System.out.println("Creando AsistenciaProfesorPanel...");
                         AsistenciaProfesorPanel panelAsistencia = new AsistenciaProfesorPanel(
                                 profesorId,
-                                ids[0], // cursoId
-                                ids[1]  // materiaId
+                                info.cursoId,
+                                info.materiaId
                         );
 
-                        panelPrincipal.add(panelAsistencia, BorderLayout.CENTER);
-                        panelPrincipal.revalidate();
-                        panelPrincipal.repaint();
+                        panelContenido.add(panelAsistencia, BorderLayout.CENTER);
+                        panelContenido.revalidate();
+                        panelContenido.repaint();
+                        panelCompleto.revalidate();
+                        panelCompleto.repaint();
+                        System.out.println("Panel de asistencias cargado exitosamente y selector ocultado");
+                        
                     } catch (Exception ex) {
+                        System.err.println("Error al cargar panel de asistencias: " + ex.getMessage());
                         ex.printStackTrace();
                         JOptionPane.showMessageDialog(ventana, 
-                            "Error al cargar panel: " + ex.getMessage() 
-                            + "\nDetalles: " + ex.getClass().getName()
-                            + "\nSelección: " + seleccion);
+                            "Error al cargar panel: " + ex.getMessage() + 
+                            "\nDetalles: " + ex.getClass().getName() +
+                            "\nSelección: " + seleccion);
                     }
                 }
             });
 
+            // Mostrar el panel completo
+            JPanel panelPrincipal = ventana.getPanelPrincipal();
+            panelPrincipal.removeAll();
+            panelPrincipal.add(panelCompleto, BorderLayout.CENTER);
             panelPrincipal.revalidate();
             panelPrincipal.repaint();
 
         } catch (SQLException ex) {
+            System.err.println("Error SQL al cargar asistencias: " + ex.getMessage());
             ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar los cursos: " + ex.getMessage(),
@@ -323,6 +488,29 @@ public class ProfesorPanelManager implements RolPanelManager {
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar el libro de temas: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Clase interna para almacenar información de curso y materia.
+     */
+    private static class MateriaInfo {
+        final int cursoId;
+        final int materiaId;
+        final String cursoNombre;
+        final String materiaNombre;
+        
+        public MateriaInfo(int cursoId, int materiaId, String cursoNombre, String materiaNombre) {
+            this.cursoId = cursoId;
+            this.materiaId = materiaId;
+            this.cursoNombre = cursoNombre;
+            this.materiaNombre = materiaNombre;
+        }
+        
+        @Override
+        public String toString() {
+            return "MateriaInfo{cursoId=" + cursoId + ", materiaId=" + materiaId + 
+                   ", curso='" + cursoNombre + "', materia='" + materiaNombre + "'}";
         }
     }
 }

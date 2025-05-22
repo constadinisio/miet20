@@ -18,14 +18,12 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import com.toedter.calendar.JDateChooser;
 import main.java.database.Conexion;
-import main.java.utils.PanelUtils; // Importación directa de PanelUtils
 import main.java.views.users.Preceptor.AsistenciaPreceptorPanel;
 
 /**
  * Gestor de paneles específico para el rol de Preceptor.
- * VERSIÓN SIMPLIFICADA para resolver problemas de visualización.
+ * Versión mejorada con selector visual de cursos.
  */
 public class PreceptorPanelManager implements RolPanelManager {
 
@@ -70,7 +68,7 @@ public class PreceptorPanelManager implements RolPanelManager {
     @Override
     public void handleButtonAction(String actionCommand) {
         try {
-            System.out.println("Acción: " + actionCommand);
+            System.out.println("Acción preceptor: " + actionCommand);
             
             switch (actionCommand) {
                 case "notas":
@@ -80,7 +78,7 @@ public class PreceptorPanelManager implements RolPanelManager {
                             JOptionPane.INFORMATION_MESSAGE);
                     break;
                 case "asistencias":
-                    mostrarPanelAsistenciasDirect();
+                    mostrarPanelAsistencias();
                     break;
                 case "exportar":
                     JOptionPane.showMessageDialog(ventana,
@@ -103,100 +101,169 @@ public class PreceptorPanelManager implements RolPanelManager {
     }
 
     /**
-     * Método directo y simplificado para mostrar panel de asistencias.
-     * Esta versión usa PanelUtils para garantizar la visualización correcta.
+     * Muestra el panel de asistencias con selector visual de cursos.
      */
-    private void mostrarPanelAsistenciasDirect() {
+    private void mostrarPanelAsistencias() {
         try {
-            System.out.println("Iniciando mostrarPanelAsistenciasDirect...");
+            System.out.println("Cargando panel de asistencias para preceptor ID: " + preceptorId);
             
-            // 1. Cargar cursos
+            // Crear el panel completo que será mostrado
+            JPanel panelCompleto = new JPanel(new BorderLayout());
+            
+            // Panel superior para selección
+            JPanel panelSeleccion = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JLabel lblSeleccion = new JLabel("Seleccione Curso:");
+            JComboBox<String> comboCursos = new JComboBox<>();
+            
+            // Cargar cursos desde la base de datos
             cargarCursos();
             
-            // 2. Mostrar diálogo de selección simple
-            String cursoStr = JOptionPane.showInputDialog(
-                ventana,
-                "Ingrese número de curso (por ejemplo, 4°2):",
-                "Selección de Curso",
-                JOptionPane.QUESTION_MESSAGE);
-            
-            if (cursoStr == null || cursoStr.trim().isEmpty()) {
-                System.out.println("Selección de curso cancelada");
-                return;
+            // Llenar el ComboBox con los cursos disponibles
+            for (String curso : cursosMap.keySet()) {
+                comboCursos.addItem(curso);
+                System.out.println("Curso añadido al selector: " + curso + " (ID: " + cursosMap.get(curso) + ")");
             }
             
-            // 3. Buscar el ID del curso seleccionado
-            Integer cursoId = obtenerIdCursoPorNombre(cursoStr.trim());
-            
-            if (cursoId == null) {
-                JOptionPane.showMessageDialog(
-                    ventana,
-                    "No se encontró un curso con ese nombre. Por favor ingrese un formato válido (ej: 4°2)",
-                    "Curso no encontrado",
-                    JOptionPane.WARNING_MESSAGE);
+            if (cursosMap.isEmpty()) {
+                JOptionPane.showMessageDialog(ventana,
+                        "No se encontraron cursos activos en el sistema.",
+                        "Sin cursos",
+                        JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
-            
-            // 4. Obtener panel principal (donde mostraremos el panel de asistencia)
-            JPanel panelPrincipal = ventana.getPanelPrincipal();
-            
-            // 5. Crear un panel simple para navegación superior
-            JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            JButton btnVolver = new JButton("Volver al inicio");
-            btnVolver.addActionListener(e -> ventana.restaurarVistaPrincipal());
-            
-            JLabel lblCurso = new JLabel("Asistencias del curso: " + cursoStr);
-            lblCurso.setFont(new Font("Arial", Font.BOLD, 14));
-            
-            navPanel.add(btnVolver);
-            navPanel.add(lblCurso);
-            
-            // 6. Preparar panel para contenido
-            panelPrincipal.removeAll();
-            panelPrincipal.setLayout(new BorderLayout());
-            panelPrincipal.add(navPanel, BorderLayout.NORTH);
-            
-            // 7. Crear mensaje de carga mientras se inicializa el panel de asistencia
-            final JLabel lblCargando = new JLabel("Cargando panel de asistencias, por favor espere...");
-            lblCargando.setHorizontalAlignment(JLabel.CENTER);
-            lblCargando.setFont(new Font("Arial", Font.BOLD, 18));
-            panelPrincipal.add(lblCargando, BorderLayout.CENTER);
-            
-            // Actualizar UI para mostrar mensaje de carga
-            panelPrincipal.revalidate();
-            panelPrincipal.repaint();
-            
-            // 8. Inicializar el panel de asistencia en segundo plano para evitar bloqueos
-            SwingUtilities.invokeLater(() -> {
-                try {
-                    System.out.println("Creando AsistenciaPreceptorPanel...");
-                    AsistenciaPreceptorPanel panelAsistencia = new AsistenciaPreceptorPanel(preceptorId, cursoId);
-                    panelAsistencia.setPreferredSize(new Dimension(1200, 800));
-                    
-                    // Remover mensaje de carga
-                    panelPrincipal.remove(lblCargando);
-                    
-                    // 9. Usar PanelUtils para añadir el panel al contenedor principal
-                    PanelUtils.addPanelWithOriginalLayout(panelPrincipal, panelAsistencia, BorderLayout.CENTER);
-                    
-                    System.out.println("Panel de asistencia agregado correctamente");
-                } catch (Exception ex) {
-                    System.err.println("Error al crear panel de asistencia: " + ex.getMessage());
-                    ex.printStackTrace();
-                    panelPrincipal.remove(lblCargando);
-                    
-                    JLabel lblError = new JLabel("Error al cargar el panel de asistencias: " + ex.getMessage());
-                    lblError.setHorizontalAlignment(JLabel.CENTER);
-                    lblError.setForeground(Color.RED);
-                    panelPrincipal.add(lblError, BorderLayout.CENTER);
-                    
-                    panelPrincipal.revalidate();
-                    panelPrincipal.repaint();
+
+            comboCursos.setPreferredSize(new Dimension(200, 30));
+            panelSeleccion.add(lblSeleccion);
+            panelSeleccion.add(comboCursos);
+
+            // Botón para cargar el panel seleccionado
+            JButton btnCargar = new JButton("Cargar Asistencias");
+            panelSeleccion.add(btnCargar);
+
+            // Agregar panel de selección al panel completo
+            panelCompleto.add(panelSeleccion, BorderLayout.NORTH);
+
+            // Panel central donde se mostrará el contenido
+            JPanel panelContenido = new JPanel(new BorderLayout());
+            panelCompleto.add(panelContenido, BorderLayout.CENTER);
+
+            // Listener para el botón
+            btnCargar.addActionListener(e -> {
+                String cursoSeleccionado = (String) comboCursos.getSelectedItem();
+                if (cursoSeleccionado != null) {
+                    try {
+                        System.out.println("Procesando selección de curso: " + cursoSeleccionado);
+                        
+                        Integer cursoId = cursosMap.get(cursoSeleccionado);
+                        if (cursoId == null) {
+                            JOptionPane.showMessageDialog(ventana, 
+                                "Error: No se encontró información para el curso: " + cursoSeleccionado);
+                            return;
+                        }
+                        
+                        System.out.println("Curso ID encontrado: " + cursoId);
+                        
+                        // OCULTAR el panel de selección después de cargar
+                        panelSeleccion.setVisible(false);
+
+                        // Limpiar el panel de contenido
+                        panelContenido.removeAll();
+
+                        // Crear panel de navegación con información del curso seleccionado
+                        JPanel panelNavegacion = new JPanel(new BorderLayout());
+                        panelNavegacion.setBackground(new Color(51, 153, 255));
+                        panelNavegacion.setPreferredSize(new Dimension(0, 40));
+
+                        JLabel lblInfo = new JLabel("Asistencias - Curso " + cursoSeleccionado);
+                        lblInfo.setForeground(Color.WHITE);
+                        lblInfo.setFont(new Font("Arial", Font.BOLD, 14));
+                        lblInfo.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+                        JButton btnCambiarCurso = new JButton("Cambiar Curso");
+                        btnCambiarCurso.setFont(new Font("Arial", Font.PLAIN, 12));
+                        btnCambiarCurso.setPreferredSize(new Dimension(120, 30));
+                        btnCambiarCurso.addActionListener(evt -> {
+                            // Mostrar nuevamente el panel de selección
+                            panelSeleccion.setVisible(true);
+                            // Limpiar el contenido
+                            panelContenido.removeAll();
+                            panelContenido.revalidate();
+                            panelContenido.repaint();
+                        });
+
+                        panelNavegacion.add(lblInfo, BorderLayout.WEST);
+                        panelNavegacion.add(btnCambiarCurso, BorderLayout.EAST);
+
+                        panelContenido.add(panelNavegacion, BorderLayout.NORTH);
+
+                        // Crear mensaje de carga
+                        JLabel lblCargando = new JLabel("Cargando panel de asistencias, por favor espere...");
+                        lblCargando.setHorizontalAlignment(JLabel.CENTER);
+                        lblCargando.setFont(new Font("Arial", Font.BOLD, 16));
+                        panelContenido.add(lblCargando, BorderLayout.CENTER);
+                        
+                        // Actualizar UI para mostrar mensaje de carga
+                        panelContenido.revalidate();
+                        panelContenido.repaint();
+                        panelCompleto.revalidate();
+                        panelCompleto.repaint();
+
+                        // Crear el panel de asistencia en segundo plano
+                        SwingUtilities.invokeLater(() -> {
+                            try {
+                                System.out.println("Creando AsistenciaPreceptorPanel...");
+                                AsistenciaPreceptorPanel panelAsistencia = new AsistenciaPreceptorPanel(preceptorId, cursoId);
+                                
+                                // Remover mensaje de carga
+                                panelContenido.remove(lblCargando);
+                                
+                                // Añadir el panel de asistencia
+                                panelContenido.add(panelAsistencia, BorderLayout.CENTER);
+                                
+                                panelContenido.revalidate();
+                                panelContenido.repaint();
+                                panelCompleto.revalidate();
+                                panelCompleto.repaint();
+                                
+                                System.out.println("Panel de asistencias del preceptor cargado exitosamente y selector ocultado");
+                                
+                            } catch (Exception ex) {
+                                System.err.println("Error al crear panel de asistencia: " + ex.getMessage());
+                                ex.printStackTrace();
+                                
+                                // Remover mensaje de carga
+                                panelContenido.remove(lblCargando);
+                                
+                                JLabel lblError = new JLabel("Error al cargar el panel de asistencias: " + ex.getMessage());
+                                lblError.setHorizontalAlignment(JLabel.CENTER);
+                                lblError.setForeground(Color.RED);
+                                panelContenido.add(lblError, BorderLayout.CENTER);
+                                
+                                panelContenido.revalidate();
+                                panelContenido.repaint();
+                            }
+                        });
+                        
+                    } catch (Exception ex) {
+                        System.err.println("Error al cargar panel de asistencias: " + ex.getMessage());
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(ventana, 
+                            "Error al cargar panel: " + ex.getMessage() + 
+                            "\nDetalles: " + ex.getClass().getName() +
+                            "\nSelección: " + cursoSeleccionado);
+                    }
                 }
             });
-            
+
+            // Mostrar el panel completo
+            JPanel panelPrincipal = ventana.getPanelPrincipal();
+            panelPrincipal.removeAll();
+            panelPrincipal.add(panelCompleto, BorderLayout.CENTER);
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
+
         } catch (Exception ex) {
-            System.err.println("Error en mostrarPanelAsistenciasDirect: " + ex.getMessage());
+            System.err.println("Error al mostrar panel de asistencias: " + ex.getMessage());
             ex.printStackTrace();
             JOptionPane.showMessageDialog(ventana,
                     "Error al mostrar panel de asistencias: " + ex.getMessage(),
@@ -204,92 +271,21 @@ public class PreceptorPanelManager implements RolPanelManager {
                     JOptionPane.ERROR_MESSAGE);
         }
     }
-    
-    /**
-     * Obtiene el ID de un curso por su nombre.
-     * 
-     * @param nombreCurso Nombre del curso en formato "4°2"
-     * @return ID del curso o null si no se encuentra
-     */
-    private Integer obtenerIdCursoPorNombre(String nombreCurso) {
-        System.out.println("Buscando curso: " + nombreCurso);
-        
-        // Primero buscar directamente en el mapa (clave exacta)
-        Integer id = cursosMap.get(nombreCurso);
-        if (id != null) {
-            return id;
-        }
-        
-        // Si no lo encuentra, intentar con búsqueda parcial
-        for (Map.Entry<String, Integer> entry : cursosMap.entrySet()) {
-            if (entry.getKey().equalsIgnoreCase(nombreCurso) || 
-                entry.getKey().replace(" ", "").equalsIgnoreCase(nombreCurso.replace(" ", ""))) {
-                return entry.getValue();
-            }
-        }
-        
-        // Si todo falla, intentar obtener el curso de la base de datos
-        return obtenerIdCursoDesdeBD(nombreCurso);
-    }
-    
-    /**
-     * Intenta obtener el ID del curso directamente desde la BD.
-     * 
-     * @param nombreCurso Nombre del curso (se intentará parsear)
-     * @return ID del curso o null si no se encuentra
-     */
-    private Integer obtenerIdCursoDesdeBD(String nombreCurso) {
-        try {
-            // Intentar extraer año y división del formato "4°2"
-            // Aceptar formatos: "4°2", "4º2", "4 2", "42", etc.
-            String cleaned = nombreCurso.replaceAll("[^0-9]", " ").trim();
-            String[] parts = cleaned.split("\\s+");
-            
-            if (parts.length >= 2) {
-                int anio = Integer.parseInt(parts[0]);
-                String division = parts[1];
-                
-                String query = "SELECT id FROM cursos WHERE anio = ? AND division = ? AND estado = 'activo'";
-                PreparedStatement ps = conect.prepareStatement(query);
-                ps.setInt(1, anio);
-                ps.setString(2, division);
-                
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    int id = rs.getInt("id");
-                    System.out.println("Curso encontrado en BD: ID=" + id);
-                    return id;
-                }
-            } else if (parts.length == 1 && parts[0].length() >= 2) {
-                // Intentar con formato pegado "42" -> año=4, división=2
-                int anio = Integer.parseInt(parts[0].substring(0, 1));
-                String division = parts[0].substring(1);
-                
-                String query = "SELECT id FROM cursos WHERE anio = ? AND division = ? AND estado = 'activo'";
-                PreparedStatement ps = conect.prepareStatement(query);
-                ps.setInt(1, anio);
-                ps.setString(2, division);
-                
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    int id = rs.getInt("id");
-                    System.out.println("Curso encontrado en BD (formato compacto): ID=" + id);
-                    return id;
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error al buscar curso en BD: " + e.getMessage());
-        }
-        
-        System.out.println("No se encontró el curso: " + nombreCurso);
-        return null;
-    }
 
     /**
      * Carga los cursos desde la base de datos.
      */
     private void cargarCursos() {
         try {
+            // Verificar conexión
+            if (conect == null || conect.isClosed()) {
+                conect = Conexion.getInstancia().verificarConexion();
+            }
+            
+            if (conect == null) {
+                throw new SQLException("No se pudo establecer conexión con la base de datos");
+            }
+            
             // Limpiar mapa actual
             cursosMap.clear();
             
@@ -306,13 +302,17 @@ public class PreceptorPanelManager implements RolPanelManager {
                 cursosMap.put(formato, id);
             }
             
-            System.out.println("Cursos cargados: " + cursosMap.size());
+            System.out.println("Cursos cargados para preceptor: " + cursosMap.size());
             // Imprimir los cursos para depuración
             cursosMap.forEach((nombre, id) -> System.out.println("  " + nombre + " -> ID=" + id));
             
         } catch (SQLException ex) {
             System.err.println("Error al cargar cursos: " + ex.getMessage());
             ex.printStackTrace();
+            JOptionPane.showMessageDialog(ventana,
+                    "Error al cargar cursos: " + ex.getMessage(),
+                    "Error de Base de Datos",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 }

@@ -1,10 +1,14 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
+ */
 package main.java.views.users.common;
 
 import java.awt.BorderLayout;
-import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Image;
 import java.io.IOException;
 import java.net.URL;
@@ -21,6 +25,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.SwingUtilities;
 import main.java.database.Conexion;
 import main.java.utils.MenuBarManager;
 import main.java.utils.ResourceManager;
@@ -31,7 +36,9 @@ import main.java.views.login.LoginForm;
 
 /**
  * Ventana principal unificada para todos los roles del sistema.
- * Utiliza CardLayout para intercambiar entre vista principal y paneles específicos.
+ * Versión con soporte completo para paneles responsive.
+ * 
+ * @author nico_
  */
 public class VentanaInicio extends javax.swing.JFrame {
 
@@ -54,18 +61,12 @@ public class VentanaInicio extends javax.swing.JFrame {
     private JLabel labelRol;
     private JLabel labelCursoDiv; // Para alumnos
 
-    // Gestión de contenido principal
-    private CardLayout cardLayout;
-    private JPanel panelContenido;
-    private JPanel panelHome;
-    private JPanel panelDinamico;
-
-    // Constantes para CardLayout
-    private static final String VISTA_HOME = "HOME";
-    private static final String VISTA_DINAMICA = "DINAMICA";
-
     // Referencia al panel de fondo original
     private JLabel fondoHomeOriginal;
+    
+    // Variables para el sistema responsive
+    private Dimension originalWindowSize;
+    private boolean panelEspecificoMostrado = false;
 
     /**
      * Constructor principal de la ventana unificada.
@@ -78,7 +79,6 @@ public class VentanaInicio extends javax.swing.JFrame {
         this.userRol = rolId;
 
         initComponents();
-        configurarPanelPrincipal();
         uiUtils.configurarVentana(this);
         probar_conexion();
 
@@ -94,194 +94,34 @@ public class VentanaInicio extends javax.swing.JFrame {
 
         // Inicializar el gestor de paneles según rol
         try {
-    // Verificar dependencias primero
-    RolPanelManagerFactory.inicializar();
-    
-    // Crear el gestor de paneles
-    this.rolPanelManager = RolPanelManagerFactory.createManager(this, userId, userRol);
-    
-    if (this.rolPanelManager == null) {
-        throw new RuntimeException("No se pudo crear el PanelManager para el rol: " + userRol);
-    }
-    
-    System.out.println("RolPanelManager creado exitosamente para rol: " + userRol);
-    
-} catch (Exception e) {
-    System.err.println("Error al crear RolPanelManager: " + e.getMessage());
-    e.printStackTrace();
-    
-    // Mostrar error al usuario pero continuar con un manager básico
-    JOptionPane.showMessageDialog(this,
-            "Error al cargar la interfaz específica del rol.\n" +
-            "La aplicación funcionará en modo básico.\n" +
-            "Error: " + e.getMessage(),
-            "Advertencia",
-            JOptionPane.WARNING_MESSAGE);
-    
-    // Crear un manager de emergencia
-    this.rolPanelManager = new AdminPanelManager(this, userId);
-}
+            RolPanelManagerFactory.inicializar();
+            this.rolPanelManager = RolPanelManagerFactory.createManager(this, userId, userRol);
+            
+            if (this.rolPanelManager == null) {
+                throw new RuntimeException("No se pudo crear el PanelManager para el rol: " + userRol);
+            }
+            
+            System.out.println("RolPanelManager creado exitosamente para rol: " + userRol);
+            
+        } catch (Exception e) {
+            System.err.println("Error al crear RolPanelManager: " + e.getMessage());
+            e.printStackTrace();
+            
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar la interfaz específica del rol.\n" +
+                    "La aplicación funcionará en modo básico.\n" +
+                    "Error: " + e.getMessage(),
+                    "Advertencia",
+                    JOptionPane.WARNING_MESSAGE);
+            
+            // Crear un manager de emergencia
+            this.rolPanelManager = RolPanelManagerFactory.createManager(this, userId, 1); // Admin por defecto
+        }
 
         // Configurar el panel de botones
         configurePanelBotones();
         hacerLogoClickeable();
         aplicarResponsive();
-    }
-
-    /**
-     * Configura el panel principal para usar CardLayout.
-     * Esto permite intercambiar fácilmente entre la vista home y los paneles dinámicos.
-     */
-    private void configurarPanelPrincipal() {
-        // Crear el CardLayout y el panel contenedor
-        cardLayout = new CardLayout();
-        panelContenido = new JPanel(cardLayout);
-
-        // Crear el panel home (vista principal original)
-        panelHome = new JPanel();
-        panelHome.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-        panelHome.setBackground(new java.awt.Color(204, 204, 204));
-
-        // Mover todos los componentes originales al panel home
-        configurarPanelHome();
-
-        // Crear el panel dinámico (para contenido específico de roles)
-        panelDinamico = new JPanel(new BorderLayout());
-        panelDinamico.setBackground(new java.awt.Color(240, 240, 240));
-
-        // Añadir ambos paneles al CardLayout
-        panelContenido.add(panelHome, VISTA_HOME);
-        panelContenido.add(panelDinamico, VISTA_DINAMICA);
-
-        // Reemplazar jPanel1 con panelContenido
-        getContentPane().remove(jPanel1);
-        
-        // Recrear el layout principal
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addGap(0, 0, 0)
-                .addComponent(panelContenido, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addComponent(panelContenido, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-
-        // Mostrar inicialmente la vista home
-        cardLayout.show(panelContenido, VISTA_HOME);
-    }
-
-    /**
-     * Configura el panel home con los componentes originales.
-     */
-    private void configurarPanelHome() {
-        // Añadir todos los componentes originales al panel home
-        panelHome.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, -1, -1));
-        panelHome.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 642, -1, -1));
-        panelHome.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 320, 370, 80));
-        panelHome.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 280, 540, 80));
-        panelHome.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, -1));
-    }
-
-    /**
-     * Muestra un panel específico en el área de contenido dinámico.
-     *
-     * @param panel Panel a mostrar
-     * @param titulo Título del panel (opcional)
-     */
-    public void mostrarPanel(JPanel panel, String titulo) {
-        try {
-            System.out.println("Mostrando panel: " + (titulo != null ? titulo : "Sin título"));
-            
-            // Limpiar el panel dinámico
-            panelDinamico.removeAll();
-            
-            // Crear panel de navegación
-            JPanel navPanel = crearPanelNavegacion(titulo);
-            panelDinamico.add(navPanel, BorderLayout.NORTH);
-            
-            // Añadir el panel principal
-            if (panel != null) {
-                // Configurar el panel para que use todo el espacio disponible
-                panel.setPreferredSize(new Dimension(750, 600));
-                
-                // Si el panel necesita scroll, añadirlo
-                if (panel.getPreferredSize().height > 600) {
-                    JScrollPane scrollPane = new JScrollPane(panel);
-                    scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-                    scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-                    panelDinamico.add(scrollPane, BorderLayout.CENTER);
-                } else {
-                    panelDinamico.add(panel, BorderLayout.CENTER);
-                }
-            } else {
-                // Panel de error si no se pudo cargar
-                JLabel lblError = new JLabel("Error: No se pudo cargar el panel", JLabel.CENTER);
-                lblError.setForeground(java.awt.Color.RED);
-                panelDinamico.add(lblError, BorderLayout.CENTER);
-            }
-            
-            // Cambiar a la vista dinámica
-            cardLayout.show(panelContenido, VISTA_DINAMICA);
-            
-            // Forzar actualización
-            panelDinamico.revalidate();
-            panelDinamico.repaint();
-            panelContenido.revalidate();
-            panelContenido.repaint();
-            
-            System.out.println("Panel mostrado correctamente");
-            
-        } catch (Exception ex) {
-            System.err.println("Error al mostrar panel: " + ex.getMessage());
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error al cargar el panel: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    /**
-     * Crea un panel de navegación con botón de volver y título.
-     *
-     * @param titulo Título a mostrar
-     * @return Panel de navegación configurado
-     */
-    private JPanel crearPanelNavegacion(String titulo) {
-        JPanel navPanel = new JPanel(new BorderLayout());
-        navPanel.setBackground(new java.awt.Color(51, 153, 255));
-        navPanel.setPreferredSize(new Dimension(0, 50));
-
-        // Botón volver
-        JButton btnVolver = new JButton("← Volver al Inicio");
-        btnVolver.setBackground(new java.awt.Color(40, 120, 200));
-        btnVolver.setForeground(java.awt.Color.WHITE);
-        btnVolver.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 12));
-        btnVolver.setBorderPainted(false);
-        btnVolver.setFocusPainted(false);
-        btnVolver.addActionListener(e -> restaurarVistaPrincipal());
-
-        // Título
-        JLabel lblTitulo = new JLabel(titulo != null ? titulo : "Panel de Trabajo");
-        lblTitulo.setForeground(java.awt.Color.WHITE);
-        lblTitulo.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 16));
-        lblTitulo.setHorizontalAlignment(JLabel.CENTER);
-
-        navPanel.add(btnVolver, BorderLayout.WEST);
-        navPanel.add(lblTitulo, BorderLayout.CENTER);
-
-        return navPanel;
     }
 
     /**
@@ -721,23 +561,36 @@ public class VentanaInicio extends javax.swing.JFrame {
 
     /**
      * Restaura la vista principal del panel central.
-     * Ahora usa CardLayout para cambiar a la vista home.
      */
     public void restaurarVistaPrincipal() {
         System.out.println("Restaurando a vista principal");
         
         try {
-            // Cambiar a la vista home usando CardLayout
-            cardLayout.show(panelContenido, VISTA_HOME);
+            // Marcar que no hay panel específico mostrado
+            panelEspecificoMostrado = false;
             
-            // Limpiar el panel dinámico
-            panelDinamico.removeAll();
+            // Limpiar panel
+            jPanel1.removeAll();
+            jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+            
+            // Restaurar componentes originales
+            jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, -1, -1));
+            jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 642, -1, -1));
+            jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 320, 370, 80));
+            jPanel1.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 280, 540, 80));
+
+            // Restaurar fondo
+            jScrollPane1.setViewportView(fondoHomeOriginal);
+            jPanel1.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 71, 758, -1));
             
             // Forzar actualización
-            panelContenido.revalidate();
-            panelContenido.repaint();
+            jPanel1.revalidate();
+            jPanel1.repaint();
             
-            System.out.println("Vista principal restaurada correctamente");
+            // Ajustar a ventana actual
+            ajustarComponentesVentana();
+            
+            System.out.println("Vista principal restaurada exitosamente");
             
         } catch (Exception ex) {
             System.err.println("Error al restaurar vista principal: " + ex.getMessage());
@@ -750,11 +603,11 @@ public class VentanaInicio extends javax.swing.JFrame {
      */
     private void aplicarResponsive() {
         // Solo hacer responsivos los paneles directamente sin añadir scrolls adicionales
-        ResponsiveUtils.makeResponsive(panelContenido);
+        ResponsiveUtils.makeResponsive(jPanel1);
         ResponsiveUtils.makeResponsive(jPanel4);
         
         // Esto es importante: asegurar que el panel principal tenga un tamaño mínimo
-        panelContenido.setMinimumSize(new Dimension(758, 600));
+        jPanel1.setMinimumSize(new Dimension(758, 600));
         
         // Guardar tamaño original para escalado
         originalWindowSize = getSize();
@@ -779,7 +632,7 @@ public class VentanaInicio extends javax.swing.JFrame {
         }
         
         // Imprimir tamaños para debug
-        System.out.println("PanelContenido size: " + panelContenido.getSize());
+        System.out.println("Panel1 size: " + jPanel1.getSize());
         System.out.println("Panel4 size: " + jPanel4.getSize());
     }
 
@@ -800,45 +653,138 @@ public class VentanaInicio extends javax.swing.JFrame {
     }
 
     /**
-     * Ajusta los componentes de la ventana principal según su tamaño
+     * Ajusta los componentes de la ventana principal según su tamaño.
      */
-    private Dimension originalWindowSize;
-
-    // Modificar ajustarComponentesVentana() para mejorar el reajuste
     private void ajustarComponentesVentana() {
         int anchoVentana = getWidth();
         int altoVentana = getHeight();
         
-        System.out.println("Ajustando ventana: " + anchoVentana + "x" + altoVentana);
+        System.out.println("Ajustando ventana responsive: " + anchoVentana + "x" + altoVentana);
         
         // Ajustar panel lateral
         if (jPanel4 != null) {
-            // Ancho fijo según el tamaño de la ventana
-            int anchoPanel4 = anchoVentana < 800 ? 200 : 260;
+            // Ancho adaptativo según el tamaño de la ventana
+            int anchoPanel4;
+            if (anchoVentana < 900) {
+                anchoPanel4 = 180; // Compacto para pantallas pequeñas
+            } else if (anchoVentana < 1200) {
+                anchoPanel4 = 220; // Mediano para pantallas medianas
+            } else {
+                anchoPanel4 = 260; // Completo para pantallas grandes
+            }
+            
             jPanel4.setPreferredSize(new Dimension(anchoPanel4, altoVentana));
-            System.out.println("Ancho Panel4: " + anchoPanel4);
+            System.out.println("Panel lateral ajustado: " + anchoPanel4 + "px");
         }
         
         // Ajustar panel principal 
-        if (panelContenido != null) {
+        if (jPanel1 != null) {
             // Calcular espacio restante
             int anchoDisponible = anchoVentana;
             if (jPanel4 != null && jPanel4.isVisible()) {
                 anchoDisponible -= jPanel4.getPreferredSize().width;
             }
             
-            // Establecer tamaño del panel principal (con mínimo de 758)
-            int anchoPanelPrincipal = Math.max(758, anchoDisponible);
-            panelContenido.setPreferredSize(new Dimension(anchoPanelPrincipal, altoVentana));
-            System.out.println("Tamaño PanelContenido: " + anchoPanelPrincipal + "x" + altoVentana);
+            // Establecer tamaño del panel principal (con mínimo responsive)
+            int anchoPanelPrincipal = Math.max(600, anchoDisponible - 10); // Margen mínimo
+            jPanel1.setPreferredSize(new Dimension(anchoPanelPrincipal, altoVentana));
+            
+            System.out.println("Panel contenido ajustado: " + anchoPanelPrincipal + "x" + altoVentana);
         }
         
-        // Forzar actualización
-        revalidate();
-        repaint();
+        // Si hay un panel específico mostrado, ajustarlo también
+        if (panelEspecificoMostrado) {
+            ajustarComponentesResponsiveRecursivamente(jPanel1);
+        }
+        
+        // Forzar actualización de toda la interfaz
+        SwingUtilities.invokeLater(() -> {
+            revalidate();
+            repaint();
+        });
     }
 
-    // Método recursivo para forzar el reajuste de todos los componentes
+    /**
+     * Ajusta recursivamente todos los componentes para que sean responsive.
+     */
+    private void ajustarComponentesResponsiveRecursivamente(Container container) {
+        if (container == null) return;
+        
+        for (Component comp : container.getComponents()) {
+            if (comp instanceof main.java.utils.ResponsivePanelWrapper) {
+                // Forzar resize en wrappers responsive
+                main.java.utils.ResponsivePanelWrapper wrapper = 
+                    (main.java.utils.ResponsivePanelWrapper) comp;
+                wrapper.forceResize();
+                
+            } else if (comp instanceof JTable) {
+                // Forzar reajuste de tablas
+                ajustarTablaResponsive((JTable) comp);
+                
+            } else if (comp instanceof JScrollPane) {
+                // Si es un ScrollPane, procesar su contenido
+                JScrollPane scrollPane = (JScrollPane) comp;
+                Component view = scrollPane.getViewport().getView();
+                if (view instanceof JTable) {
+                    ajustarTablaResponsive((JTable) view);
+                } else if (view instanceof Container) {
+                    ajustarComponentesResponsiveRecursivamente((Container) view);
+                }
+                scrollPane.revalidate();
+                
+            } else if (comp instanceof JPanel) {
+                // Procesar paneles recursivamente
+                JPanel panel = (JPanel) comp;
+                panel.revalidate();
+                ajustarComponentesResponsiveRecursivamente(panel);
+                
+            } else if (comp instanceof Container) {
+                // Otros contenedores
+                Container subContainer = (Container) comp;
+                subContainer.revalidate();
+                ajustarComponentesResponsiveRecursivamente(subContainer);
+            }
+        }
+    }
+    
+    /**
+     * Ajusta una tabla específica para que sea responsive.
+     */
+    private void ajustarTablaResponsive(JTable table) {
+        if (table == null) return;
+        
+        try {
+            // Configurar auto-resize según el ancho disponible
+            int anchoDisponible = jPanel1 != null ? jPanel1.getWidth() : 800;
+            
+            if (anchoDisponible < 900) {
+                table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+            } else {
+                table.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+            }
+            
+            // Ajustar altura de filas según el tamaño de pantalla
+            int altoFila = anchoDisponible < 900 ? 20 : 25;
+            table.setRowHeight(Math.max(altoFila, table.getRowHeight()));
+            
+            // Configurar header
+            if (table.getTableHeader() != null) {
+                table.getTableHeader().setReorderingAllowed(false);
+                table.getTableHeader().setResizingAllowed(true);
+            }
+            
+            // Forzar actualización
+            table.revalidate();
+            table.repaint();
+            
+        } catch (Exception e) {
+            System.err.println("Error al ajustar tabla responsive: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Método recursivo para forzar el reajuste de todos los componentes.
+     */
     private void reajustarComponentesRecursivamente(Container container) {
         for (Component comp : container.getComponents()) {
             if (comp instanceof JTable) {
@@ -874,49 +820,71 @@ public class VentanaInicio extends javax.swing.JFrame {
     }
 
     /**
-     * Obtiene el panel principal donde se muestra el contenido.
-     * MODIFICADO: Ahora retorna el panel dinámico en lugar del panel home.
-     *
-     * @return Panel dinámico para contenido específico de roles
+     * Configura los tamaños responsive según el tipo de panel.
      */
-    public JPanel getPanelPrincipal() {
-        // Método de compatibilidad: crear un panel temporal que delega al método mostrarPanel
-        return new JPanel() {
-            @Override
-            public void removeAll() {
-                // Override para interceptar cuando los PanelManager intentan limpiar
-                panelDinamico.removeAll();
-            }
-
-            @Override
-            public void add(Component comp, Object constraints) {
-                // Override para interceptar cuando los PanelManager añaden componentes
-                if (comp instanceof JPanel) {
-                    String titulo = determinarTituloPanel(comp);
-                    mostrarPanel((JPanel) comp, titulo);
-                } else {
-                    panelDinamico.add(comp, constraints);
-                }
-            }
-
-            @Override
-            public void revalidate() {
-                panelDinamico.revalidate();
-                panelContenido.revalidate();
-            }
-
-            @Override
-            public void repaint() {
-                panelDinamico.repaint();
-                panelContenido.repaint();
-            }
-
-            @Override
-            public void setLayout(java.awt.LayoutManager mgr) {
-                // Ignorar cambios de layout del panel wrapper
-                panelDinamico.setLayout(new BorderLayout());
-            }
-        };
+    private void configurarTamanosResponsive(main.java.utils.ResponsivePanelWrapper wrapper, 
+                                           JPanel panel, String titulo) {
+        Dimension minSize;
+        Dimension maxSize;
+        
+        // Configurar tamaños según el tipo de panel
+        String className = panel.getClass().getSimpleName();
+        
+        switch (className) {
+            case "GestionUsuariosPanel":
+            case "GestionCursosPanel":
+            case "UsuariosPendientesPanel":
+                // Paneles de administración - necesitan más espacio
+                minSize = new Dimension(900, 700);
+                maxSize = new Dimension(1600, 1200);
+                break;
+                
+            case "AsistenciaProfesorPanel":
+            case "AsistenciaPreceptorPanel":
+                // Paneles de asistencia - tablas grandes
+                minSize = new Dimension(1000, 600);
+                maxSize = new Dimension(1800, 1000);
+                break;
+                
+            case "NotasProfesorPanel":
+            case "NotasBimestralesPanel":
+                // Paneles de notas - tablas medianas
+                minSize = new Dimension(800, 500);
+                maxSize = new Dimension(1400, 900);
+                break;
+                
+            case "StockPanel":
+            case "PrestamosPanel":
+            case "RegistrosPanel":
+                // Paneles ATTP - tamaño mediano
+                minSize = new Dimension(850, 600);
+                maxSize = new Dimension(1500, 1000);
+                break;
+                
+            case "NetbookRegistrationPanel":
+                // Formularios - tamaño más compacto
+                minSize = new Dimension(600, 400);
+                maxSize = new Dimension(1000, 800);
+                break;
+                
+            case "libroTema":
+                // Libro de temas - tamaño especial
+                minSize = new Dimension(900, 650);
+                maxSize = new Dimension(1600, 1100);
+                break;
+                
+            default:
+                // Tamaño por defecto
+                minSize = new Dimension(800, 600);
+                maxSize = new Dimension(1400, 1000);
+                break;
+        }
+        
+        wrapper.setMinimumContentSize(minSize);
+        wrapper.setMaximumContentSize(maxSize);
+        
+        System.out.println("Configurado responsive para " + className + 
+                          " - Min: " + minSize + ", Max: " + maxSize);
     }
 
     /**
@@ -960,6 +928,143 @@ public class VentanaInicio extends javax.swing.JFrame {
     }
 
     /**
+     * Crea un panel de navegación con botón de volver y título.
+     *
+     * @param titulo Título a mostrar
+     * @return Panel de navegación configurado
+     */
+    private JPanel crearPanelNavegacion(String titulo) {
+        JPanel navPanel = new JPanel(new BorderLayout());
+        navPanel.setBackground(new java.awt.Color(51, 153, 255));
+        navPanel.setPreferredSize(new Dimension(0, 50));
+
+        // Botón volver
+        JButton btnVolver = new JButton("← Volver al Inicio");
+        btnVolver.setBackground(new java.awt.Color(40, 120, 200));
+        btnVolver.setForeground(java.awt.Color.WHITE);
+        btnVolver.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 12));
+        btnVolver.setBorderPainted(false);
+        btnVolver.setFocusPainted(false);
+        btnVolver.addActionListener(e -> restaurarVistaPrincipal());
+
+        // Título
+        JLabel lblTitulo = new JLabel(titulo != null ? titulo : "Panel de Trabajo");
+        lblTitulo.setForeground(java.awt.Color.WHITE);
+        lblTitulo.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 16));
+        lblTitulo.setHorizontalAlignment(JLabel.CENTER);
+
+        navPanel.add(btnVolver, BorderLayout.WEST);
+        navPanel.add(lblTitulo, BorderLayout.CENTER);
+
+        return navPanel;
+    }
+
+    /**
+     * Obtiene el panel principal donde se muestra el contenido.
+     * MODIFICADO: Ahora envuelve automáticamente los paneles en ResponsivePanelWrapper
+     */
+    public JPanel getPanelPrincipal() {
+        return new JPanel() {
+            @Override
+            public void removeAll() {
+                jPanel1.removeAll();
+            }
+
+            @Override
+            public void add(Component comp, Object constraints) {
+                if (comp instanceof JPanel) {
+                    JPanel panel = (JPanel) comp;
+                    
+                    System.out.println("Interceptando add() para panel: " + panel.getClass().getSimpleName());
+                    
+                    // Marcar que se está mostrando un panel específico
+                    panelEspecificoMostrado = true;
+                    
+                    // Limpiar jPanel1
+                    jPanel1.removeAll();
+                    jPanel1.setLayout(new BorderLayout());
+                    
+                    // Crear panel de navegación
+                    String titulo = determinarTituloPanel(panel);
+                    JPanel navPanel = crearPanelNavegacion(titulo);
+                    jPanel1.add(navPanel, BorderLayout.NORTH);
+                    
+                    // Envolver el panel en ResponsivePanelWrapper
+                    main.java.utils.ResponsivePanelWrapper wrapper = 
+                        main.java.utils.ResponsivePanelWrapper.wrap(panel, jPanel1);
+                    
+                    // Configurar tamaños según el tipo de panel
+                    configurarTamanosResponsive(wrapper, panel, titulo);
+                    
+                    // Añadir el wrapper al panel principal
+                    jPanel1.add(wrapper, BorderLayout.CENTER);
+                    
+                    // Scroll automático al top después de un pequeño delay
+                    SwingUtilities.invokeLater(() -> {
+                        wrapper.scrollToTop();
+                        wrapper.forceResize();
+                        ajustarComponentesVentana();
+                    });
+                    
+                } else {
+                    // Para otros componentes, añadir directamente
+                    jPanel1.add(comp, constraints);
+                }
+            }
+            
+            @Override
+            public Component add(Component comp) {
+                if (comp instanceof JPanel) {
+                    add(comp, BorderLayout.CENTER);
+                } else {
+                    jPanel1.add(comp);
+                }
+                return comp;
+            }
+
+            @Override
+            public void revalidate() {
+                jPanel1.revalidate();
+            }
+
+            @Override
+            public void repaint() {
+                jPanel1.repaint();
+            }
+
+            @Override
+            public void setLayout(java.awt.LayoutManager mgr) {
+                // Mantener BorderLayout para el responsive cuando hay paneles específicos
+                if (panelEspecificoMostrado) {
+                    jPanel1.setLayout(new BorderLayout());
+                } else {
+                    jPanel1.setLayout(mgr);
+                }
+            }
+            
+            @Override
+            public Dimension getSize() {
+                return jPanel1.getSize();
+            }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                return jPanel1.getPreferredSize();
+            }
+            
+            @Override
+            public int getComponentCount() {
+                return jPanel1.getComponentCount();
+            }
+            
+            @Override
+            public Component[] getComponents() {
+                return jPanel1.getComponents();
+            }
+        };
+    }
+
+    /**
      * Retorna el gestor de paneles para este rol.
      *
      * @return Gestor de paneles actual
@@ -994,7 +1099,6 @@ public class VentanaInicio extends javax.swing.JFrame {
     public int getUserId() {
         return this.userId;
     }
-
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -1101,35 +1205,16 @@ public class VentanaInicio extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-        /**
-         * @param args the command line arguments
-         */
-        public static void main(String args[]) {
-            /* Set the Nimbus look and feel */
-            //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-            /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+         /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
          * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-             */
-            try {
-                for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                    if ("Nimbus".equals(info.getName())) {
-                        javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                        break;
-                    }
-                }
-            } catch (ClassNotFoundException ex) {
-                java.util.logging.Logger.getLogger(VentanaInicio.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-            } catch (InstantiationException ex) {
-                java.util.logging.Logger.getLogger(VentanaInicio.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-            } catch (IllegalAccessException ex) {
-                java.util.logging.Logger.getLogger(VentanaInicio.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-            } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-                java.util.logging.Logger.getLogger(VentanaInicio.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-            }
-            //</editor-fold>
-
-            /* Set the Nimbus look and feel */
-            try {
+         */
+        try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
@@ -1192,7 +1277,7 @@ public class VentanaInicio extends javax.swing.JFrame {
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
-        }
+    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel fondoHome;

@@ -13,12 +13,14 @@ import main.java.views.users.common.VentanaInicio;
 /**
  * Clase utilitaria para crear y gestionar la barra de menú común que incluye la
  * funcionalidad de cambio de roles.
+ * Versión corregida que actualiza correctamente el rol actual.
  */
 public class MenuBarManager {
 
     private int userId;
     private JFrame currentFrame;
     private String rolColumnName = "rol_id"; // Valor por defecto que se actualizará
+    private int rolActual; // Variable para trackear el rol actual
 
     /**
      * Constructor que inicializa el gestor de menú.
@@ -30,10 +32,71 @@ public class MenuBarManager {
         this.userId = userId;
         this.currentFrame = currentFrame;
 
+        // Obtener el rol actual del usuario
+        this.rolActual = obtenerRolActual();
+
         // Determinar el nombre correcto de la columna de rol en la base de datos
         determinarNombreColumnaRol();
 
         // Crear y configurar la barra de menú
+        setupMenuBar();
+    }
+
+    /**
+     * Obtiene el rol actual del usuario desde la base de datos.
+     */
+    private int obtenerRolActual() {
+        try {
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                System.err.println("ERROR: No se pudo establecer conexión a la base de datos");
+                return 1; // Rol por defecto
+            }
+
+            // Primero intentar obtener desde usuario_roles (rol por defecto)
+            String query = "SELECT ur." + rolColumnName + " as rol_id " +
+                          "FROM usuario_roles ur " +
+                          "WHERE ur.usuario_id = ? AND ur.is_default = 1";
+            
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int rol = rs.getInt("rol_id");
+                System.out.println("Rol actual obtenido desde usuario_roles: " + rol);
+                return rol;
+            }
+
+            // Si no hay rol por defecto en usuario_roles, obtener desde usuarios
+            query = "SELECT rol FROM usuarios WHERE id = ?";
+            ps = conect.prepareStatement(query);
+            ps.setInt(1, userId);
+            rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int rol = rs.getInt("rol");
+                System.out.println("Rol actual obtenido desde usuarios: " + rol);
+                return rol;
+            }
+
+        } catch (SQLException ex) {
+            System.err.println("Error al obtener rol actual: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+
+        return 1; // Rol por defecto si hay error
+    }
+
+    /**
+     * Actualiza el rol actual y refresca la barra de menú.
+     * Este método debe ser llamado después de cambiar de rol.
+     */
+    public void actualizarRolActual(int nuevoRol) {
+        this.rolActual = nuevoRol;
+        System.out.println("MenuBarManager: Actualizando rol actual a: " + nuevoRol);
+        
+        // Refrescar la barra de menú para mostrar el nuevo rol como actual
         setupMenuBar();
     }
 
@@ -91,116 +154,125 @@ public class MenuBarManager {
      * Configura y añade la barra de menú a la ventana actual.
      */
     private void setupMenuBar() {
-    // Crear la barra de menú
-    JMenuBar menuBar = new JMenuBar();
+        // Crear la barra de menú
+        JMenuBar menuBar = new JMenuBar();
 
-    // Menú de usuario
-    JMenu userMenu = new JMenu("Usuario");
+        // Menú de usuario
+        JMenu userMenu = new JMenu("Usuario");
 
-    // Obtener roles y crear submenú de roles si hay más de uno
-    try {
-        // Consulta para obtener roles disponibles
-        Connection conect = Conexion.getInstancia().verificarConexion();
+        // Obtener roles y crear submenú de roles si hay más de uno
+        try {
+            // Consulta para obtener roles disponibles
+            Connection conect = Conexion.getInstancia().verificarConexion();
 
-        String query = "SELECT ur." + rolColumnName + " as rol_id, r.nombre AS rol_nombre, ur.is_default "
-                + "FROM usuario_roles ur "
-                + "JOIN roles r ON ur." + rolColumnName + " = r.id "
-                + "WHERE ur.usuario_id = ? "
-                + "ORDER BY ur.is_default DESC";
+            String query = "SELECT ur." + rolColumnName + " as rol_id, r.nombre AS rol_nombre, ur.is_default "
+                    + "FROM usuario_roles ur "
+                    + "JOIN roles r ON ur." + rolColumnName + " = r.id "
+                    + "WHERE ur.usuario_id = ? "
+                    + "ORDER BY ur.is_default DESC";
 
-        PreparedStatement ps = conect.prepareStatement(query);
-        ps.setInt(1, userId);
-        ResultSet rs = ps.executeQuery();
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
 
-        // Contar roles y crear submenú si hay más de uno
-        int rolesCount = 0;
-        JMenu rolesMenu = new JMenu("Cambiar Rol");
+            // Contar roles y crear submenú si hay más de uno
+            int rolesCount = 0;
+            JMenu rolesMenu = new JMenu("Cambiar Rol");
 
-        // Procesar roles
-        while (rs.next()) {
-            rolesCount++;
-            final String rolNombre = rs.getString("rol_nombre");
-            final int rolId = rs.getInt("rol_id");
-            final boolean isDefault = rs.getBoolean("is_default");
+            // Procesar roles
+            while (rs.next()) {
+                rolesCount++;
+                final String rolNombre = rs.getString("rol_nombre");
+                final int rolId = rs.getInt("rol_id");
+                final boolean isDefault = rs.getBoolean("is_default");
 
-            // Crear elemento de menú para este rol
-            JMenuItem rolItem = new JMenuItem(rolNombre);
-            if (isDefault) {
-                rolItem.setFont(rolItem.getFont().deriveFont(java.awt.Font.BOLD));
-                rolItem.setText(rolNombre + " (Actual)");
+                // Crear elemento de menú para este rol
+                JMenuItem rolItem = new JMenuItem(rolNombre);
+                
+                // Marcar el rol actual (no solo el default de la BD)
+                if (rolId == rolActual) {
+                    rolItem.setFont(rolItem.getFont().deriveFont(java.awt.Font.BOLD));
+                    rolItem.setText(rolNombre + " (Actual)");
+                    rolItem.setEnabled(false); // Deshabilitar el rol actual para evitar clicks innecesarios
+                }
+
+                // Añadir acción para cambiar a este rol (solo si no es el actual)
+                if (rolId != rolActual) {
+                    rolItem.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            cambiarARol(rolId, rolNombre);
+                        }
+                    });
+                }
+
+                // Añadir al submenú de roles
+                rolesMenu.add(rolItem);
             }
 
-            // Añadir acción para cambiar a este rol
-            rolItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    cambiarARol(rolId, rolNombre);
-                }
-            });
+            // Añadir submenú de roles si hay más de uno
+            if (rolesCount > 1) {
+                userMenu.add(rolesMenu);
+            }
 
-            // Añadir al submenú de roles
-            rolesMenu.add(rolItem);
+        } catch (SQLException ex) {
+            System.err.println("ERROR al cargar roles para el menú: " + ex.getMessage());
+            ex.printStackTrace();
         }
 
-        // Añadir submenú de roles si hay más de uno
-        if (rolesCount > 1) {
-            userMenu.add(rolesMenu);
-        }
+        // Añadir opción de cerrar sesión
+        JMenuItem logoutItem = new JMenuItem("Cerrar Sesión");
+        logoutItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                cerrarSesion();
+            }
+        });
+        userMenu.add(logoutItem);
 
-    } catch (SQLException ex) {
-        System.err.println("ERROR al cargar roles para el menú: " + ex.getMessage());
-        ex.printStackTrace();
+        // Añadir menú de usuario a la barra
+        menuBar.add(userMenu);
+
+        // Añadir menú de Ayuda con opción de actualizaciones
+        JMenu helpMenu = new JMenu("Ayuda");
+        
+        // Opción para verificar actualizaciones
+        JMenuItem updateItem = new JMenuItem("Verificar actualizaciones");
+        updateItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ActualizadorApp.verificarActualizaciones();
+            }
+        });
+        helpMenu.add(updateItem);
+        
+        // Opción de Acerca de con versión
+        JMenuItem aboutItem = new JMenuItem("Acerca de");
+        aboutItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(
+                    currentFrame,
+                    "Sistema de Gestión Escolar ET20\nVersión: " + ActualizadorApp.VERSION_ACTUAL,
+                    "Acerca de",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+            }
+        });
+        helpMenu.add(aboutItem);
+        
+        // Añadir menú de Ayuda a la barra
+        menuBar.add(helpMenu);
+
+        // Establecer la barra de menú en el frame actual
+        currentFrame.setJMenuBar(menuBar);
+
+        // Forzar actualización visual
+        currentFrame.revalidate();
+        currentFrame.repaint();
+
+        System.out.println("Barra de menú configurada. Rol actual marcado: " + rolActual + " (" + obtenerTextoRol(rolActual) + ")");
     }
-
-    // Añadir opción de cerrar sesión
-    JMenuItem logoutItem = new JMenuItem("Cerrar Sesión");
-    logoutItem.addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            cerrarSesion();
-        }
-    });
-    userMenu.add(logoutItem);
-
-    // Añadir menú de usuario a la barra
-    menuBar.add(userMenu);
-
-    // Añadir menú de Ayuda con opción de actualizaciones
-    JMenu helpMenu = new JMenu("Ayuda");
-    
-    // Opción para verificar actualizaciones
-    JMenuItem updateItem = new JMenuItem("Verificar actualizaciones");
-    updateItem.addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            ActualizadorApp.verificarActualizaciones();
-        }
-    });
-    helpMenu.add(updateItem);
-    
-    // Opción de Acerca de con versión
-    JMenuItem aboutItem = new JMenuItem("Acerca de");
-    aboutItem.addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            JOptionPane.showMessageDialog(
-                currentFrame,
-                "Sistema de Gestión Escolar ET20\nVersión: " + ActualizadorApp.VERSION_ACTUAL,
-                "Acerca de",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-        }
-    });
-    helpMenu.add(aboutItem);
-    
-    // Añadir menú de Ayuda a la barra
-    menuBar.add(helpMenu);
-
-    // Establecer la barra de menú en el frame actual
-    currentFrame.setJMenuBar(menuBar);
-
-    System.out.println("Barra de menú configurada con opciones de cambio de rol y verificación de actualizaciones");
-}
 
     /**
      * Cambia al rol seleccionado.
@@ -317,6 +389,9 @@ public class MenuBarManager {
                 if (currentFrame instanceof VentanaInicio) {
                     VentanaInicio ventana = (VentanaInicio) currentFrame;
 
+                    // IMPORTANTE: Actualizar el rol actual ANTES de refrescar la barra de menú
+                    actualizarRolActual(rolId);
+
                     // Actualizar el gestor de paneles según el nuevo rol
                     ventana.setRolPanelManager(RolPanelManagerFactory.createManager(ventana, userId, rolId));
 
@@ -380,6 +455,9 @@ public class MenuBarManager {
                     // Actualizar referencia a la ventana actual
                     currentFrame = nuevaVentana;
 
+                    // IMPORTANTE: Actualizar el rol actual para la nueva ventana
+                    actualizarRolActual(rolId);
+
                     // Mostrar la nueva ventana
                     nuevaVentana.setVisible(true);
                     System.out.println("Pantalla de " + obtenerTextoRol(rolId) + " abierta");
@@ -421,6 +499,7 @@ public class MenuBarManager {
                 return "Usuario";
         }
     }
+
     /**
      * Cierra la sesión actual y vuelve a la pantalla de login.
      */
