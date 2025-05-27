@@ -16,7 +16,7 @@ public class Main {
         configurarLookAndFeel();
 
         // Verificar actualizaciones antes de iniciar la aplicación
-       // verificarYActualizarAplicacion();
+        //verificarYActualizarAplicacion();
         
         //Llamado al ResourceManager para que se ejecute y haga la comprobación de las imagenes
          try {

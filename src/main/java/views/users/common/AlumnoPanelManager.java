@@ -15,6 +15,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import main.java.views.users.Alumnos.verasisten;
 import main.java.views.users.Alumnos.vernotas;
+import main.java.views.users.common.NotasVisualizationPanel;
 
 /**
  * Gestor de paneles específico para el rol de Alumno.
@@ -49,6 +50,42 @@ public class AlumnoPanelManager implements RolPanelManager {
     }
 
     /**
+     * Muestra el panel de notas del alumno.
+     */
+    private void mostrarNotasAlumno() {
+        try {
+            System.out.println("Cargando panel de notas para alumno ID: " + alumnoId);
+
+            // Crear el panel de visualización de notas
+            main.java.views.users.common.NotasVisualizationPanel panelNotas
+                    = new main.java.views.users.common.NotasVisualizationPanel(ventana, alumnoId, 4); // rol 4 = alumno
+
+            // Obtener panel principal y configurarlo
+            javax.swing.JPanel panelPrincipal = ventana.getPanelPrincipal();
+            panelPrincipal.removeAll();
+            panelPrincipal.setLayout(new java.awt.BorderLayout());
+            panelPrincipal.add(panelNotas, java.awt.BorderLayout.CENTER);
+
+            // Actualizar vista
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
+
+            System.out.println("Panel de notas del alumno cargado exitosamente");
+
+        } catch (Exception ex) {
+            System.err.println("Error al cargar panel de notas: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(ventana,
+                    "Error al cargar notas: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+
+            // En caso de error, restaurar vista principal
+            ventana.restaurarVistaPrincipal();
+        }
+    }
+
+    /**
      * Crea un botón con el estilo estándar de la aplicación.
      *
      * @param text Texto del botón
@@ -75,7 +112,7 @@ public class AlumnoPanelManager implements RolPanelManager {
         try {
             switch (actionCommand) {
                 case "notas":
-                    mostrarNotas();
+                    mostrarNotasAlumno();
                     break;
                 case "asistencias":
                     mostrarAsistencias();

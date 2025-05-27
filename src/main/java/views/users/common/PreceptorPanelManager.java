@@ -2,6 +2,7 @@ package main.java.views.users.common;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -21,6 +22,7 @@ import javax.swing.SwingUtilities;
 import main.java.database.Conexion;
 import main.java.views.users.Preceptor.AsistenciaPreceptorPanel;
 import main.java.utils.ExcelExportUtility;
+import main.java.views.users.common.NotasVisualizationPanel;
 
 /**
  * Gestor de paneles específico para el rol de Preceptor. Versión mejorada con
@@ -73,10 +75,7 @@ public class PreceptorPanelManager implements RolPanelManager {
 
             switch (actionCommand) {
                 case "notas":
-                    JOptionPane.showMessageDialog(ventana,
-                            "Funcionalidad de gestión de notas en desarrollo.",
-                            "Información",
-                            JOptionPane.INFORMATION_MESSAGE);
+                    mostrarPanelNotas();
                     break;
                 case "asistencias":
                     mostrarPanelAsistencias();
@@ -643,6 +642,73 @@ public class PreceptorPanelManager implements RolPanelManager {
         } catch (SQLException ex) {
             System.err.println("Error al obtener estado de asistencia: " + ex.getMessage());
             return "NC";
+        }
+    }
+
+    /**
+     * Muestra el panel de visualización de notas para preceptores. Versión
+     * corregida que implementa la funcionalidad completa.
+     */
+    private void mostrarPanelNotas() {
+        try {
+            System.out.println("=== INICIANDO CARGA DE PANEL DE NOTAS PARA PRECEPTOR ===");
+            System.out.println("Preceptor ID: " + preceptorId);
+
+            // Verificar conexión
+            if (conect == null || conect.isClosed()) {
+                conect = Conexion.getInstancia().verificarConexion();
+            }
+
+            if (conect == null) {
+                throw new SQLException("No se pudo establecer conexión con la base de datos");
+            }
+
+            // CREAR el panel de visualización de notas directamente
+            // IMPORTANTE: Rol 2 = preceptor
+            main.java.views.users.common.NotasVisualizationPanel panelNotas
+                    = new main.java.views.users.common.NotasVisualizationPanel(ventana, preceptorId, 2);
+
+            // Obtener panel principal y configurarlo
+            javax.swing.JPanel panelPrincipal = ventana.getPanelPrincipal();
+            panelPrincipal.removeAll();
+            panelPrincipal.setLayout(new java.awt.BorderLayout());
+            panelPrincipal.add(panelNotas, java.awt.BorderLayout.CENTER);
+
+            // Actualizar vista
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
+
+            System.out.println("=== PANEL DE NOTAS DEL PRECEPTOR CARGADO EXITOSAMENTE ===");
+
+            // DEBUG ADICIONAL: Verificar que el botón está presente
+            SwingUtilities.invokeLater(() -> {
+                System.out.println("=== VERIFICACIÓN FINAL ===");
+                Component[] componentes = panelPrincipal.getComponents();
+                System.out.println("Componentes en panel principal: " + componentes.length);
+
+                if (componentes.length > 0 && componentes[0] instanceof NotasVisualizationPanel) {
+                    NotasVisualizationPanel panel = (NotasVisualizationPanel) componentes[0];
+                    System.out.println("Panel de notas encontrado y configurado correctamente");
+                }
+            });
+
+        } catch (Exception ex) {
+            System.err.println("=== ERROR AL CARGAR PANEL DE NOTAS DEL PRECEPTOR ===");
+            System.err.println("Error: " + ex.getMessage());
+            System.err.println("Tipo: " + ex.getClass().getName());
+            ex.printStackTrace();
+
+            JOptionPane.showMessageDialog(ventana,
+                    "Error al cargar panel de notas:\n"
+                    + ex.getMessage() + "\n\n"
+                    + "Detalles técnicos:\n"
+                    + "- Preceptor ID: " + preceptorId + "\n"
+                    + "- Tipo de error: " + ex.getClass().getSimpleName(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+
+            // En caso de error, restaurar vista principal
+            ventana.restaurarVistaPrincipal();
         }
     }
 
