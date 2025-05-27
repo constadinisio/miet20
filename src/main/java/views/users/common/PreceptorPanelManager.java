@@ -49,8 +49,9 @@ public class PreceptorPanelManager implements RolPanelManager {
         JButton btnNotas = createStyledButton("NOTAS", "notas");
         JButton btnAsistencias = createStyledButton("ASISTENCIAS", "asistencias");
         JButton btnExportar = createStyledButton("EXPORTAR", "exportar");
+        JButton btnBoletines = createStyledButton("BOLETINES", "boletines"); // NUEVO
 
-        return new JComponent[]{btnNotas, btnAsistencias, btnExportar};
+        return new JComponent[]{btnNotas, btnAsistencias, btnExportar, btnBoletines}; // ACTUALIZADO
     }
 
     private JButton createStyledButton(String text, String actionCommand) {
@@ -82,6 +83,10 @@ public class PreceptorPanelManager implements RolPanelManager {
                     break;
                 case "exportar":
                     mostrarDialogoExportacion();
+                    break;
+
+                case "boletines":
+                    mostrarPanelBoletines();
                     break;
                 default:
                     ventana.restaurarVistaPrincipal();
@@ -700,6 +705,60 @@ public class PreceptorPanelManager implements RolPanelManager {
 
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar panel de notas:\n"
+                    + ex.getMessage() + "\n\n"
+                    + "Detalles técnicos:\n"
+                    + "- Preceptor ID: " + preceptorId + "\n"
+                    + "- Tipo de error: " + ex.getClass().getSimpleName(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+
+            // En caso de error, restaurar vista principal
+            ventana.restaurarVistaPrincipal();
+        }
+    }
+
+    /**
+     * Muestra el panel de gestión de boletines para preceptores.
+     */
+    private void mostrarPanelBoletines() {
+        try {
+            System.out.println("=== INICIANDO PANEL DE BOLETINES PARA PRECEPTOR ===");
+            System.out.println("Preceptor ID: " + preceptorId);
+
+            // Verificar conexión
+            if (conect == null || conect.isClosed()) {
+                conect = Conexion.getInstancia().verificarConexion();
+            }
+
+            if (conect == null) {
+                throw new SQLException("No se pudo establecer conexión con la base de datos");
+            }
+
+            // CREAR el panel de gestión de boletines para preceptores
+            // IMPORTANTE: Rol 2 = preceptor
+            main.java.views.users.common.PanelGestionBoletines panelBoletines
+                    = new main.java.views.users.common.PanelGestionBoletines(ventana, preceptorId, 2);
+
+            // Obtener panel principal y configurarlo
+            javax.swing.JPanel panelPrincipal = ventana.getPanelPrincipal();
+            panelPrincipal.removeAll();
+            panelPrincipal.setLayout(new java.awt.BorderLayout());
+            panelPrincipal.add(panelBoletines, java.awt.BorderLayout.CENTER);
+
+            // Actualizar vista
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
+
+            System.out.println("=== PANEL DE BOLETINES DEL PRECEPTOR CARGADO EXITOSAMENTE ===");
+
+        } catch (Exception ex) {
+            System.err.println("=== ERROR AL CARGAR PANEL DE BOLETINES DEL PRECEPTOR ===");
+            System.err.println("Error: " + ex.getMessage());
+            System.err.println("Tipo: " + ex.getClass().getName());
+            ex.printStackTrace();
+
+            JOptionPane.showMessageDialog(ventana,
+                    "Error al cargar panel de boletines:\n"
                     + ex.getMessage() + "\n\n"
                     + "Detalles técnicos:\n"
                     + "- Preceptor ID: " + preceptorId + "\n"

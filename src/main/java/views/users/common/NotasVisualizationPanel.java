@@ -25,6 +25,7 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -3056,91 +3057,6 @@ public class NotasVisualizationPanel extends JPanel {
     }
 
     /**
-     * Valida que el curso tenga datos suficientes para generar boletines
-     */
-    private boolean validarDatosParaBoletines(int cursoId) {
-        try {
-            // Verificar que hay alumnos
-            String queryAlumnos = "SELECT COUNT(*) as total FROM alumno_curso WHERE curso_id = ? AND estado = 'activo'";
-            PreparedStatement psAlumnos = conect.prepareStatement(queryAlumnos);
-            psAlumnos.setInt(1, cursoId);
-            ResultSet rsAlumnos = psAlumnos.executeQuery();
-
-            int totalAlumnos = 0;
-            if (rsAlumnos.next()) {
-                totalAlumnos = rsAlumnos.getInt("total");
-            }
-
-            if (totalAlumnos == 0) {
-                JOptionPane.showMessageDialog(this,
-                        "No hay alumnos activos en el curso seleccionado",
-                        "Sin alumnos",
-                        JOptionPane.WARNING_MESSAGE);
-                return false;
-            }
-
-            // Verificar que hay materias
-            String queryMaterias = "SELECT COUNT(*) as total FROM profesor_curso_materia WHERE curso_id = ? AND estado = 'activo'";
-            PreparedStatement psMaterias = conect.prepareStatement(queryMaterias);
-            psMaterias.setInt(1, cursoId);
-            ResultSet rsMaterias = psMaterias.executeQuery();
-
-            int totalMaterias = 0;
-            if (rsMaterias.next()) {
-                totalMaterias = rsMaterias.getInt("total");
-            }
-
-            if (totalMaterias == 0) {
-                int confirmacion = JOptionPane.showConfirmDialog(this,
-                        "No se encontraron materias activas en el curso.\n"
-                        + "¿Desea continuar con la generación de boletines vacíos?",
-                        "Sin materias",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE);
-
-                return confirmacion == JOptionPane.YES_OPTION;
-            }
-
-            // Verificar que hay al menos algunas notas
-            String queryNotas = "SELECT COUNT(*) as total FROM notas_bimestrales nb "
-                    + "INNER JOIN materias m ON nb.materia_id = m.id "
-                    + "INNER JOIN profesor_curso_materia pcm ON m.id = pcm.materia_id "
-                    + "WHERE pcm.curso_id = ? AND pcm.estado = 'activo'";
-            PreparedStatement psNotas = conect.prepareStatement(queryNotas);
-            psNotas.setInt(1, cursoId);
-            ResultSet rsNotas = psNotas.executeQuery();
-
-            int totalNotas = 0;
-            if (rsNotas.next()) {
-                totalNotas = rsNotas.getInt("total");
-            }
-
-            if (totalNotas == 0) {
-                int confirmacion = JOptionPane.showConfirmDialog(this,
-                        "No se encontraron notas bimestrales en el curso.\n"
-                        + "Los boletines se generarán con notas de trabajos individuales si están disponibles.\n"
-                        + "¿Desea continuar?",
-                        "Sin notas bimestrales",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE);
-
-                return confirmacion == JOptionPane.YES_OPTION;
-            }
-
-            return true;
-
-        } catch (SQLException e) {
-            System.err.println("Error al validar datos para boletines: " + e.getMessage());
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error al validar datos: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-    }
-
-    /**
      * Muestra estadísticas del curso antes de generar boletines
      */
     private void mostrarEstadisticasCurso(int cursoId) {
@@ -3204,6 +3120,395 @@ public class NotasVisualizationPanel extends JPanel {
         } catch (SQLException e) {
             System.err.println("Error al obtener estadísticas: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Genera un boletín individual CON INTEGRACIÓN AL SERVIDOR
+     */
+    private void generarBoletinIndividualConServidor(int cursoId) {
+        try {
+            // Cargar alumnos del curso
+            cargarAlumnos(cursoId);
+
+            if (alumnosMap.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "No se encontraron alumnos en el curso seleccionado",
+                        "Sin alumnos",
+                        JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            // Seleccionar alumno
+            String[] alumnosArray = alumnosMap.keySet().toArray(new String[0]);
+            String alumnoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el alumno:",
+                    "Seleccionar Alumno",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    alumnosArray,
+                    alumnosArray[0]);
+
+            if (alumnoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+            // Seleccionar período
+            String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+            String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el período del boletín:",
+                    "Seleccionar Período",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    periodos,
+                    main.java.utils.BoletinesUtils.obtenerPeriodoActual());
+
+            if (periodoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+            Integer alumnoId = alumnosMap.get(alumnoSeleccionado);
+            if (alumnoId != null) {
+                // USAR LA NUEVA IMPLEMENTACIÓN CON SERVIDOR
+                main.java.utils.PlantillaBoletinUtility.generarBoletinIndividualConServidorConInterfaz(
+                        alumnoId, cursoId, periodoSeleccionado, this);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al generar boletín individual: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al generar boletín individual: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Genera boletines para todos los alumnos del curso CON INTEGRACIÓN AL
+     * SERVIDOR
+     */
+    private void generarBoletinesTodoCursoConServidor(int cursoId) {
+        try {
+            // Seleccionar período
+            String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+            String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el período del boletín:",
+                    "Seleccionar Período",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    periodos,
+                    main.java.utils.BoletinesUtils.obtenerPeriodoActual());
+
+            if (periodoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+            int confirmacion = JOptionPane.showConfirmDialog(this,
+                    "¿Está seguro de generar boletines para todos los alumnos del curso?\n"
+                    + "Período: " + periodoSeleccionado + "\n"
+                    + "Los boletines se guardarán automáticamente en el servidor.\n"
+                    + "Esta operación puede tomar varios minutos.",
+                    "Confirmar Generación Masiva",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+
+            if (confirmacion == JOptionPane.YES_OPTION) {
+                // USAR LA NUEVA IMPLEMENTACIÓN CON SERVIDOR
+                main.java.utils.PlantillaBoletinUtility.generarBoletinesCursoConServidorConInterfaz(
+                        cursoId, periodoSeleccionado, this);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al generar boletines del curso: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al generar boletines del curso: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Abre el panel de gestión de boletines existentes
+     */
+    private void abrirGestionBoletines() {
+        try {
+            // Crear y mostrar el panel de gestión de boletines
+            main.java.views.users.common.PanelGestionBoletines panelGestion
+                    = new main.java.views.users.common.PanelGestionBoletines(ventana, userId, userRol);
+
+            // Obtener panel principal y configurarlo
+            javax.swing.JPanel panelPrincipal = ventana.getPanelPrincipal();
+            panelPrincipal.removeAll();
+            panelPrincipal.setLayout(new java.awt.BorderLayout());
+            panelPrincipal.add(panelGestion, java.awt.BorderLayout.CENTER);
+
+            // Actualizar vista
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
+
+            System.out.println("Panel de gestión de boletines abierto desde NotasVisualizationPanel");
+
+        } catch (Exception e) {
+            System.err.println("Error al abrir gestión de boletines: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir gestión de boletines: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Configurar el servidor de boletines
+     */
+    private void configurarServidorBoletines() {
+        try {
+            // Solo administradores pueden configurar el servidor
+            if (userRol != 1) {
+                JOptionPane.showMessageDialog(this,
+                        "Solo los administradores pueden configurar el servidor de boletines",
+                        "Permisos insuficientes",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            mostrarDialogoConfiguracionServidor();
+
+        } catch (Exception e) {
+            System.err.println("Error al configurar servidor: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al configurar servidor: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Muestra el diálogo de configuración del servidor de boletines
+     */
+    private void mostrarDialogoConfiguracionServidor() {
+        JPanel panel = new JPanel(new java.awt.GridBagLayout());
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.insets = new java.awt.Insets(5, 5, 5, 5);
+        gbc.anchor = java.awt.GridBagConstraints.WEST;
+
+        // Información actual
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        panel.add(new JLabel("=== CONFIGURACIÓN ACTUAL ==="), gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        panel.add(new JLabel("Servidor de boletines:"), gbc);
+
+        JTextField txtRutaActual = new JTextField(main.java.utils.GestorBoletines.obtenerRutaServidor(), 30);
+        txtRutaActual.setEditable(false);
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        panel.add(txtRutaActual, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 1;
+        panel.add(new JLabel("Plantilla de boletines:"), gbc);
+
+        JTextField txtPlantillaActual = new JTextField(main.java.utils.PlantillaBoletinUtility.obtenerRutaPlantilla(), 30);
+        txtPlantillaActual.setEditable(false);
+        gbc.gridx = 1;
+        gbc.gridy = 2;
+        panel.add(txtPlantillaActual, gbc);
+
+        // Configuración nueva
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        panel.add(new JLabel(" "), gbc); // Espaciador
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.gridwidth = 2;
+        panel.add(new JLabel("=== NUEVA CONFIGURACIÓN ==="), gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 1;
+        panel.add(new JLabel("Nueva ruta del servidor:"), gbc);
+
+        JTextField txtNuevaRuta = new JTextField(30);
+        gbc.gridx = 1;
+        gbc.gridy = 5;
+        panel.add(txtNuevaRuta, gbc);
+
+        JButton btnExaminarServidor = new JButton("Examinar...");
+        gbc.gridx = 2;
+        gbc.gridy = 5;
+        panel.add(btnExaminarServidor, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        gbc.gridwidth = 1;
+        panel.add(new JLabel("Nueva plantilla:"), gbc);
+
+        JTextField txtNuevaPlantilla = new JTextField(30);
+        gbc.gridx = 1;
+        gbc.gridy = 6;
+        panel.add(txtNuevaPlantilla, gbc);
+
+        JButton btnExaminarPlantilla = new JButton("Examinar...");
+        gbc.gridx = 2;
+        gbc.gridy = 6;
+        panel.add(btnExaminarPlantilla, gbc);
+
+        // Listeners para examinar
+        btnExaminarServidor.addActionListener(evt -> {
+            javax.swing.JFileChooser fileChooser = new javax.swing.JFileChooser();
+            fileChooser.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
+            fileChooser.setDialogTitle("Seleccionar carpeta del servidor de boletines");
+
+            if (fileChooser.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                txtNuevaRuta.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+
+        btnExaminarPlantilla.addActionListener(evt -> {
+            javax.swing.JFileChooser fileChooser = new javax.swing.JFileChooser();
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos Excel (*.xlsx)", "xlsx"));
+            fileChooser.setDialogTitle("Seleccionar plantilla de boletines");
+
+            if (fileChooser.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                txtNuevaPlantilla.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+
+        // Mostrar diálogo
+        int result = JOptionPane.showConfirmDialog(this, panel,
+                "Configuración del Sistema de Boletines",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            // Aplicar cambios
+            boolean cambios = false;
+
+            // Cambiar ruta del servidor si se especificó
+            String nuevaRuta = txtNuevaRuta.getText().trim();
+            if (!nuevaRuta.isEmpty()) {
+                main.java.utils.GestorBoletines.configurarRutaServidor(nuevaRuta);
+                cambios = true;
+                System.out.println("✅ Ruta del servidor actualizada: " + nuevaRuta);
+            }
+
+            // Cambiar plantilla si se especificó
+            String nuevaPlantilla = txtNuevaPlantilla.getText().trim();
+            if (!nuevaPlantilla.isEmpty()) {
+                main.java.utils.PlantillaBoletinUtility.configurarRutaPlantilla(nuevaPlantilla);
+                cambios = true;
+                System.out.println("✅ Plantilla actualizada: " + nuevaPlantilla);
+            }
+
+            if (cambios) {
+                // Preguntar si generar estructura
+                int confirmacion = JOptionPane.showConfirmDialog(this,
+                        "¿Desea generar la estructura de carpetas para el año actual?\n"
+                        + "Esto creará las carpetas necesarias para organizar los boletines.",
+                        "Generar Estructura",
+                        JOptionPane.YES_NO_OPTION);
+
+                if (confirmacion == JOptionPane.YES_OPTION) {
+                    try {
+                        boolean exito = main.java.utils.GestorBoletines.generarEstructuraCompleta(
+                                java.time.LocalDate.now().getYear());
+
+                        String mensaje = exito
+                                ? "Configuración actualizada y estructura generada exitosamente"
+                                : "Configuración actualizada, pero hubo problemas generando la estructura";
+
+                        JOptionPane.showMessageDialog(this,
+                                mensaje,
+                                "Configuración Completada",
+                                exito ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE);
+
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(this,
+                                "Error al generar estructura: " + ex.getMessage(),
+                                "Error",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Configuración actualizada exitosamente",
+                            "Configuración Completada",
+                            JOptionPane.INFORMATION_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "No se realizaron cambios",
+                        "Sin cambios",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+
+// TAMBIÉN AGREGAR este método para completar la funcionalidad
+    /**
+     * Valida que el curso tenga datos suficientes para generar boletines
+     */
+    private boolean validarDatosParaBoletines(int cursoId) {
+        try {
+            // Verificar que hay alumnos
+            String queryAlumnos = "SELECT COUNT(*) as total FROM alumno_curso WHERE curso_id = ? AND estado = 'activo'";
+            PreparedStatement psAlumnos = conect.prepareStatement(queryAlumnos);
+            psAlumnos.setInt(1, cursoId);
+            ResultSet rsAlumnos = psAlumnos.executeQuery();
+
+            int totalAlumnos = 0;
+            if (rsAlumnos.next()) {
+                totalAlumnos = rsAlumnos.getInt("total");
+            }
+
+            if (totalAlumnos == 0) {
+                JOptionPane.showMessageDialog(this,
+                        "No hay alumnos activos en el curso seleccionado",
+                        "Sin alumnos",
+                        JOptionPane.WARNING_MESSAGE);
+                return false;
+            }
+
+            // Verificar que hay materias
+            String queryMaterias = "SELECT COUNT(*) as total FROM profesor_curso_materia WHERE curso_id = ? AND estado = 'activo'";
+            PreparedStatement psMaterias = conect.prepareStatement(queryMaterias);
+            psMaterias.setInt(1, cursoId);
+            ResultSet rsMaterias = psMaterias.executeQuery();
+
+            int totalMaterias = 0;
+            if (rsMaterias.next()) {
+                totalMaterias = rsMaterias.getInt("total");
+            }
+
+            if (totalMaterias == 0) {
+                int confirmacion = JOptionPane.showConfirmDialog(this,
+                        "No se encontraron materias activas en el curso.\n"
+                        + "¿Desea continuar con la generación de boletines vacíos?",
+                        "Sin materias",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+
+                return confirmacion == JOptionPane.YES_OPTION;
+            }
+
+            return true;
+
+        } catch (SQLException e) {
+            System.err.println("Error al validar datos para boletines: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al validar datos: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     }
 }

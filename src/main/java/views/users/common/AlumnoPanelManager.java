@@ -41,11 +41,13 @@ public class AlumnoPanelManager implements RolPanelManager {
         // Crear botones específicos para el rol de alumno
         JButton btnNotas = createStyledButton("NOTAS", "notas");
         JButton btnAsistencias = createStyledButton("ASISTENCIAS", "asistencias");
+        JButton btnMisBoletines = createStyledButton("MIS BOLETINES", "misBoletines"); // NUEVO
 
         // Retornar array de botones
         return new JComponent[]{
             btnNotas,
-            btnAsistencias
+            btnAsistencias,
+            btnMisBoletines // NUEVO
         };
     }
 
@@ -116,6 +118,9 @@ public class AlumnoPanelManager implements RolPanelManager {
                     break;
                 case "asistencias":
                     mostrarAsistencias();
+                    break;
+                case "misBoletines":
+                    mostrarMisBoletines();
                     break;
                 default:
                     ventana.restaurarVistaPrincipal();
@@ -201,6 +206,43 @@ public class AlumnoPanelManager implements RolPanelManager {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(ventana,
                     "Error al cargar asistencias: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+
+            // En caso de error, restaurar vista principal
+            ventana.restaurarVistaPrincipal();
+        }
+    }
+
+    /**
+     * Muestra el panel de boletines específico para el alumno.
+     */
+    private void mostrarMisBoletines() {
+        try {
+            System.out.println("Cargando mis boletines para alumno ID: " + alumnoId);
+
+            // CREAR el panel de boletines específico para alumnos
+            // Este panel solo muestra los boletines del alumno actual
+            main.java.views.users.common.PanelBoletinesAlumno panelMisBoletines
+                    = new main.java.views.users.common.PanelBoletinesAlumno(ventana, alumnoId);
+
+            // Obtener panel principal y configurarlo
+            javax.swing.JPanel panelPrincipal = ventana.getPanelPrincipal();
+            panelPrincipal.removeAll();
+            panelPrincipal.setLayout(new java.awt.BorderLayout());
+            panelPrincipal.add(panelMisBoletines, java.awt.BorderLayout.CENTER);
+
+            // Actualizar vista
+            panelPrincipal.revalidate();
+            panelPrincipal.repaint();
+
+            System.out.println("Panel de mis boletines cargado exitosamente");
+
+        } catch (Exception ex) {
+            System.err.println("Error al cargar mis boletines: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(ventana,
+                    "Error al cargar mis boletines: " + ex.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
 

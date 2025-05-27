@@ -17,18 +17,17 @@ public class Main {
 
         // Verificar actualizaciones antes de iniciar la aplicación
         //verificarYActualizarAplicacion();
-        
         //Llamado al ResourceManager para que se ejecute y haga la comprobación de las imagenes
-         try {
+        try {
             // Inicializar el gestor de recursos
             ResourceManager.initialize();
         } catch (Exception e) {
             // Solo mostrar un diálogo en caso de error crítico
-            JOptionPane.showMessageDialog(null, 
-                "Error al inicializar recursos: " + e.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null,
+                    "Error al inicializar recursos: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
-        
+
         // Configurar UI responsiva
         setupResponsiveUI();
 
@@ -37,8 +36,7 @@ public class Main {
 
         // Iniciar la aplicación
         iniciarAplicacion();
-        
-        
+
     }
 
     private static void configurarLookAndFeel() {
@@ -116,4 +114,5 @@ public class Main {
             }
         }
     }
+
 }

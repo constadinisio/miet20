@@ -27,8 +27,8 @@ public class Conexion {
     Conexion() {
         try {
             // Parámetros de conexión a la base de datos
-            String url = "jdbc:mysql://localhost/et20plataforma";
-            //String url = "jdbc:mysql://10.120.1.109/et20plataforma";
+            //String url = "jdbc:mysql://localhost/et20plataforma";
+            String url = "jdbc:mysql://10.120.1.109/et20plataforma";
             String usuario = "root";
             String contrasena = "";
             
