@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: May 31, 2025 at 01:22 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Servidor: 127.0.0.1
+-- Tiempo de generación: 02-06-2025 a las 14:18:50
+-- Versión del servidor: 10.4.32-MariaDB
+-- Versión de PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `et20plataforma`
+-- Base de datos: `et20plataforma`
 --
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `actividades_evaluables`
+-- Estructura de tabla para la tabla `actividades_evaluables`
 --
 
 CREATE TABLE `actividades_evaluables` (
@@ -49,7 +49,7 @@ CREATE TABLE `actividades_evaluables` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `alumno_curso`
+-- Estructura de tabla para la tabla `alumno_curso`
 --
 
 CREATE TABLE `alumno_curso` (
@@ -62,7 +62,7 @@ CREATE TABLE `alumno_curso` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `asistencia_general`
+-- Estructura de tabla para la tabla `asistencia_general`
 --
 
 CREATE TABLE `asistencia_general` (
@@ -79,7 +79,7 @@ CREATE TABLE `asistencia_general` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `asistencia_materia`
+-- Estructura de tabla para la tabla `asistencia_materia`
 --
 
 CREATE TABLE `asistencia_materia` (
@@ -97,7 +97,7 @@ CREATE TABLE `asistencia_materia` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `boletin`
+-- Estructura de tabla para la tabla `boletin`
 --
 
 CREATE TABLE `boletin` (
@@ -118,7 +118,7 @@ CREATE TABLE `boletin` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `calificaciones`
+-- Estructura de tabla para la tabla `calificaciones`
 --
 
 CREATE TABLE `calificaciones` (
@@ -134,7 +134,7 @@ CREATE TABLE `calificaciones` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `calificacion_boletin`
+-- Estructura de tabla para la tabla `calificacion_boletin`
 --
 
 CREATE TABLE `calificacion_boletin` (
@@ -151,7 +151,7 @@ CREATE TABLE `calificacion_boletin` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `certificado`
+-- Estructura de tabla para la tabla `certificado`
 --
 
 CREATE TABLE `certificado` (
@@ -174,7 +174,7 @@ CREATE TABLE `certificado` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `configuracion_notificaciones`
+-- Estructura de tabla para la tabla `configuracion_notificaciones`
 --
 
 CREATE TABLE `configuracion_notificaciones` (
@@ -191,7 +191,22 @@ CREATE TABLE `configuracion_notificaciones` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `contenidos_libro`
+-- Estructura de tabla para la tabla `configuracion_soporte`
+--
+
+CREATE TABLE `configuracion_soporte` (
+  `id` int(11) NOT NULL,
+  `desarrollador_user_id` int(11) NOT NULL DEFAULT 960 COMMENT 'ID del desarrollador que recibe tickets',
+  `prefijo_ticket` varchar(5) DEFAULT 'TK' COMMENT 'Prefijo para números de ticket',
+  `notificar_nuevos` tinyint(1) DEFAULT 1 COMMENT 'Enviar notificación por nuevos tickets',
+  `auto_numero` int(11) DEFAULT 1 COMMENT 'Próximo número de ticket',
+  `activo` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `contenidos_libro`
 --
 
 CREATE TABLE `contenidos_libro` (
@@ -207,7 +222,7 @@ CREATE TABLE `contenidos_libro` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `cursos`
+-- Estructura de tabla para la tabla `cursos`
 --
 
 CREATE TABLE `cursos` (
@@ -223,7 +238,7 @@ CREATE TABLE `cursos` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `detalle_certificado`
+-- Estructura de tabla para la tabla `detalle_certificado`
 --
 
 CREATE TABLE `detalle_certificado` (
@@ -240,7 +255,7 @@ CREATE TABLE `detalle_certificado` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `firmas_libro`
+-- Estructura de tabla para la tabla `firmas_libro`
 --
 
 CREATE TABLE `firmas_libro` (
@@ -256,7 +271,7 @@ CREATE TABLE `firmas_libro` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `grupos_notificacion`
+-- Estructura de tabla para la tabla `grupos_notificacion`
 --
 
 CREATE TABLE `grupos_notificacion` (
@@ -272,7 +287,7 @@ CREATE TABLE `grupos_notificacion` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `grupos_notificacion_miembros`
+-- Estructura de tabla para la tabla `grupos_notificacion_miembros`
 --
 
 CREATE TABLE `grupos_notificacion_miembros` (
@@ -286,7 +301,7 @@ CREATE TABLE `grupos_notificacion_miembros` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `grupos_notificacion_personalizados`
+-- Estructura de tabla para la tabla `grupos_notificacion_personalizados`
 --
 
 CREATE TABLE `grupos_notificacion_personalizados` (
@@ -303,7 +318,7 @@ CREATE TABLE `grupos_notificacion_personalizados` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `horarios_materia`
+-- Estructura de tabla para la tabla `horarios_materia`
 --
 
 CREATE TABLE `horarios_materia` (
@@ -320,7 +335,7 @@ CREATE TABLE `horarios_materia` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `libros_temas`
+-- Estructura de tabla para la tabla `libros_temas`
 --
 
 CREATE TABLE `libros_temas` (
@@ -335,7 +350,7 @@ CREATE TABLE `libros_temas` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `materias`
+-- Estructura de tabla para la tabla `materias`
 --
 
 CREATE TABLE `materias` (
@@ -350,7 +365,7 @@ CREATE TABLE `materias` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `miembros_grupos_personalizados`
+-- Estructura de tabla para la tabla `miembros_grupos_personalizados`
 --
 
 CREATE TABLE `miembros_grupos_personalizados` (
@@ -364,7 +379,7 @@ CREATE TABLE `miembros_grupos_personalizados` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `netbooks`
+-- Estructura de tabla para la tabla `netbooks`
 --
 
 CREATE TABLE `netbooks` (
@@ -382,7 +397,7 @@ CREATE TABLE `netbooks` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `notas`
+-- Estructura de tabla para la tabla `notas`
 --
 
 CREATE TABLE `notas` (
@@ -398,7 +413,7 @@ CREATE TABLE `notas` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `notas_bimestrales`
+-- Estructura de tabla para la tabla `notas_bimestrales`
 --
 
 CREATE TABLE `notas_bimestrales` (
@@ -416,7 +431,7 @@ CREATE TABLE `notas_bimestrales` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `notificaciones`
+-- Estructura de tabla para la tabla `notificaciones`
 --
 
 CREATE TABLE `notificaciones` (
@@ -431,13 +446,16 @@ CREATE TABLE `notificaciones` (
   `estado` enum('ACTIVA','ARCHIVADA','ELIMINADA') DEFAULT 'ACTIVA',
   `requiere_confirmacion` tinyint(1) DEFAULT 0,
   `icono` varchar(50) DEFAULT 'info',
-  `color` varchar(20) DEFAULT '#007bff'
+  `color` varchar(20) DEFAULT '#007bff',
+  `grupo_personalizado_id` int(11) DEFAULT NULL,
+  `ticket_id` int(11) DEFAULT NULL COMMENT 'ID del ticket relacionado (si aplica)',
+  `tipo_especial` enum('TICKET','ACADEMICO','SISTEMA','GENERAL') DEFAULT 'GENERAL' COMMENT 'Tipo especial de notificación'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `notificaciones_destinatarios`
+-- Estructura de tabla para la tabla `notificaciones_destinatarios`
 --
 
 CREATE TABLE `notificaciones_destinatarios` (
@@ -452,7 +470,7 @@ CREATE TABLE `notificaciones_destinatarios` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `observaciones_asistencia`
+-- Estructura de tabla para la tabla `observaciones_asistencia`
 --
 
 CREATE TABLE `observaciones_asistencia` (
@@ -467,7 +485,7 @@ CREATE TABLE `observaciones_asistencia` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `plantillas_notificacion`
+-- Estructura de tabla para la tabla `plantillas_notificacion`
 --
 
 CREATE TABLE `plantillas_notificacion` (
@@ -485,7 +503,7 @@ CREATE TABLE `plantillas_notificacion` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `plantilla_boletin`
+-- Estructura de tabla para la tabla `plantilla_boletin`
 --
 
 CREATE TABLE `plantilla_boletin` (
@@ -502,7 +520,7 @@ CREATE TABLE `plantilla_boletin` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `plantilla_certificado`
+-- Estructura de tabla para la tabla `plantilla_certificado`
 --
 
 CREATE TABLE `plantilla_certificado` (
@@ -520,7 +538,7 @@ CREATE TABLE `plantilla_certificado` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `preceptor_curso`
+-- Estructura de tabla para la tabla `preceptor_curso`
 --
 
 CREATE TABLE `preceptor_curso` (
@@ -533,7 +551,7 @@ CREATE TABLE `preceptor_curso` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `prestamos`
+-- Estructura de tabla para la tabla `prestamos`
 --
 
 CREATE TABLE `prestamos` (
@@ -553,7 +571,7 @@ CREATE TABLE `prestamos` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `profesor_curso_materia`
+-- Estructura de tabla para la tabla `profesor_curso_materia`
 --
 
 CREATE TABLE `profesor_curso_materia` (
@@ -568,7 +586,7 @@ CREATE TABLE `profesor_curso_materia` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `promedios`
+-- Estructura de tabla para la tabla `promedios`
 --
 
 CREATE TABLE `promedios` (
@@ -593,7 +611,7 @@ CREATE TABLE `promedios` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `roles`
+-- Estructura de tabla para la tabla `roles`
 --
 
 CREATE TABLE `roles` (
@@ -604,7 +622,7 @@ CREATE TABLE `roles` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `stock`
+-- Estructura de tabla para la tabla `stock`
 --
 
 CREATE TABLE `stock` (
@@ -619,7 +637,30 @@ CREATE TABLE `stock` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `trabajos`
+-- Estructura de tabla para la tabla `tickets`
+--
+
+CREATE TABLE `tickets` (
+  `id` int(11) NOT NULL,
+  `ticket_number` varchar(15) NOT NULL COMMENT 'Número único (TK-001, TK-002, etc)',
+  `asunto` varchar(200) NOT NULL,
+  `descripcion` text NOT NULL,
+  `categoria` enum('ERROR','MEJORA','CONSULTA','SUGERENCIA') NOT NULL DEFAULT 'CONSULTA',
+  `prioridad` enum('BAJA','NORMAL','ALTA','URGENTE') NOT NULL DEFAULT 'NORMAL',
+  `estado` enum('ABIERTO','EN_REVISION','RESUELTO','CERRADO') NOT NULL DEFAULT 'ABIERTO',
+  `usuario_reporta_id` int(11) NOT NULL,
+  `fecha_creacion` datetime NOT NULL DEFAULT current_timestamp(),
+  `fecha_actualizacion` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `archivo_adjunto_url` varchar(500) DEFAULT NULL,
+  `respuesta_desarrollador` text DEFAULT NULL COMMENT 'Respuesta del desarrollador',
+  `fecha_respuesta` datetime DEFAULT NULL,
+  `activo` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `trabajos`
 --
 
 CREATE TABLE `trabajos` (
@@ -633,7 +674,7 @@ CREATE TABLE `trabajos` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `usuarios`
+-- Estructura de tabla para la tabla `usuarios`
 --
 
 CREATE TABLE `usuarios` (
@@ -659,7 +700,7 @@ CREATE TABLE `usuarios` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `usuario_roles`
+-- Estructura de tabla para la tabla `usuario_roles`
 --
 
 CREATE TABLE `usuario_roles` (
@@ -670,17 +711,17 @@ CREATE TABLE `usuario_roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Indexes for dumped tables
+-- Índices para tablas volcadas
 --
 
 --
--- Indexes for table `actividades_evaluables`
+-- Indices de la tabla `actividades_evaluables`
 --
 ALTER TABLE `actividades_evaluables`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `alumno_curso`
+-- Indices de la tabla `alumno_curso`
 --
 ALTER TABLE `alumno_curso`
   ADD PRIMARY KEY (`id`),
@@ -688,7 +729,7 @@ ALTER TABLE `alumno_curso`
   ADD KEY `curso_id` (`curso_id`);
 
 --
--- Indexes for table `asistencia_general`
+-- Indices de la tabla `asistencia_general`
 --
 ALTER TABLE `asistencia_general`
   ADD PRIMARY KEY (`id`),
@@ -697,7 +738,7 @@ ALTER TABLE `asistencia_general`
   ADD KEY `creado_por` (`creado_por`);
 
 --
--- Indexes for table `asistencia_materia`
+-- Indices de la tabla `asistencia_materia`
 --
 ALTER TABLE `asistencia_materia`
   ADD PRIMARY KEY (`id`),
@@ -707,7 +748,7 @@ ALTER TABLE `asistencia_materia`
   ADD KEY `creado_por` (`creado_por`);
 
 --
--- Indexes for table `boletin`
+-- Indices de la tabla `boletin`
 --
 ALTER TABLE `boletin`
   ADD PRIMARY KEY (`id`),
@@ -716,13 +757,13 @@ ALTER TABLE `boletin`
   ADD KEY `creado_por` (`creado_por`);
 
 --
--- Indexes for table `calificaciones`
+-- Indices de la tabla `calificaciones`
 --
 ALTER TABLE `calificaciones`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `calificacion_boletin`
+-- Indices de la tabla `calificacion_boletin`
 --
 ALTER TABLE `calificacion_boletin`
   ADD PRIMARY KEY (`id`),
@@ -730,7 +771,7 @@ ALTER TABLE `calificacion_boletin`
   ADD KEY `materia_id` (`materia_id`);
 
 --
--- Indexes for table `certificado`
+-- Indices de la tabla `certificado`
 --
 ALTER TABLE `certificado`
   ADD PRIMARY KEY (`id`),
@@ -740,26 +781,33 @@ ALTER TABLE `certificado`
   ADD KEY `firmado_por` (`firmado_por`);
 
 --
--- Indexes for table `configuracion_notificaciones`
+-- Indices de la tabla `configuracion_notificaciones`
 --
 ALTER TABLE `configuracion_notificaciones`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_usuario_config` (`usuario_id`);
 
 --
--- Indexes for table `contenidos_libro`
+-- Indices de la tabla `configuracion_soporte`
+--
+ALTER TABLE `configuracion_soporte`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `configuracion_soporte_ibfk_1` (`desarrollador_user_id`);
+
+--
+-- Indices de la tabla `contenidos_libro`
 --
 ALTER TABLE `contenidos_libro`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `cursos`
+-- Indices de la tabla `cursos`
 --
 ALTER TABLE `cursos`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `detalle_certificado`
+-- Indices de la tabla `detalle_certificado`
 --
 ALTER TABLE `detalle_certificado`
   ADD PRIMARY KEY (`id`),
@@ -767,13 +815,13 @@ ALTER TABLE `detalle_certificado`
   ADD KEY `materia_id` (`materia_id`);
 
 --
--- Indexes for table `firmas_libro`
+-- Indices de la tabla `firmas_libro`
 --
 ALTER TABLE `firmas_libro`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `grupos_notificacion`
+-- Indices de la tabla `grupos_notificacion`
 --
 ALTER TABLE `grupos_notificacion`
   ADD PRIMARY KEY (`id`),
@@ -781,7 +829,7 @@ ALTER TABLE `grupos_notificacion`
   ADD KEY `idx_tipo` (`tipo_grupo`);
 
 --
--- Indexes for table `grupos_notificacion_miembros`
+-- Indices de la tabla `grupos_notificacion_miembros`
 --
 ALTER TABLE `grupos_notificacion_miembros`
   ADD PRIMARY KEY (`id`),
@@ -790,7 +838,7 @@ ALTER TABLE `grupos_notificacion_miembros`
   ADD KEY `idx_usuario` (`usuario_id`);
 
 --
--- Indexes for table `grupos_notificacion_personalizados`
+-- Indices de la tabla `grupos_notificacion_personalizados`
 --
 ALTER TABLE `grupos_notificacion_personalizados`
   ADD PRIMARY KEY (`id`),
@@ -798,7 +846,7 @@ ALTER TABLE `grupos_notificacion_personalizados`
   ADD KEY `creador_id` (`creador_id`);
 
 --
--- Indexes for table `horarios_materia`
+-- Indices de la tabla `horarios_materia`
 --
 ALTER TABLE `horarios_materia`
   ADD PRIMARY KEY (`id`),
@@ -807,19 +855,19 @@ ALTER TABLE `horarios_materia`
   ADD KEY `materia_id` (`materia_id`);
 
 --
--- Indexes for table `libros_temas`
+-- Indices de la tabla `libros_temas`
 --
 ALTER TABLE `libros_temas`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `materias`
+-- Indices de la tabla `materias`
 --
 ALTER TABLE `materias`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `miembros_grupos_personalizados`
+-- Indices de la tabla `miembros_grupos_personalizados`
 --
 ALTER TABLE `miembros_grupos_personalizados`
   ADD PRIMARY KEY (`id`),
@@ -827,7 +875,7 @@ ALTER TABLE `miembros_grupos_personalizados`
   ADD KEY `usuario_id` (`usuario_id`);
 
 --
--- Indexes for table `netbooks`
+-- Indices de la tabla `netbooks`
 --
 ALTER TABLE `netbooks`
   ADD PRIMARY KEY (`id`),
@@ -835,7 +883,7 @@ ALTER TABLE `netbooks`
   ADD UNIQUE KEY `numero_serie` (`numero_serie`);
 
 --
--- Indexes for table `notas`
+-- Indices de la tabla `notas`
 --
 ALTER TABLE `notas`
   ADD PRIMARY KEY (`id`),
@@ -844,7 +892,7 @@ ALTER TABLE `notas`
   ADD KEY `idx_notas_trabajo` (`trabajo_id`);
 
 --
--- Indexes for table `notas_bimestrales`
+-- Indices de la tabla `notas_bimestrales`
 --
 ALTER TABLE `notas_bimestrales`
   ADD PRIMARY KEY (`id`),
@@ -853,17 +901,19 @@ ALTER TABLE `notas_bimestrales`
   ADD KEY `idx_bimestrales_periodo` (`periodo`);
 
 --
--- Indexes for table `notificaciones`
+-- Indices de la tabla `notificaciones`
 --
 ALTER TABLE `notificaciones`
   ADD PRIMARY KEY (`id`),
   ADD KEY `remitente_id` (`remitente_id`),
   ADD KEY `idx_fecha_creacion` (`fecha_creacion`),
   ADD KEY `idx_estado` (`estado`),
-  ADD KEY `idx_tipo` (`tipo_notificacion`);
+  ADD KEY `idx_tipo` (`tipo_notificacion`),
+  ADD KEY `fk_notif_grupo_personal` (`grupo_personalizado_id`),
+  ADD KEY `idx_ticket_id` (`ticket_id`);
 
 --
--- Indexes for table `notificaciones_destinatarios`
+-- Indices de la tabla `notificaciones_destinatarios`
 --
 ALTER TABLE `notificaciones_destinatarios`
   ADD PRIMARY KEY (`id`),
@@ -872,7 +922,7 @@ ALTER TABLE `notificaciones_destinatarios`
   ADD KEY `idx_notificacion` (`notificacion_id`);
 
 --
--- Indexes for table `observaciones_asistencia`
+-- Indices de la tabla `observaciones_asistencia`
 --
 ALTER TABLE `observaciones_asistencia`
   ADD PRIMARY KEY (`id`),
@@ -880,7 +930,7 @@ ALTER TABLE `observaciones_asistencia`
   ADD KEY `creado_por` (`creado_por`);
 
 --
--- Indexes for table `plantillas_notificacion`
+-- Indices de la tabla `plantillas_notificacion`
 --
 ALTER TABLE `plantillas_notificacion`
   ADD PRIMARY KEY (`id`),
@@ -888,19 +938,19 @@ ALTER TABLE `plantillas_notificacion`
   ADD KEY `idx_creador` (`creador_id`);
 
 --
--- Indexes for table `plantilla_boletin`
+-- Indices de la tabla `plantilla_boletin`
 --
 ALTER TABLE `plantilla_boletin`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `plantilla_certificado`
+-- Indices de la tabla `plantilla_certificado`
 --
 ALTER TABLE `plantilla_certificado`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `preceptor_curso`
+-- Indices de la tabla `preceptor_curso`
 --
 ALTER TABLE `preceptor_curso`
   ADD PRIMARY KEY (`id`),
@@ -908,13 +958,13 @@ ALTER TABLE `preceptor_curso`
   ADD KEY `curso_id` (`curso_id`);
 
 --
--- Indexes for table `prestamos`
+-- Indices de la tabla `prestamos`
 --
 ALTER TABLE `prestamos`
   ADD PRIMARY KEY (`Prestamo_ID`);
 
 --
--- Indexes for table `profesor_curso_materia`
+-- Indices de la tabla `profesor_curso_materia`
 --
 ALTER TABLE `profesor_curso_materia`
   ADD PRIMARY KEY (`id`),
@@ -923,246 +973,270 @@ ALTER TABLE `profesor_curso_materia`
   ADD KEY `materia_id` (`materia_id`);
 
 --
--- Indexes for table `promedios`
+-- Indices de la tabla `promedios`
 --
 ALTER TABLE `promedios`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `roles`
+-- Indices de la tabla `roles`
 --
 ALTER TABLE `roles`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `stock`
+-- Indices de la tabla `stock`
 --
 ALTER TABLE `stock`
   ADD PRIMARY KEY (`ID`),
   ADD UNIQUE KEY `Cod_Barra` (`Cod_Barra`);
 
 --
--- Indexes for table `trabajos`
+-- Indices de la tabla `tickets`
+--
+ALTER TABLE `tickets`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `ticket_number` (`ticket_number`),
+  ADD KEY `idx_usuario_reporta` (`usuario_reporta_id`),
+  ADD KEY `idx_estado` (`estado`),
+  ADD KEY `idx_fecha_creacion` (`fecha_creacion`);
+
+--
+-- Indices de la tabla `trabajos`
 --
 ALTER TABLE `trabajos`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_trabajos_materia` (`materia_id`);
 
 --
--- Indexes for table `usuarios`
+-- Indices de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `usuario_roles`
+-- Indices de la tabla `usuario_roles`
 --
 ALTER TABLE `usuario_roles`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `usuario_id` (`usuario_id`),
+  ADD KEY `rol_id` (`rol_id`);
 
 --
--- AUTO_INCREMENT for dumped tables
+-- AUTO_INCREMENT de las tablas volcadas
 --
 
 --
--- AUTO_INCREMENT for table `alumno_curso`
+-- AUTO_INCREMENT de la tabla `alumno_curso`
 --
 ALTER TABLE `alumno_curso`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `asistencia_general`
+-- AUTO_INCREMENT de la tabla `asistencia_general`
 --
 ALTER TABLE `asistencia_general`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `asistencia_materia`
+-- AUTO_INCREMENT de la tabla `asistencia_materia`
 --
 ALTER TABLE `asistencia_materia`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `boletin`
+-- AUTO_INCREMENT de la tabla `boletin`
 --
 ALTER TABLE `boletin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `calificacion_boletin`
+-- AUTO_INCREMENT de la tabla `calificacion_boletin`
 --
 ALTER TABLE `calificacion_boletin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `certificado`
+-- AUTO_INCREMENT de la tabla `certificado`
 --
 ALTER TABLE `certificado`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `configuracion_notificaciones`
+-- AUTO_INCREMENT de la tabla `configuracion_notificaciones`
 --
 ALTER TABLE `configuracion_notificaciones`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `cursos`
+-- AUTO_INCREMENT de la tabla `configuracion_soporte`
+--
+ALTER TABLE `configuracion_soporte`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `cursos`
 --
 ALTER TABLE `cursos`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `detalle_certificado`
+-- AUTO_INCREMENT de la tabla `detalle_certificado`
 --
 ALTER TABLE `detalle_certificado`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `grupos_notificacion`
+-- AUTO_INCREMENT de la tabla `grupos_notificacion`
 --
 ALTER TABLE `grupos_notificacion`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `grupos_notificacion_miembros`
+-- AUTO_INCREMENT de la tabla `grupos_notificacion_miembros`
 --
 ALTER TABLE `grupos_notificacion_miembros`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `grupos_notificacion_personalizados`
+-- AUTO_INCREMENT de la tabla `grupos_notificacion_personalizados`
 --
 ALTER TABLE `grupos_notificacion_personalizados`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `horarios_materia`
+-- AUTO_INCREMENT de la tabla `horarios_materia`
 --
 ALTER TABLE `horarios_materia`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `materias`
+-- AUTO_INCREMENT de la tabla `materias`
 --
 ALTER TABLE `materias`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `miembros_grupos_personalizados`
+-- AUTO_INCREMENT de la tabla `miembros_grupos_personalizados`
 --
 ALTER TABLE `miembros_grupos_personalizados`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `netbooks`
+-- AUTO_INCREMENT de la tabla `netbooks`
 --
 ALTER TABLE `netbooks`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `notas`
+-- AUTO_INCREMENT de la tabla `notas`
 --
 ALTER TABLE `notas`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `notas_bimestrales`
+-- AUTO_INCREMENT de la tabla `notas_bimestrales`
 --
 ALTER TABLE `notas_bimestrales`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `notificaciones`
+-- AUTO_INCREMENT de la tabla `notificaciones`
 --
 ALTER TABLE `notificaciones`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `notificaciones_destinatarios`
+-- AUTO_INCREMENT de la tabla `notificaciones_destinatarios`
 --
 ALTER TABLE `notificaciones_destinatarios`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `observaciones_asistencia`
+-- AUTO_INCREMENT de la tabla `observaciones_asistencia`
 --
 ALTER TABLE `observaciones_asistencia`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `plantillas_notificacion`
+-- AUTO_INCREMENT de la tabla `plantillas_notificacion`
 --
 ALTER TABLE `plantillas_notificacion`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `plantilla_boletin`
+-- AUTO_INCREMENT de la tabla `plantilla_boletin`
 --
 ALTER TABLE `plantilla_boletin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `plantilla_certificado`
+-- AUTO_INCREMENT de la tabla `plantilla_certificado`
 --
 ALTER TABLE `plantilla_certificado`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `preceptor_curso`
+-- AUTO_INCREMENT de la tabla `preceptor_curso`
 --
 ALTER TABLE `preceptor_curso`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `prestamos`
+-- AUTO_INCREMENT de la tabla `prestamos`
 --
 ALTER TABLE `prestamos`
   MODIFY `Prestamo_ID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `profesor_curso_materia`
+-- AUTO_INCREMENT de la tabla `profesor_curso_materia`
 --
 ALTER TABLE `profesor_curso_materia`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `stock`
+-- AUTO_INCREMENT de la tabla `stock`
 --
 ALTER TABLE `stock`
   MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `trabajos`
+-- AUTO_INCREMENT de la tabla `tickets`
+--
+ALTER TABLE `tickets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `trabajos`
 --
 ALTER TABLE `trabajos`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `usuarios`
+-- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `usuario_roles`
+-- AUTO_INCREMENT de la tabla `usuario_roles`
 --
 ALTER TABLE `usuario_roles`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- Constraints for dumped tables
+-- Restricciones para tablas volcadas
 --
 
 --
--- Constraints for table `alumno_curso`
+-- Filtros para la tabla `alumno_curso`
 --
 ALTER TABLE `alumno_curso`
   ADD CONSTRAINT `alumno_curso_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `usuarios` (`id`),
   ADD CONSTRAINT `alumno_curso_ibfk_2` FOREIGN KEY (`curso_id`) REFERENCES `cursos` (`id`);
 
 --
--- Constraints for table `asistencia_general`
+-- Filtros para la tabla `asistencia_general`
 --
 ALTER TABLE `asistencia_general`
   ADD CONSTRAINT `asistencia_general_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `usuarios` (`id`),
@@ -1170,7 +1244,7 @@ ALTER TABLE `asistencia_general`
   ADD CONSTRAINT `asistencia_general_ibfk_3` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`);
 
 --
--- Constraints for table `asistencia_materia`
+-- Filtros para la tabla `asistencia_materia`
 --
 ALTER TABLE `asistencia_materia`
   ADD CONSTRAINT `asistencia_materia_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `usuarios` (`id`),
@@ -1179,7 +1253,7 @@ ALTER TABLE `asistencia_materia`
   ADD CONSTRAINT `asistencia_materia_ibfk_4` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`);
 
 --
--- Constraints for table `boletin`
+-- Filtros para la tabla `boletin`
 --
 ALTER TABLE `boletin`
   ADD CONSTRAINT `boletin_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `usuarios` (`id`),
@@ -1187,14 +1261,14 @@ ALTER TABLE `boletin`
   ADD CONSTRAINT `boletin_ibfk_3` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`);
 
 --
--- Constraints for table `calificacion_boletin`
+-- Filtros para la tabla `calificacion_boletin`
 --
 ALTER TABLE `calificacion_boletin`
   ADD CONSTRAINT `calificacion_boletin_ibfk_1` FOREIGN KEY (`boletin_id`) REFERENCES `boletin` (`id`),
   ADD CONSTRAINT `calificacion_boletin_ibfk_2` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`);
 
 --
--- Constraints for table `certificado`
+-- Filtros para la tabla `certificado`
 --
 ALTER TABLE `certificado`
   ADD CONSTRAINT `certificado_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `usuarios` (`id`),
@@ -1202,39 +1276,45 @@ ALTER TABLE `certificado`
   ADD CONSTRAINT `certificado_ibfk_3` FOREIGN KEY (`firmado_por`) REFERENCES `usuarios` (`id`);
 
 --
--- Constraints for table `configuracion_notificaciones`
+-- Filtros para la tabla `configuracion_notificaciones`
 --
 ALTER TABLE `configuracion_notificaciones`
   ADD CONSTRAINT `configuracion_notificaciones_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `detalle_certificado`
+-- Filtros para la tabla `configuracion_soporte`
+--
+ALTER TABLE `configuracion_soporte`
+  ADD CONSTRAINT `configuracion_soporte_ibfk_1` FOREIGN KEY (`desarrollador_user_id`) REFERENCES `usuarios` (`id`);
+
+--
+-- Filtros para la tabla `detalle_certificado`
 --
 ALTER TABLE `detalle_certificado`
   ADD CONSTRAINT `detalle_certificado_ibfk_1` FOREIGN KEY (`certificado_id`) REFERENCES `certificado` (`id`),
   ADD CONSTRAINT `detalle_certificado_ibfk_2` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`);
 
 --
--- Constraints for table `grupos_notificacion`
+-- Filtros para la tabla `grupos_notificacion`
 --
 ALTER TABLE `grupos_notificacion`
   ADD CONSTRAINT `grupos_notificacion_ibfk_1` FOREIGN KEY (`creador_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `grupos_notificacion_miembros`
+-- Filtros para la tabla `grupos_notificacion_miembros`
 --
 ALTER TABLE `grupos_notificacion_miembros`
   ADD CONSTRAINT `grupos_notificacion_miembros_ibfk_1` FOREIGN KEY (`grupo_id`) REFERENCES `grupos_notificacion` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `grupos_notificacion_miembros_ibfk_2` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `grupos_notificacion_personalizados`
+-- Filtros para la tabla `grupos_notificacion_personalizados`
 --
 ALTER TABLE `grupos_notificacion_personalizados`
   ADD CONSTRAINT `grupos_notificacion_personalizados_ibfk_1` FOREIGN KEY (`creador_id`) REFERENCES `usuarios` (`id`);
 
 --
--- Constraints for table `horarios_materia`
+-- Filtros para la tabla `horarios_materia`
 --
 ALTER TABLE `horarios_materia`
   ADD CONSTRAINT `horarios_materia_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `usuarios` (`id`),
@@ -1242,60 +1322,62 @@ ALTER TABLE `horarios_materia`
   ADD CONSTRAINT `horarios_materia_ibfk_3` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`);
 
 --
--- Constraints for table `miembros_grupos_personalizados`
+-- Filtros para la tabla `miembros_grupos_personalizados`
 --
 ALTER TABLE `miembros_grupos_personalizados`
   ADD CONSTRAINT `miembros_grupos_personalizados_ibfk_1` FOREIGN KEY (`grupo_id`) REFERENCES `grupos_notificacion_personalizados` (`id`),
   ADD CONSTRAINT `miembros_grupos_personalizados_ibfk_2` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`);
 
 --
--- Constraints for table `notas`
+-- Filtros para la tabla `notas`
 --
 ALTER TABLE `notas`
   ADD CONSTRAINT `notas_ibfk_1` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`),
   ADD CONSTRAINT `notas_ibfk_2` FOREIGN KEY (`trabajo_id`) REFERENCES `trabajos` (`id`);
 
 --
--- Constraints for table `notas_bimestrales`
+-- Filtros para la tabla `notas_bimestrales`
 --
 ALTER TABLE `notas_bimestrales`
   ADD CONSTRAINT `notas_bimestrales_ibfk_1` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`);
 
 --
--- Constraints for table `notificaciones`
+-- Filtros para la tabla `notificaciones`
 --
 ALTER TABLE `notificaciones`
-  ADD CONSTRAINT `notificaciones_ibfk_1` FOREIGN KEY (`remitente_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_notif_grupo_personal` FOREIGN KEY (`grupo_personalizado_id`) REFERENCES `grupos_notificacion_personalizados` (`id`),
+  ADD CONSTRAINT `notificaciones_ibfk_1` FOREIGN KEY (`remitente_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `notificaciones_ticket_fk` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `notificaciones_destinatarios`
+-- Filtros para la tabla `notificaciones_destinatarios`
 --
 ALTER TABLE `notificaciones_destinatarios`
   ADD CONSTRAINT `notificaciones_destinatarios_ibfk_1` FOREIGN KEY (`notificacion_id`) REFERENCES `notificaciones` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `notificaciones_destinatarios_ibfk_2` FOREIGN KEY (`destinatario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `observaciones_asistencia`
+-- Filtros para la tabla `observaciones_asistencia`
 --
 ALTER TABLE `observaciones_asistencia`
   ADD CONSTRAINT `observaciones_asistencia_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `usuarios` (`id`),
   ADD CONSTRAINT `observaciones_asistencia_ibfk_2` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`);
 
 --
--- Constraints for table `plantillas_notificacion`
+-- Filtros para la tabla `plantillas_notificacion`
 --
 ALTER TABLE `plantillas_notificacion`
   ADD CONSTRAINT `plantillas_notificacion_ibfk_1` FOREIGN KEY (`creador_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `preceptor_curso`
+-- Filtros para la tabla `preceptor_curso`
 --
 ALTER TABLE `preceptor_curso`
   ADD CONSTRAINT `preceptor_curso_ibfk_1` FOREIGN KEY (`preceptor_id`) REFERENCES `usuarios` (`id`),
   ADD CONSTRAINT `preceptor_curso_ibfk_2` FOREIGN KEY (`curso_id`) REFERENCES `cursos` (`id`);
 
 --
--- Constraints for table `profesor_curso_materia`
+-- Filtros para la tabla `profesor_curso_materia`
 --
 ALTER TABLE `profesor_curso_materia`
   ADD CONSTRAINT `profesor_curso_materia_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `usuarios` (`id`),
@@ -1303,7 +1385,13 @@ ALTER TABLE `profesor_curso_materia`
   ADD CONSTRAINT `profesor_curso_materia_ibfk_3` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`);
 
 --
--- Constraints for table `trabajos`
+-- Filtros para la tabla `tickets`
+--
+ALTER TABLE `tickets`
+  ADD CONSTRAINT `tickets_ibfk_1` FOREIGN KEY (`usuario_reporta_id`) REFERENCES `usuarios` (`id`);
+
+--
+-- Filtros para la tabla `trabajos`
 --
 ALTER TABLE `trabajos`
   ADD CONSTRAINT `trabajos_ibfk_1` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`);
