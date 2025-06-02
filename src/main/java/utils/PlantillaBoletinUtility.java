@@ -1,7 +1,5 @@
 package main.java.utils;
 
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -12,512 +10,514 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.JProgressBar;
 import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import main.java.database.Conexion;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
- * Utilidad para generar boletines utilizando una plantilla de Excel
- * prediseñada.
- *
- * Esta clase trabaja con un archivo Excel específico que contiene el formato
- * institucional de la escuela, completando únicamente los campos de datos sin
- * alterar el diseño o estructura del documento.
+ * Utilidad para generar boletines usando plantilla Excel institucional. VERSIÓN
+ * SERVIDOR: Los boletines se guardan automáticamente en el servidor sin
+ * preguntar al usuario la ubicación.
  *
  * @author Sistema de Gestión Escolar
- * @version 2.0
+ * @version 3.0 - Servidor Automático
  */
 public class PlantillaBoletinUtility {
 
-    // Ruta por defecto de la plantilla (configurable)
-    private static String RUTA_PLANTILLA_DEFAULT = "C:\\Users\\nico_\\OneDrive\\Documentos\\Pruebas\\PlantillaBoletines.xlsx";
+    // Configuración de la plantilla (ahora en el servidor)
+    private static String RUTA_PLANTILLA_SERVIDOR = null; // Se inicializará dinámicamente
 
-    // Constantes para ubicaciones de celdas en la plantilla
-    private static final String CELDA_ANIO_DIVISION = "C7";
-    private static final String CELDA_APELLIDO_NOMBRE = "D7"; // Combinada hasta H7
-    private static final String CELDA_DNI = "J7";
-    private static final String CELDA_CODIGO_MIESCUELA = "L7";
-    private static final String CELDA_INASISTENCIAS = "D22";
-    private static final String CELDA_PENDIENTES_TRONCALES_CANT = "A26";
-    private static final String CELDA_PENDIENTES_TRONCALES_NOMBRES = "B26"; // Combinada hasta E26
-    private static final String CELDA_PENDIENTES_GENERALES_CANT = "F26";
-    private static final String CELDA_PENDIENTES_GENERALES_NOMBRES = "H26"; // Combinada hasta M26
-    private static final String CELDA_MATERIAS_PROCESO_CANT = "A29";
-    private static final String CELDA_MATERIAS_PROCESO_NOMBRES = "B29"; // Combinada hasta M29
+    // Mapeo de períodos para compatibilidad con BD
+    private static final Map<String, String> MAPEO_PERIODOS = new HashMap<>();
 
-    // Filas donde van las materias (12-21)
-    private static final int FILA_INICIO_MATERIAS = 12;
-    private static final int FILA_FIN_MATERIAS = 21;
-    private static final String COLUMNA_MATERIA = "A"; // Combinada hasta C
-
-    // Columnas para las notas (D-M)
-    private static final String[] COLUMNAS_NOTAS = {
-        "D", "E", "F", "G", "H", "I", "J", "K", "L", "M"
-    };
-
-    // Estructura para datos del estudiante
-    public static class DatosEstudiante {
-
-        public String apellidoNombre;
-        public String dni;
-        public String anio;
-        public String division;
-        public String codigoMiEscuela;
-        public int inasistencias;
-        public Map<String, NotasMateria> materias;
-        public List<String> materiasPendientesTroncales;
-        public List<String> materiasPendientesGenerales;
-        public List<String> materiasEnProceso;
-
-        public DatosEstudiante() {
-            this.materias = new LinkedHashMap<>();
-            this.materiasPendientesTroncales = new ArrayList<>();
-            this.materiasPendientesGenerales = new ArrayList<>();
-            this.materiasEnProceso = new ArrayList<>();
-        }
+    static {
+        MAPEO_PERIODOS.put("1B", "1er Bimestre");
+        MAPEO_PERIODOS.put("2B", "2do Bimestre");
+        MAPEO_PERIODOS.put("3B", "3er Bimestre");
+        MAPEO_PERIODOS.put("4B", "4to Bimestre");
+        MAPEO_PERIODOS.put("1C", "1er Cuatrimestre");
+        MAPEO_PERIODOS.put("2C", "2do Cuatrimestre");
+        MAPEO_PERIODOS.put("Final", "Final");
+        MAPEO_PERIODOS.put("Diciembre", "Diciembre");
+        MAPEO_PERIODOS.put("Febrero", "Febrero");
     }
 
-    // Estructura para notas de cada materia
-    public static class NotasMateria {
+    /**
+     * Inicializa la ruta de la plantilla basada en el servidor configurado
+     */
+    private static void inicializarRutaPlantilla() {
+        if (RUTA_PLANTILLA_SERVIDOR == null) {
+            String servidorBase = GestorBoletines.obtenerRutaServidor();
 
-        public double bimestre1 = -1;
-        public double bimestre2 = -1;
-        public double cuatrimestre1 = -1;
-        public double bimestre3 = -1;
-        public double bimestre4 = -1;
-        public double cuatrimestre2 = -1;
-        public double calificacionAnual = -1;
-        public double diciembre = -1;
-        public double febrero = -1;
-        public double calificacionDefinitiva = -1;
+            // Si es una URL web, usar ruta local por defecto para la plantilla
+            if (servidorBase.startsWith("http://") || servidorBase.startsWith("https://")) {
+                RUTA_PLANTILLA_SERVIDOR = System.getProperty("user.dir") + File.separator + "plantilla_boletin.xlsx";
+            } else {
+                // Si es ruta local, buscar plantilla en la carpeta del servidor
+                RUTA_PLANTILLA_SERVIDOR = servidorBase + File.separator + "plantilla_boletin.xlsx";
+            }
 
-        public NotasMateria() {
+            System.out.println("Ruta de plantilla inicializada: " + RUTA_PLANTILLA_SERVIDOR);
         }
     }
 
     /**
-     * Configura la ruta de la plantilla a utilizar.
+     * Obtiene la ruta de la plantilla
      */
-    public static void configurarRutaPlantilla(String rutaPlantilla) {
-        RUTA_PLANTILLA_DEFAULT = rutaPlantilla;
+    public static String obtenerRutaPlantilla() {
+        inicializarRutaPlantilla();
+        return RUTA_PLANTILLA_SERVIDOR;
     }
 
     /**
-     * Genera un boletín individual para un estudiante específico.
+     * Configura la ruta de la plantilla
      */
-    public static boolean generarBoletinIndividual(int alumnoId, int cursoId, String rutaDestino) {
-        return generarBoletinIndividual(alumnoId, cursoId, rutaDestino, RUTA_PLANTILLA_DEFAULT);
+    public static void configurarRutaPlantilla(String nuevaRuta) {
+        RUTA_PLANTILLA_SERVIDOR = nuevaRuta;
+        System.out.println("Nueva ruta de plantilla configurada: " + nuevaRuta);
     }
 
     /**
-     * Genera un boletín individual especificando la ruta de la plantilla.
+     * MÉTODO PRINCIPAL: Genera un boletín individual guardándolo
+     * automáticamente en el servidor
      */
-    public static boolean generarBoletinIndividual(int alumnoId, int cursoId, String rutaDestino, String rutaPlantilla) {
+    public static boolean generarBoletinIndividualEnServidor(int alumnoId, int cursoId, String periodo) {
         try {
-            System.out.println("=== GENERANDO BOLETÍN INDIVIDUAL ===");
-            System.out.println("Alumno ID: " + alumnoId);
-            System.out.println("Curso ID: " + cursoId);
-            System.out.println("Plantilla: " + rutaPlantilla);
-            System.out.println("Destino: " + rutaDestino);
+            System.out.println("=== GENERANDO BOLETÍN EN SERVIDOR (AUTOMÁTICO) ===");
+            System.out.println("Alumno ID: " + alumnoId + ", Curso ID: " + cursoId + ", Período: " + periodo);
 
-            // Verificar que existe la plantilla
-            File plantilla = new File(rutaPlantilla);
-            if (!plantilla.exists()) {
-                System.err.println("❌ No se encontró la plantilla en: " + rutaPlantilla);
-                JOptionPane.showMessageDialog(null,
-                        "No se encontró la plantilla de boletín en:\n" + rutaPlantilla
-                        + "\n\nVerifique la ruta o configure una nueva plantilla.",
-                        "Plantilla no encontrada",
-                        JOptionPane.ERROR_MESSAGE);
+            // 1. Construir ruta de destino automáticamente
+            String rutaDestino = construirRutaDestinoServidor(alumnoId, cursoId, periodo);
+            if (rutaDestino == null) {
+                System.err.println("❌ No se pudo construir la ruta de destino");
                 return false;
             }
 
-            // Obtener datos del estudiante
-            DatosEstudiante datos = obtenerDatosEstudiante(alumnoId, cursoId);
-            if (datos == null) {
+            // 2. Obtener datos del estudiante
+            DatosEstudiante datosEstudiante = obtenerDatosEstudiante(alumnoId, cursoId);
+            if (datosEstudiante == null) {
                 System.err.println("❌ No se pudieron obtener los datos del estudiante");
                 return false;
             }
 
-            // Generar el boletín
-            boolean exito = procesarPlantillaBoletin(plantilla, datos, rutaDestino);
+            // 3. Obtener notas del estudiante
+            Map<String, NotasMateria> notasPorMateria = obtenerNotasEstudiante(alumnoId, cursoId, periodo);
+
+            // 4. Generar el boletín
+            boolean exito = generarBoletinConPlantilla(datosEstudiante, notasPorMateria, periodo, rutaDestino);
 
             if (exito) {
                 System.out.println("✅ Boletín generado exitosamente: " + rutaDestino);
+
+                // 5. Registrar en base de datos
+                String nombreArchivo = new File(rutaDestino).getName();
+                GestorBoletines.registrarBoletinEnServidor(alumnoId, cursoId, periodo, nombreArchivo);
+
+                return true;
             } else {
                 System.err.println("❌ Error al generar el boletín");
+                return false;
             }
 
-            return exito;
-
         } catch (Exception e) {
-            System.err.println("❌ Error general al generar boletín: " + e.getMessage());
+            System.err.println("❌ Error en generarBoletinIndividualEnServidor: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
-
     }
 
     /**
-     * Genera boletines para todos los estudiantes de un curso.
+     * Genera boletines para todo el curso automáticamente en el servidor
      */
-    public static int generarBoletinesCurso(int cursoId, String carpetaDestino) {
-        return generarBoletinesCurso(cursoId, carpetaDestino, RUTA_PLANTILLA_DEFAULT);
-    }
-
-    /**
-     * Genera boletines para todos los estudiantes especificando la plantilla.
-     */
-    public static int generarBoletinesCurso(int cursoId, String carpetaDestino, String rutaPlantilla) {
-        int boletinesGenerados = 0;
-
+    public static int generarBoletinesCursoEnServidor(int cursoId, String periodo) {
         try {
-            System.out.println("=== GENERANDO BOLETINES DEL CURSO ===");
-            System.out.println("Curso ID: " + cursoId);
-            System.out.println("Carpeta destino: " + carpetaDestino);
-            System.out.println("Plantilla: " + rutaPlantilla);
+            System.out.println("=== GENERANDO BOLETINES DEL CURSO EN SERVIDOR ===");
+            System.out.println("Curso ID: " + cursoId + ", Período: " + periodo);
 
-            // Verificar plantilla
-            File plantilla = new File(rutaPlantilla);
-            if (!plantilla.exists()) {
-                System.err.println("❌ Plantilla no encontrada: " + rutaPlantilla);
+            // Obtener lista de alumnos del curso
+            List<Integer> alumnosIds = obtenerAlumnosDelCurso(cursoId);
+
+            if (alumnosIds.isEmpty()) {
+                System.out.println("⚠️ No se encontraron alumnos en el curso");
                 return 0;
             }
 
-            // Obtener lista de estudiantes
-            List<Integer> estudiantesIds = obtenerEstudiantesCurso(cursoId);
-            System.out.println("Estudiantes a procesar: " + estudiantesIds.size());
+            System.out.println("Alumnos encontrados: " + alumnosIds.size());
 
-            for (int alumnoId : estudiantesIds) {
+            int boletinesGenerados = 0;
+
+            for (int i = 0; i < alumnosIds.size(); i++) {
+                int alumnoId = alumnosIds.get(i);
+
                 try {
-                    // Obtener datos del estudiante
-                    DatosEstudiante datos = obtenerDatosEstudiante(alumnoId, cursoId);
-                    if (datos == null) {
-                        System.err.println("❌ Saltando alumno ID: " + alumnoId + " (sin datos)");
-                        continue;
-                    }
+                    System.out.println("Procesando alumno " + (i + 1) + "/" + alumnosIds.size() + " (ID: " + alumnoId + ")");
 
-                    // Generar nombre de archivo
-                    String nombreArchivo = generarNombreArchivo(datos);
-                    String rutaCompleta = carpetaDestino + File.separator + nombreArchivo;
-
-                    // Generar boletín
-                    if (procesarPlantillaBoletin(plantilla, datos, rutaCompleta)) {
+                    if (generarBoletinIndividualEnServidor(alumnoId, cursoId, periodo)) {
                         boletinesGenerados++;
-                        System.out.println("✅ Boletín creado: " + nombreArchivo);
+                        System.out.println("✅ Boletín " + boletinesGenerados + "/" + alumnosIds.size() + " generado");
                     } else {
-                        System.err.println("❌ Error al crear boletín para: " + datos.apellidoNombre);
+                        System.err.println("❌ Error generando boletín para alumno ID: " + alumnoId);
                     }
 
                 } catch (Exception e) {
-                    System.err.println("❌ Error procesando alumno ID " + alumnoId + ": " + e.getMessage());
+                    System.err.println("❌ Error con alumno " + alumnoId + ": " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
 
+            System.out.println("=== GENERACIÓN MASIVA COMPLETADA ===");
+            System.out.println("Boletines generados: " + boletinesGenerados + "/" + alumnosIds.size());
+
+            return boletinesGenerados;
+
         } catch (Exception e) {
-            System.err.println("❌ Error general generando boletines del curso: " + e.getMessage());
+            System.err.println("❌ Error en generarBoletinesCursoEnServidor: " + e.getMessage());
             e.printStackTrace();
-        }
-
-        return boletinesGenerados;
-    }
-
-    /**
-     * Procesa la plantilla Excel y completa los datos del estudiante.
-     */
-    private static boolean procesarPlantillaBoletin(File plantilla, DatosEstudiante datos, String rutaDestino) {
-        try (FileInputStream inputStream = new FileInputStream(plantilla); XSSFWorkbook workbook = new XSSFWorkbook(inputStream)) {
-
-            XSSFSheet sheet = workbook.getSheetAt(0); // Primera hoja
-
-            // Configurar fuente Nunito tamaño 10 para datos
-            XSSFFont fonteDatos = workbook.createFont();
-            fonteDatos.setFontName("Nunito");
-            fonteDatos.setFontHeightInPoints((short) 10);
-
-            XSSFCellStyle estiloDatos = workbook.createCellStyle();
-            estiloDatos.setFont(fonteDatos);
-
-            // Completar datos básicos del estudiante
-            completarDatosBasicos(sheet, datos, estiloDatos);
-
-            // Completar materias y notas
-            completarMateriasYNotas(sheet, datos, estiloDatos);
-
-            // Completar inasistencias
-            completarInasistencias(sheet, datos, estiloDatos);
-
-            // Completar materias pendientes y en proceso
-            completarMateriasPendientes(sheet, datos, estiloDatos);
-
-            // Guardar archivo
-            try (FileOutputStream outputStream = new FileOutputStream(rutaDestino)) {
-                workbook.write(outputStream);
-            }
-
-            return true;
-
-        } catch (Exception e) {
-            System.err.println("❌ Error procesando plantilla: " + e.getMessage());
-            e.printStackTrace();
-            return false;
+            return 0;
         }
     }
 
     /**
-     * Completa los datos básicos del estudiante en la plantilla.
+     * Construye automáticamente la ruta de destino en el servidor
      */
-    private static void completarDatosBasicos(XSSFSheet sheet, DatosEstudiante datos, XSSFCellStyle estilo) {
-        // Año y División (C7)
-        setCellValue(sheet, CELDA_ANIO_DIVISION, datos.anio + "°" + datos.division, estilo);
-
-        // Apellido y Nombre (D7)
-        setCellValue(sheet, CELDA_APELLIDO_NOMBRE, datos.apellidoNombre, estilo);
-
-        // DNI (J7)
-        setCellValue(sheet, CELDA_DNI, datos.dni, estilo);
-
-        // Código miEscuela (L7)
-        setCellValue(sheet, CELDA_CODIGO_MIESCUELA, datos.codigoMiEscuela, estilo);
-
-        System.out.println("✅ Datos básicos completados");
-    }
-
-    /**
-     * Completa las materias y sus notas en la plantilla. VERSIÓN CORREGIDA:
-     * Obtiene materias dinámicamente de la base de datos.
-     */
-    private static void completarMateriasYNotas(XSSFSheet sheet, DatosEstudiante datos, XSSFCellStyle estilo) {
-        int filaActual = FILA_INICIO_MATERIAS;
-        int materiasCompletadas = 0;
-
-        System.out.println("=== COMPLETANDO MATERIAS DINÁMICAMENTE ===");
-        System.out.println("Materias disponibles en datos: " + datos.materias.size());
-
-        // **CAMBIO IMPORTANTE**: Usar las materias reales del curso sin orden predeterminado
-        // Las materias ya vienen ordenadas de la consulta SQL (ORDER BY m.nombre)
-        for (Map.Entry<String, NotasMateria> entry : datos.materias.entrySet()) {
-            if (filaActual > FILA_FIN_MATERIAS) {
-                System.out.println("⚠️ Se alcanzó el límite de filas en la plantilla. Materias restantes: "
-                        + (datos.materias.size() - materiasCompletadas));
-                break;
-            }
-
-            String nombreMateria = entry.getKey();
-            NotasMateria notas = entry.getValue();
-
-            System.out.println("Completando fila " + filaActual + ": " + nombreMateria);
-
-            completarFilaMateria(sheet, filaActual, nombreMateria, notas, estilo);
-            filaActual++;
-            materiasCompletadas++;
-        }
-
-        // Si quedan filas vacías, limpiarlas (opcional)
-        while (filaActual <= FILA_FIN_MATERIAS) {
-            limpiarFilaMateria(sheet, filaActual, estilo);
-            filaActual++;
-        }
-
-        System.out.println("✅ Materias completadas: " + materiasCompletadas + " de " + datos.materias.size());
-
-        if (materiasCompletadas < datos.materias.size()) {
-            System.out.println("⚠️ ADVERTENCIA: La plantilla solo permite " + (FILA_FIN_MATERIAS - FILA_INICIO_MATERIAS + 1)
-                    + " materias, pero el curso tiene " + datos.materias.size() + " materias.");
-        }
-    }
-
-    /**
-     * Limpia una fila de materia vacía en la plantilla.
-     */
-    private static void limpiarFilaMateria(XSSFSheet sheet, int fila, XSSFCellStyle estilo) {
-        // Limpiar nombre de materia (columna A)
-        setCellValue(sheet, COLUMNA_MATERIA + fila, "", estilo);
-
-        // Limpiar todas las columnas de notas
-        for (String columna : COLUMNAS_NOTAS) {
-            setCellValue(sheet, columna + fila, "", estilo);
-        }
-
-        System.out.println("  Fila " + fila + " limpiada");
-    }
-
-    /**
-     * Completa una fila específica con los datos de una materia.
-     */
-    private static void completarFilaMateria(XSSFSheet sheet, int fila, String nombreMateria,
-            NotasMateria notas, XSSFCellStyle estilo) {
-        // Nombre de la materia (columna A, combinada hasta C)
-        setCellValue(sheet, COLUMNA_MATERIA + fila, nombreMateria, estilo);
-
-        // Notas en orden: 1°Bim, 2°Bim, 1°Cuat, 3°Bim, 4°Bim, 2°Cuat, Cal.Anual, Dic, Feb, Cal.Def
-        double[] valoresNotas = {
-            notas.bimestre1, notas.bimestre2, notas.cuatrimestre1,
-            notas.bimestre3, notas.bimestre4, notas.cuatrimestre2,
-            notas.calificacionAnual, notas.diciembre, notas.febrero, notas.calificacionDefinitiva
-        };
-
-        for (int i = 0; i < COLUMNAS_NOTAS.length && i < valoresNotas.length; i++) {
-            String celda = COLUMNAS_NOTAS[i] + fila;
-            if (valoresNotas[i] >= 0) {
-                setCellValue(sheet, celda, String.format("%.1f", valoresNotas[i]), estilo);
-            }
-        }
-    }
-
-    /**
-     * Completa las inasistencias en la plantilla.
-     */
-    private static void completarInasistencias(XSSFSheet sheet, DatosEstudiante datos, XSSFCellStyle estilo) {
-        setCellValue(sheet, CELDA_INASISTENCIAS, String.valueOf(datos.inasistencias), estilo);
-        System.out.println("✅ Inasistencias completadas: " + datos.inasistencias);
-    }
-
-    /**
-     * Completa las materias pendientes y en proceso.
-     */
-    private static void completarMateriasPendientes(XSSFSheet sheet, DatosEstudiante datos, XSSFCellStyle estilo) {
-        // Materias pendientes troncales
-        setCellValue(sheet, CELDA_PENDIENTES_TRONCALES_CANT,
-                String.valueOf(datos.materiasPendientesTroncales.size()), estilo);
-        setCellValue(sheet, CELDA_PENDIENTES_TRONCALES_NOMBRES,
-                String.join(", ", datos.materiasPendientesTroncales), estilo);
-
-        // Materias pendientes generales
-        setCellValue(sheet, CELDA_PENDIENTES_GENERALES_CANT,
-                String.valueOf(datos.materiasPendientesGenerales.size()), estilo);
-        setCellValue(sheet, CELDA_PENDIENTES_GENERALES_NOMBRES,
-                String.join(", ", datos.materiasPendientesGenerales), estilo);
-
-        // Materias en proceso
-        setCellValue(sheet, CELDA_MATERIAS_PROCESO_CANT,
-                String.valueOf(datos.materiasEnProceso.size()), estilo);
-        setCellValue(sheet, CELDA_MATERIAS_PROCESO_NOMBRES,
-                String.join(", ", datos.materiasEnProceso), estilo);
-
-        System.out.println("✅ Materias pendientes y en proceso completadas");
-    }
-
-    /**
-     * Establece el valor de una celda específica.
-     */
-    private static void setCellValue(XSSFSheet sheet, String cellAddress, String value, XSSFCellStyle style) {
+    private static String construirRutaDestinoServidor(int alumnoId, int cursoId, String periodo) {
         try {
-            org.apache.poi.ss.util.CellReference cellRef = new org.apache.poi.ss.util.CellReference(cellAddress);
-            Row row = sheet.getRow(cellRef.getRow());
-            if (row == null) {
-                row = sheet.createRow(cellRef.getRow());
-            }
-
-            Cell cell = row.getCell(cellRef.getCol());
-            if (cell == null) {
-                cell = row.createCell(cellRef.getCol());
-            }
-
-            cell.setCellValue(value != null ? value : "");
-            if (style != null) {
-                cell.setCellStyle(style);
-            }
-
-        } catch (Exception e) {
-            System.err.println("❌ Error estableciendo valor en celda " + cellAddress + ": " + e.getMessage());
-        }
-    }
-
-    /**
-     * Obtiene los datos completos de un estudiante desde la base de datos.
-     */
-    private static DatosEstudiante obtenerDatosEstudiante(int alumnoId, int cursoId) {
-        Connection conect = null;
-
-        try {
-            conect = Conexion.getInstancia().verificarConexion();
-            if (conect == null) {
-                System.err.println("❌ No se pudo establecer conexión con la base de datos");
+            // Obtener información básica del alumno y curso
+            DatosEstudiante datos = obtenerDatosEstudiante(alumnoId, cursoId);
+            if (datos == null) {
                 return null;
             }
 
-            DatosEstudiante datos = new DatosEstudiante();
+            // Construir ruta de carpeta: servidor/año/curso/periodo/
+            String servidorBase = GestorBoletines.obtenerRutaServidor();
+            int anioActual = LocalDate.now().getYear();
 
-            // Obtener datos básicos del estudiante
-            if (!obtenerDatosBasicos(datos, alumnoId, cursoId, conect)) {
-                return null;
+            // CORREGIDO: Formato numérico para cursos (ej: "11", "12", "21", etc.)
+            String nombreCurso = datos.curso + datos.division; // "1" + "1" = "11"
+
+            String rutaCarpeta;
+            if (servidorBase.startsWith("http://") || servidorBase.startsWith("https://")) {
+                // Para servidor web, construir URL
+                rutaCarpeta = servidorBase + anioActual + "/" + nombreCurso + "/" + periodo + "/";
+            } else {
+                // Para servidor local, construir ruta de archivo
+                rutaCarpeta = servidorBase + File.separator + anioActual + File.separator
+                        + nombreCurso + File.separator + periodo + File.separator;
             }
 
-            // Obtener notas por materia
-            obtenerNotasMaterias(datos, alumnoId, cursoId, conect);
+            // Crear la carpeta si no existe (solo para rutas locales)
+            if (!servidorBase.startsWith("http")) {
+                File carpeta = new File(rutaCarpeta);
+                if (!carpeta.exists()) {
+                    boolean creada = carpeta.mkdirs();
+                    if (creada) {
+                        System.out.println("✅ Carpeta creada: " + rutaCarpeta);
+                    } else {
+                        System.err.println("⚠️ No se pudo crear la carpeta: " + rutaCarpeta);
+                    }
+                }
+            }
 
-            // Obtener inasistencias
-            obtenerInasistencias(datos, alumnoId, cursoId, conect);
+            // Generar nombre de archivo
+            String fechaStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            String apellidoLimpio = datos.apellidoNombre.split(",")[0].replaceAll("[^a-zA-Z0-9]", "_");
+            String nombreArchivo = String.format("Boletin_%s_%s_%s_%s.xlsx",
+                    apellidoLimpio, nombreCurso, periodo, fechaStr);
 
-            // Obtener materias pendientes (esto dependería de tu lógica de negocio)
-            obtenerMateriasPendientes(datos, alumnoId, cursoId, conect);
+            String rutaCompleta = rutaCarpeta + nombreArchivo;
+            System.out.println("✅ Ruta de destino construida: " + rutaCompleta);
 
-            return datos;
+            return rutaCompleta;
 
         } catch (Exception e) {
-            System.err.println("❌ Error obteniendo datos del estudiante: " + e.getMessage());
+            System.err.println("❌ Error construyendo ruta de destino: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
     }
 
     /**
-     * Obtiene los datos básicos del estudiante.
+     * Genera el boletín usando la plantilla Excel
      */
-    private static boolean obtenerDatosBasicos(DatosEstudiante datos, int alumnoId, int cursoId, Connection conect) {
+    private static boolean generarBoletinConPlantilla(DatosEstudiante estudiante,
+            Map<String, NotasMateria> notasPorMateria,
+            String periodo,
+            String rutaDestino) {
         try {
-            String query = """
-                SELECT u.nombre, u.apellido, u.dni, c.anio, c.division
-                FROM usuarios u 
-                INNER JOIN alumno_curso ac ON u.id = ac.alumno_id 
-                INNER JOIN cursos c ON ac.curso_id = c.id 
-                WHERE u.id = ? AND ac.curso_id = ? AND ac.estado = 'activo'
-                """;
+            System.out.println("Generando boletín con plantilla para: " + estudiante.apellidoNombre);
 
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, alumnoId);
-            ps.setInt(2, cursoId);
-            ResultSet rs = ps.executeQuery();
+            // 1. Verificar que existe la plantilla
+            String rutaPlantilla = obtenerRutaPlantilla();
+            File archivoPlantilla = new File(rutaPlantilla);
 
-            if (rs.next()) {
-                datos.apellidoNombre = rs.getString("apellido") + ", " + rs.getString("nombre");
-                datos.dni = rs.getString("dni");
-                datos.anio = String.valueOf(rs.getInt("anio"));
-                datos.division = String.valueOf(rs.getInt("division"));
-                datos.codigoMiEscuela = generarCodigoMiEscuela(datos.dni, datos.anio, datos.division);
-
-                System.out.println("✅ Datos básicos obtenidos: " + datos.apellidoNombre);
-                return true;
-            } else {
-                System.err.println("❌ No se encontraron datos básicos para alumno ID: " + alumnoId);
+            if (!archivoPlantilla.exists()) {
+                System.err.println("❌ No se encontró la plantilla en: " + rutaPlantilla);
                 return false;
             }
 
-        } catch (SQLException e) {
-            System.err.println("❌ Error obteniendo datos básicos: " + e.getMessage());
+            // 2. Cargar la plantilla
+            Workbook workbook;
+            try (FileInputStream fis = new FileInputStream(archivoPlantilla)) {
+                workbook = new XSSFWorkbook(fis);
+            }
+
+            Sheet hoja = workbook.getSheetAt(0); // Asumir que la plantilla está en la primera hoja
+
+            // 3. Llenar datos del estudiante
+            llenarDatosEstudiante(hoja, estudiante, periodo);
+
+            // 4. Llenar notas por materia
+            llenarNotasMaterias(hoja, notasPorMateria, periodo);
+
+            // 5. Calcular notas derivadas (cuatrimestres, anual, etc.)
+            calcularNotasDerivadas(hoja, notasPorMateria);
+
+            // 6. Guardar el archivo en la ruta de destino
+            try (FileOutputStream fos = new FileOutputStream(rutaDestino)) {
+                workbook.write(fos);
+            }
+
+            workbook.close();
+
+            System.out.println("✅ Boletín generado y guardado en: " + rutaDestino);
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error generando boletín con plantilla: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
 
     /**
-     * Obtiene las notas de todas las materias del estudiante.
+     * Llena los datos básicos del estudiante en la plantilla
      */
-    private static void obtenerNotasMaterias(DatosEstudiante datos, int alumnoId, int cursoId, Connection conect) {
+    private static void llenarDatosEstudiante(Sheet hoja, DatosEstudiante estudiante, String periodo) {
         try {
-            // Obtener DNI para búsquedas
-            String alumnoDni = datos.dni;
+            // Buscar y llenar celdas específicas de la plantilla
+            // Nota: Ajustar estas posiciones según la plantilla real
+
+            setCellValue(hoja, 2, 1, estudiante.apellidoNombre); // Nombre del estudiante
+            setCellValue(hoja, 3, 1, estudiante.dni); // DNI
+            setCellValue(hoja, 4, 1, estudiante.curso + "° " + estudiante.division); // Curso
+            setCellValue(hoja, 5, 1, estudiante.codigoMiEscuela); // Código Mi Escuela
+            setCellValue(hoja, 6, 1, periodo); // Período
+            setCellValue(hoja, 7, 1, LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))); // Fecha
+
+            System.out.println("✅ Datos del estudiante completados");
+
+        } catch (Exception e) {
+            System.err.println("❌ Error llenando datos del estudiante: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Llena las notas de las materias en la plantilla
+     */
+    private static void llenarNotasMaterias(Sheet hoja, Map<String, NotasMateria> notasPorMateria, String periodo) {
+        try {
+            int filaInicio = 10; // Fila donde empiezan las materias en la plantilla
+            int filaActual = filaInicio;
+
+            for (Map.Entry<String, NotasMateria> entry : notasPorMateria.entrySet()) {
+                String nombreMateria = entry.getKey();
+                NotasMateria notas = entry.getValue();
+
+                // Llenar nombre de la materia
+                setCellValue(hoja, filaActual, 0, nombreMateria);
+
+                // Llenar notas bimestrales
+                setCellValue(hoja, filaActual, 1, notas.bimestre1 > 0 ? notas.bimestre1 : "");
+                setCellValue(hoja, filaActual, 2, notas.bimestre2 > 0 ? notas.bimestre2 : "");
+                setCellValue(hoja, filaActual, 3, notas.bimestre3 > 0 ? notas.bimestre3 : "");
+                setCellValue(hoja, filaActual, 4, notas.bimestre4 > 0 ? notas.bimestre4 : "");
+
+                // Llenar cuatrimestres
+                setCellValue(hoja, filaActual, 5, notas.cuatrimestre1 > 0 ? notas.cuatrimestre1 : "");
+                setCellValue(hoja, filaActual, 6, notas.cuatrimestre2 > 0 ? notas.cuatrimestre2 : "");
+
+                // Llenar exámenes
+                setCellValue(hoja, filaActual, 7, notas.diciembre > 0 ? notas.diciembre : "");
+                setCellValue(hoja, filaActual, 8, notas.febrero > 0 ? notas.febrero : "");
+
+                // Observaciones
+                setCellValue(hoja, filaActual, 9, notas.observaciones != null ? notas.observaciones : "");
+
+                filaActual++;
+            }
+
+            System.out.println("✅ Notas de materias completadas (" + notasPorMateria.size() + " materias)");
+
+        } catch (Exception e) {
+            System.err.println("❌ Error llenando notas de materias: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Calcula notas derivadas (cuatrimestres, anual, etc.)
+     */
+    private static void calcularNotasDerivadas(Sheet hoja, Map<String, NotasMateria> notasPorMateria) {
+        try {
+            for (Map.Entry<String, NotasMateria> entry : notasPorMateria.entrySet()) {
+                NotasMateria notas = entry.getValue();
+
+                // Calcular cuatrimestre 1 si no existe
+                if (notas.cuatrimestre1 <= 0 && notas.bimestre1 > 0 && notas.bimestre2 > 0) {
+                    notas.cuatrimestre1 = (notas.bimestre1 + notas.bimestre2) / 2;
+                }
+
+                // Calcular cuatrimestre 2 si no existe
+                if (notas.cuatrimestre2 <= 0 && notas.bimestre3 > 0 && notas.bimestre4 > 0) {
+                    notas.cuatrimestre2 = (notas.bimestre3 + notas.bimestre4) / 2;
+                }
+
+                // Calcular nota anual
+                if (notas.cuatrimestre1 > 0 && notas.cuatrimestre2 > 0) {
+                    double notaAnual = (notas.cuatrimestre1 + notas.cuatrimestre2) / 2;
+                    // Aquí podrías escribir la nota anual en una celda específica
+                }
+            }
+
+            System.out.println("✅ Notas derivadas calculadas");
+
+        } catch (Exception e) {
+            System.err.println("❌ Error calculando notas derivadas: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Método auxiliar para establecer valor en una celda
+     */
+    private static void setCellValue(Sheet hoja, int fila, int columna, Object valor) {
+        try {
+            Row row = hoja.getRow(fila);
+            if (row == null) {
+                row = hoja.createRow(fila);
+            }
+
+            Cell cell = row.getCell(columna);
+            if (cell == null) {
+                cell = row.createCell(columna);
+            }
+
+            if (valor instanceof String) {
+                cell.setCellValue((String) valor);
+            } else if (valor instanceof Double) {
+                cell.setCellValue((Double) valor);
+            } else if (valor instanceof Integer) {
+                cell.setCellValue((Integer) valor);
+            } else if (valor != null) {
+                cell.setCellValue(valor.toString());
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error estableciendo valor en celda [" + fila + "," + columna + "]: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Obtiene los datos básicos de un estudiante
+     */
+    private static DatosEstudiante obtenerDatosEstudiante(int alumnoId, int cursoId) {
+        try {
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                return null;
+            }
+
+            String query = """
+            SELECT u.nombre, u.apellido, u.dni, c.anio, c.division, u.codigo_miescuela
+            FROM usuarios u 
+            INNER JOIN cursos c ON c.id = ?
+            WHERE u.id = ?
+            """;
+
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, cursoId);
+            ps.setInt(2, alumnoId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                DatosEstudiante datos = new DatosEstudiante();
+                datos.apellidoNombre = rs.getString("apellido") + ", " + rs.getString("nombre");
+                datos.dni = rs.getString("dni");
+
+                // CORREGIDO: Usar formato numérico para cursos
+                int anio = rs.getInt("anio");
+                int division = rs.getInt("division");
+
+                datos.curso = String.valueOf(anio);      // "1", "2", "3", etc.
+                datos.division = String.valueOf(division); // "1", "2", "3", etc.
+
+                datos.codigoMiEscuela = rs.getString("codigo_miescuela");
+
+                rs.close();
+                ps.close();
+
+                System.out.println("✅ Datos de estudiante obtenidos: " + datos.apellidoNombre
+                        + " - Curso: " + datos.curso + datos.division);
+                return datos;
+            }
+
+            rs.close();
+            ps.close();
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error obteniendo datos del estudiante: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    /**
+     * Obtiene las notas de un estudiante por materia
+     */
+    private static Map<String, NotasMateria> obtenerNotasEstudiante(int alumnoId, int cursoId, String periodo) {
+        Map<String, NotasMateria> notasPorMateria = new HashMap<>();
+
+        try {
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                return notasPorMateria;
+            }
+
+            // Obtener DNI del alumno para búsquedas
+            String queryDni = "SELECT dni FROM usuarios WHERE id = ?";
+            PreparedStatement psDni = conect.prepareStatement(queryDni);
+            psDni.setInt(1, alumnoId);
+            ResultSet rsDni = psDni.executeQuery();
+
+            String alumnoDni = null;
+            if (rsDni.next()) {
+                alumnoDni = rsDni.getString("dni");
+            }
+            rsDni.close();
+            psDni.close();
+
+            if (alumnoDni == null) {
+                System.err.println("⚠️ No se encontró DNI para alumno ID: " + alumnoId);
+                return notasPorMateria;
+            }
 
             // Obtener materias del curso
             String queryMaterias = """
                 SELECT DISTINCT m.id, m.nombre 
                 FROM materias m 
                 INNER JOIN profesor_curso_materia pcm ON m.id = pcm.materia_id 
-                WHERE pcm.curso_id = ? AND pcm.estado = 'activo'
+                WHERE pcm.curso_id = ? AND pcm.estado = 'activo' 
                 ORDER BY m.nombre
                 """;
 
@@ -532,72 +532,85 @@ public class PlantillaBoletinUtility {
                 NotasMateria notas = new NotasMateria();
 
                 // Obtener notas bimestrales
-                obtenerNotasBimestrales(notas, materiaId, alumnoDni, conect);
+                obtenerNotasBimestrales(alumnoDni, materiaId, notas);
 
-                // Si no hay notas bimestrales, calcular desde trabajos
-                if (notas.bimestre1 == -1 && notas.bimestre2 == -1
-                        && notas.bimestre3 == -1 && notas.bimestre4 == -1) {
-                    obtenerNotasTrabajos(notas, materiaId, alumnoDni, conect);
-                }
-
-                // Calcular notas derivadas
-                calcularNotasDerivadas(notas);
-
-                datos.materias.put(nombreMateria.toUpperCase(), notas);
+                notasPorMateria.put(nombreMateria, notas);
             }
 
-            System.out.println("✅ Notas de materias obtenidas: " + datos.materias.size() + " materias");
+            rsMaterias.close();
+            psMaterias.close();
+
+            System.out.println("✅ Notas obtenidas para " + notasPorMateria.size() + " materias");
 
         } catch (SQLException e) {
-            System.err.println("❌ Error obteniendo notas de materias: " + e.getMessage());
+            System.err.println("❌ Error obteniendo notas del estudiante: " + e.getMessage());
+            e.printStackTrace();
         }
+
+        return notasPorMateria;
     }
 
     /**
-     * Obtiene las notas bimestrales de una materia.
+     * Obtiene las notas bimestrales de una materia específica
      */
-    private static void obtenerNotasBimestrales(NotasMateria notas, int materiaId, String alumnoDni, Connection conect) {
+    private static void obtenerNotasBimestrales(String alumnoDni, int materiaId, NotasMateria notas) {
         try {
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                return;
+            }
+
             String query = """
-                SELECT periodo, nota 
+                SELECT periodo, nota, promedio_actividades, observaciones 
                 FROM notas_bimestrales 
-                WHERE materia_id = ? AND alumno_id = ?
+                WHERE alumno_id = ? AND materia_id = ?
                 """;
 
             PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, materiaId);
-            ps.setString(2, alumnoDni);
+            ps.setString(1, alumnoDni);
+            ps.setInt(2, materiaId);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                String periodo = rs.getString("periodo").toLowerCase();
+                String periodo = rs.getString("periodo");
                 double nota = rs.getDouble("nota");
+                String observaciones = rs.getString("observaciones");
 
+                // Mapear período a campos de la clase
                 switch (periodo) {
-                    case "1er bimestre":
-                    case "1b":
+                    case "1er Bimestre":
                         notas.bimestre1 = nota;
                         break;
-                    case "2do bimestre":
-                    case "2b":
+                    case "2do Bimestre":
                         notas.bimestre2 = nota;
                         break;
-                    case "3er bimestre":
-                    case "3b":
+                    case "3er Bimestre":
                         notas.bimestre3 = nota;
                         break;
-                    case "4to bimestre":
-                    case "4b":
+                    case "4to Bimestre":
                         notas.bimestre4 = nota;
                         break;
-                    case "diciembre":
+                    case "1er Cuatrimestre":
+                        notas.cuatrimestre1 = nota;
+                        break;
+                    case "2do Cuatrimestre":
+                        notas.cuatrimestre2 = nota;
+                        break;
+                    case "Diciembre":
                         notas.diciembre = nota;
                         break;
-                    case "febrero":
+                    case "Febrero":
                         notas.febrero = nota;
                         break;
                 }
+
+                if (observaciones != null && !observaciones.trim().isEmpty()) {
+                    notas.observaciones = observaciones;
+                }
             }
+
+            rs.close();
+            ps.close();
 
         } catch (SQLException e) {
             System.err.println("❌ Error obteniendo notas bimestrales: " + e.getMessage());
@@ -605,207 +618,22 @@ public class PlantillaBoletinUtility {
     }
 
     /**
-     * Obtiene notas de trabajos para calcular promedios bimestrales.
+     * Obtiene la lista de alumnos de un curso
      */
-    private static void obtenerNotasTrabajos(NotasMateria notas, int materiaId, String alumnoDni, Connection conect) {
-        try {
-            String query = """
-                SELECT n.nota, t.fecha_creacion
-                FROM notas n
-                INNER JOIN trabajos t ON n.trabajo_id = t.id
-                WHERE t.materia_id = ? AND n.alumno_id = ?
-                ORDER BY t.fecha_creacion
-                """;
-
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, materiaId);
-            ps.setString(2, alumnoDni);
-            ResultSet rs = ps.executeQuery();
-
-            List<Double> notasBim1 = new ArrayList<>();
-            List<Double> notasBim2 = new ArrayList<>();
-            List<Double> notasBim3 = new ArrayList<>();
-            List<Double> notasBim4 = new ArrayList<>();
-
-            while (rs.next()) {
-                double nota = rs.getDouble("nota");
-                java.sql.Date fecha = rs.getDate("fecha_creacion");
-
-                if (fecha != null) {
-                    int mes = fecha.toLocalDate().getMonthValue();
-
-                    if (mes >= 3 && mes <= 5) {
-                        notasBim1.add(nota);
-                    } else if (mes >= 6 && mes <= 8) {
-                        notasBim2.add(nota);
-                    } else if (mes >= 9 && mes <= 11) {
-                        notasBim3.add(nota);
-                    } else if (mes == 12 || mes >= 1 && mes <= 2) {
-                        notasBim4.add(nota);
-                    }
-                }
-            }
-
-            // Calcular promedios
-            notas.bimestre1 = calcularPromedio(notasBim1);
-            notas.bimestre2 = calcularPromedio(notasBim2);
-            notas.bimestre3 = calcularPromedio(notasBim3);
-            notas.bimestre4 = calcularPromedio(notasBim4);
-
-        } catch (SQLException e) {
-            System.err.println("❌ Error obteniendo notas de trabajos: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Calcula el promedio de una lista de notas.
-     */
-    private static double calcularPromedio(List<Double> notas) {
-        if (notas.isEmpty()) {
-            return -1;
-        }
-
-        double suma = notas.stream().mapToDouble(Double::doubleValue).sum();
-        return Math.round((suma / notas.size()) * 10.0) / 10.0;
-    }
-
-    /**
-     * Calcula las notas derivadas (cuatrimestres, anual, definitiva).
-     */
-    private static void calcularNotasDerivadas(NotasMateria notas) {
-        // Primer cuatrimestre
-        if (notas.bimestre1 >= 0 && notas.bimestre2 >= 0) {
-            notas.cuatrimestre1 = Math.round(((notas.bimestre1 + notas.bimestre2) / 2.0) * 10.0) / 10.0;
-        } else if (notas.bimestre1 >= 0) {
-            notas.cuatrimestre1 = notas.bimestre1;
-        } else if (notas.bimestre2 >= 0) {
-            notas.cuatrimestre1 = notas.bimestre2;
-        }
-
-        // Segundo cuatrimestre
-        if (notas.bimestre3 >= 0 && notas.bimestre4 >= 0) {
-            notas.cuatrimestre2 = Math.round(((notas.bimestre3 + notas.bimestre4) / 2.0) * 10.0) / 10.0;
-        } else if (notas.bimestre3 >= 0) {
-            notas.cuatrimestre2 = notas.bimestre3;
-        } else if (notas.bimestre4 >= 0) {
-            notas.cuatrimestre2 = notas.bimestre4;
-        }
-
-        // Calificación anual (promedio de cuatrimestres)
-        if (notas.cuatrimestre1 >= 0 && notas.cuatrimestre2 >= 0) {
-            notas.calificacionAnual = Math.round(((notas.cuatrimestre1 + notas.cuatrimestre2) / 2.0) * 10.0) / 10.0;
-        } else if (notas.cuatrimestre1 >= 0) {
-            notas.calificacionAnual = notas.cuatrimestre1;
-        } else if (notas.cuatrimestre2 >= 0) {
-            notas.calificacionAnual = notas.cuatrimestre2;
-        }
-
-        // Calificación definitiva (prioridad: febrero > diciembre > anual)
-        if (notas.febrero >= 0) {
-            notas.calificacionDefinitiva = notas.febrero;
-        } else if (notas.diciembre >= 0) {
-            notas.calificacionDefinitiva = notas.diciembre;
-        } else if (notas.calificacionAnual >= 0) {
-            notas.calificacionDefinitiva = notas.calificacionAnual;
-        }
-    }
-
-    /**
-     * Obtiene las inasistencias del estudiante.
-     */
-    private static void obtenerInasistencias(DatosEstudiante datos, int alumnoId, int cursoId, Connection conect) {
-        try {
-            String query = """
-                SELECT COUNT(*) as total_inasistencias
-                FROM asistencia_general 
-                WHERE alumno_id = ? AND curso_id = ? AND estado IN ('A', 'AP')
-                """;
-
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, alumnoId);
-            ps.setInt(2, cursoId);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                datos.inasistencias = rs.getInt("total_inasistencias");
-            } else {
-                datos.inasistencias = 0;
-            }
-
-            System.out.println("✅ Inasistencias obtenidas: " + datos.inasistencias);
-
-        } catch (SQLException e) {
-            System.err.println("❌ Error obteniendo inasistencias: " + e.getMessage());
-            datos.inasistencias = 0;
-        }
-    }
-
-    /**
-     * Obtiene las materias pendientes y en proceso. Esta lógica depende de cómo
-     * tu sistema maneje estos estados.
-     */
-    private static void obtenerMateriasPendientes(DatosEstudiante datos, int alumnoId, int cursoId, Connection conect) {
-        try {
-            // Esta es una implementación de ejemplo. Ajusta según tu lógica de negocio.
-
-            // Materias con calificación anual menor a 6 podrían considerarse pendientes
-            for (Map.Entry<String, NotasMateria> entry : datos.materias.entrySet()) {
-                String materia = entry.getKey();
-                NotasMateria notas = entry.getValue();
-
-                if (notas.calificacionAnual >= 0 && notas.calificacionAnual < 6.0) {
-                    // Determinar si es troncal o general (esto depende de tu clasificación)
-                    if (esMateriaTrancal(materia)) {
-                        datos.materiasPendientesTroncales.add(materia);
-                    } else {
-                        datos.materiasPendientesGenerales.add(materia);
-                    }
-                }
-
-                // Materias en proceso (ejemplo: sin calificación definitiva)
-                if (notas.calificacionDefinitiva == -1 && notas.calificacionAnual >= 0) {
-                    datos.materiasEnProceso.add(materia);
-                }
-            }
-
-            System.out.println("✅ Materias pendientes obtenidas - Troncales: "
-                    + datos.materiasPendientesTroncales.size()
-                    + ", Generales: " + datos.materiasPendientesGenerales.size()
-                    + ", En proceso: " + datos.materiasEnProceso.size());
-
-        } catch (Exception e) {
-            System.err.println("❌ Error obteniendo materias pendientes: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Determina si una materia es troncal (materias principales).
-     */
-    private static boolean esMateriaTrancal(String materia) {
-        String[] materiasTrancales = {
-            "MATEMÁTICA", "LENGUA", "CIENCIAS SOCIALES", "CIENCIAS NATURALES"
-        };
-
-        return Arrays.asList(materiasTrancales).contains(materia.toUpperCase());
-    }
-
-    /**
-     * Obtiene la lista de IDs de estudiantes de un curso.
-     */
-    private static List<Integer> obtenerEstudiantesCurso(int cursoId) {
-        List<Integer> estudiantesIds = new ArrayList<>();
+    private static List<Integer> obtenerAlumnosDelCurso(int cursoId) {
+        List<Integer> alumnosIds = new ArrayList<>();
 
         try {
             Connection conect = Conexion.getInstancia().verificarConexion();
             if (conect == null) {
-                return estudiantesIds;
+                return alumnosIds;
             }
 
             String query = """
                 SELECT u.id 
                 FROM usuarios u 
                 INNER JOIN alumno_curso ac ON u.id = ac.alumno_id 
-                WHERE ac.curso_id = ? AND ac.estado = 'activo' AND u.rol = 4
+                WHERE ac.curso_id = ? AND ac.estado = 'activo' AND u.rol = '4'
                 ORDER BY u.apellido, u.nombre
                 """;
 
@@ -814,702 +642,439 @@ public class PlantillaBoletinUtility {
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                estudiantesIds.add(rs.getInt("id"));
+                alumnosIds.add(rs.getInt("id"));
             }
+
+            rs.close();
+            ps.close();
 
         } catch (SQLException e) {
-            System.err.println("❌ Error obteniendo estudiantes del curso: " + e.getMessage());
+            System.err.println("❌ Error obteniendo alumnos del curso: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        return estudiantesIds;
+        return alumnosIds;
     }
 
+    // ========================================================================
+    // MÉTODOS PARA COMPATIBILIDAD CON INTERFAZ GRÁFICA
+    // ========================================================================
     /**
-     * Genera el nombre del archivo para el boletín.
+     * Genera boletín individual con interfaz de progreso
      */
-    private static String generarNombreArchivo(DatosEstudiante datos) {
-        String apellido = datos.apellidoNombre.split(",")[0].trim();
-        apellido = apellido.replaceAll("[^a-zA-Z0-9]", "_");
-
-        String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-
-        return String.format("Boletin_%s_%s%s_%s.xlsx",
-                apellido, datos.anio, datos.division, fecha);
-    }
-
-    /**
-     * Genera un código miEscuela basado en los datos disponibles.
-     */
-    private static String generarCodigoMiEscuela(String dni, String anio, String division) {
-        try {
-            String codigo;
-
-            if (dni != null && !dni.trim().isEmpty()) {
-                String ultimosDigitos = dni.length() >= 4 ? dni.substring(dni.length() - 4)
-                        : String.format("%04d", Integer.parseInt(dni));
-                codigo = "ET20" + ultimosDigitos + anio + division;
-            } else {
-                String anioActual = String.valueOf(LocalDate.now().getYear());
-                codigo = "ET20" + anioActual.substring(2) + "0000" + anio + division;
-            }
-
-            return codigo;
-
-        } catch (Exception e) {
-            System.err.println("❌ Error generando código miEscuela: " + e.getMessage());
-            return "ET20" + anio + division + "001";
-        }
-    }
-
-    // =================================================================
-    // MÉTODOS PÚBLICOS PARA INTEGRACIÓN CON LA INTERFAZ
-    // =================================================================
-    /**
-     * Método para integración con interfaz - Generar boletín individual con
-     * selector de archivo.
-     */
-    public static void generarBoletinIndividualConInterfaz(int alumnoId, int cursoId,
+    public static void generarBoletinIndividualConServidorConInterfaz(int alumnoId, int cursoId, String periodo,
             javax.swing.JComponent parentComponent) {
-        generarBoletinIndividualConInterfaz(alumnoId, cursoId, parentComponent, RUTA_PLANTILLA_DEFAULT);
+        SwingWorker<Boolean, String> worker = new SwingWorker<Boolean, String>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                publish("Iniciando generación de boletín...");
+                return generarBoletinIndividualEnServidor(alumnoId, cursoId, periodo);
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+                for (String message : chunks) {
+                    System.out.println(message);
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    boolean exito = get();
+                    String mensaje = exito
+                            ? "Boletín generado y guardado exitosamente en el servidor"
+                            : "Error al generar el boletín";
+
+                    JOptionPane.showMessageDialog(parentComponent,
+                            mensaje,
+                            "Generación de Boletín",
+                            exito ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
+
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(parentComponent,
+                            "Error durante la generación: " + ex.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+
+        worker.execute();
     }
 
     /**
-     * Método para integración con interfaz - Generar boletín individual
-     * especificando plantilla.
+     * Genera boletines para todo el curso con interfaz de progreso
      */
-    public static void generarBoletinIndividualConInterfaz(int alumnoId, int cursoId,
-            javax.swing.JComponent parentComponent,
-            String rutaPlantilla) {
-        try {
-            // Verificar plantilla
-            File plantilla = new File(rutaPlantilla);
-            if (!plantilla.exists()) {
-                // Permitir seleccionar plantilla manualmente
-                JFileChooser fileChooser = new JFileChooser();
-                fileChooser.setDialogTitle("Seleccionar plantilla de boletín");
-                fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos Excel (*.xlsx)", "xlsx"));
+    public static void generarBoletinesCursoConServidorConInterfaz(int cursoId, String periodo,
+            javax.swing.JComponent parentComponent) {
+        // Crear ventana de progreso
+        javax.swing.JDialog progressDialog = new javax.swing.JDialog(
+                (java.awt.Frame) javax.swing.SwingUtilities.getWindowAncestor(parentComponent),
+                "Generando Boletines", true);
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setStringPainted(true);
+        progressBar.setString("Iniciando...");
 
-                int resultado = fileChooser.showOpenDialog(parentComponent);
-                if (resultado == JFileChooser.APPROVE_OPTION) {
-                    plantilla = fileChooser.getSelectedFile();
-                    rutaPlantilla = plantilla.getAbsolutePath();
-                } else {
-                    return; // Usuario canceló
+        progressDialog.setLayout(new java.awt.BorderLayout());
+        progressDialog.add(new javax.swing.JLabel("Generando boletines del curso...", javax.swing.SwingConstants.CENTER),
+                java.awt.BorderLayout.NORTH);
+        progressDialog.add(progressBar, java.awt.BorderLayout.CENTER);
+        progressDialog.setSize(400, 100);
+        progressDialog.setLocationRelativeTo(parentComponent);
+
+        SwingWorker<Integer, String> worker = new SwingWorker<Integer, String>() {
+            @Override
+            protected Integer doInBackground() throws Exception {
+                // Obtener total de alumnos para progreso
+                List<Integer> alumnosIds = obtenerAlumnosDelCurso(cursoId);
+                int totalAlumnos = alumnosIds.size();
+
+                if (totalAlumnos == 0) {
+                    publish("No se encontraron alumnos en el curso");
+                    return 0;
+                }
+
+                publish("Encontrados " + totalAlumnos + " alumnos");
+
+                int boletinesGenerados = 0;
+
+                for (int i = 0; i < alumnosIds.size(); i++) {
+                    int alumnoId = alumnosIds.get(i);
+
+                    publish("Procesando alumno " + (i + 1) + "/" + totalAlumnos);
+                    setProgress((i * 100) / totalAlumnos);
+
+                    if (generarBoletinIndividualEnServidor(alumnoId, cursoId, periodo)) {
+                        boletinesGenerados++;
+                        publish("Boletín " + boletinesGenerados + " generado");
+                    }
+                }
+
+                setProgress(100);
+                return boletinesGenerados;
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+                for (String message : chunks) {
+                    progressBar.setString(message);
+                    System.out.println(message);
                 }
             }
 
-            // Obtener datos del estudiante para nombre sugerido
-            DatosEstudiante datos = obtenerDatosEstudiante(alumnoId, cursoId);
-            if (datos == null) {
-                JOptionPane.showMessageDialog(parentComponent,
-                        "No se pudieron obtener los datos del estudiante",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+            @Override
+            protected void done() {
+                progressDialog.dispose();
+                try {
+                    int boletinesGenerados = get();
 
-            // Seleccionar archivo de destino
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Guardar boletín");
-            fileChooser.setSelectedFile(new File(generarNombreArchivo(datos)));
-            fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos Excel (*.xlsx)", "xlsx"));
+                    String mensaje = "Generación completada.\n"
+                            + "Boletines generados: " + boletinesGenerados + "\n"
+                            + "Guardados automáticamente en el servidor.";
 
-            if (fileChooser.showSaveDialog(parentComponent) == JFileChooser.APPROVE_OPTION) {
-                File archivo = fileChooser.getSelectedFile();
+                    JOptionPane.showMessageDialog(parentComponent,
+                            mensaje,
+                            "Generación Masiva Completada",
+                            JOptionPane.INFORMATION_MESSAGE);
 
-                // Asegurar extensión .xlsx
-                if (!archivo.getName().toLowerCase().endsWith(".xlsx")) {
-                    archivo = new File(archivo.getAbsolutePath() + ".xlsx");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(parentComponent,
+                            "Error durante la generación masiva: " + ex.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
                 }
-
-                final String rutaFinalArchivo = archivo.getAbsolutePath();
-                final String rutaFinalPlantilla = rutaPlantilla;
-
-                // Exportar en hilo separado
-                SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
-                    @Override
-                    protected Boolean doInBackground() throws Exception {
-                        return generarBoletinIndividual(alumnoId, cursoId, rutaFinalArchivo, rutaFinalPlantilla);
-                    }
-
-                    @Override
-                    protected void done() {
-                        try {
-                            boolean exito = get();
-                            if (exito) {
-                                int opcion = JOptionPane.showConfirmDialog(parentComponent,
-                                        "Boletín creado exitosamente en:\n" + rutaFinalArchivo
-                                        + "\n\n¿Desea abrir el archivo?",
-                                        "Exportación Exitosa",
-                                        JOptionPane.YES_NO_OPTION,
-                                        JOptionPane.INFORMATION_MESSAGE);
-
-                                if (opcion == JOptionPane.YES_OPTION) {
-                                    abrirArchivo(new File(rutaFinalArchivo));
-                                }
-                            } else {
-                                JOptionPane.showMessageDialog(parentComponent,
-                                        "Error al crear el boletín",
-                                        "Error",
-                                        JOptionPane.ERROR_MESSAGE);
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            JOptionPane.showMessageDialog(parentComponent,
-                                    "Error durante la exportación: " + e.getMessage(),
-                                    "Error",
-                                    JOptionPane.ERROR_MESSAGE);
-                        }
-                    }
-                };
-
-                worker.execute();
             }
+        };
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(parentComponent,
-                    "Error al iniciar exportación: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
+        // Configurar progreso
+        worker.addPropertyChangeListener(evt -> {
+            if ("progress".equals(evt.getPropertyName())) {
+                progressBar.setValue((Integer) evt.getNewValue());
+            }
+        });
+
+        worker.execute();
+        progressDialog.setVisible(true);
     }
 
     /**
-     * Método para integración con interfaz - Generar boletines de todo el
-     * curso.
-     */
-    public static void generarBoletinesCursoConInterfaz(int cursoId, javax.swing.JComponent parentComponent) {
-        generarBoletinesCursoConInterfaz(cursoId, parentComponent, RUTA_PLANTILLA_DEFAULT);
-    }
-
-    /**
-     * Método para integración con interfaz - Generar boletines especificando
-     * plantilla.
-     */
-    public static void generarBoletinesCursoConInterfaz(int cursoId, javax.swing.JComponent parentComponent,
-            String rutaPlantilla) {
-        try {
-            // Verificar plantilla
-            File plantilla = new File(rutaPlantilla);
-            if (!plantilla.exists()) {
-                // Permitir seleccionar plantilla manualmente
-                JFileChooser fileChooser = new JFileChooser();
-                fileChooser.setDialogTitle("Seleccionar plantilla de boletín");
-                fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos Excel (*.xlsx)", "xlsx"));
-
-                int resultado = fileChooser.showOpenDialog(parentComponent);
-                if (resultado == JFileChooser.APPROVE_OPTION) {
-                    plantilla = fileChooser.getSelectedFile();
-                    rutaPlantilla = plantilla.getAbsolutePath();
-                } else {
-                    return; // Usuario canceló
-                }
-            }
-
-            // Seleccionar carpeta de destino
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Seleccionar carpeta para guardar boletines");
-            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-
-            if (fileChooser.showSaveDialog(parentComponent) == JFileChooser.APPROVE_OPTION) {
-                File carpetaDestino = fileChooser.getSelectedFile();
-
-                // Crear subcarpeta con fecha
-                String nombreSubcarpeta = "Boletines_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                File subcarpeta = new File(carpetaDestino, nombreSubcarpeta);
-
-                if (!subcarpeta.exists()) {
-                    subcarpeta.mkdirs();
-                }
-
-                final String rutaFinalSubcarpeta = subcarpeta.getAbsolutePath();
-                final String rutaFinalPlantilla = rutaPlantilla;
-
-                // Mostrar progreso y exportar
-                SwingWorker<Integer, String> worker = new SwingWorker<Integer, String>() {
-                    @Override
-                    protected Integer doInBackground() throws Exception {
-                        return generarBoletinesCurso(cursoId, rutaFinalSubcarpeta, rutaFinalPlantilla);
-                    }
-
-                    @Override
-                    protected void done() {
-                        try {
-                            int boletinesCreados = get();
-
-                            if (boletinesCreados > 0) {
-                                int opcion = JOptionPane.showConfirmDialog(parentComponent,
-                                        String.format("Se crearon %d boletines exitosamente en:\n%s"
-                                                + "\n\n¿Desea abrir la carpeta?",
-                                                boletinesCreados, rutaFinalSubcarpeta),
-                                        "Exportación Completada",
-                                        JOptionPane.YES_NO_OPTION,
-                                        JOptionPane.INFORMATION_MESSAGE);
-
-                                if (opcion == JOptionPane.YES_OPTION) {
-                                    abrirCarpeta(new File(rutaFinalSubcarpeta));
-                                }
-                            } else {
-                                JOptionPane.showMessageDialog(parentComponent,
-                                        "No se pudieron crear boletines.\n"
-                                        + "Verifique que haya estudiantes en el curso y que tengan datos suficientes.",
-                                        "Sin boletines generados",
-                                        JOptionPane.WARNING_MESSAGE);
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            JOptionPane.showMessageDialog(parentComponent,
-                                    "Error durante la exportación: " + e.getMessage(),
-                                    "Error",
-                                    JOptionPane.ERROR_MESSAGE);
-                        }
-                    }
-                };
-
-                worker.execute();
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(parentComponent,
-                    "Error al iniciar exportación: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    /**
-     * Método para configurar la plantilla desde la interfaz.
+     * Configura la plantilla con interfaz gráfica
      */
     public static void configurarPlantillaConInterfaz(javax.swing.JComponent parentComponent) {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Seleccionar plantilla de boletín");
+        fileChooser.setDialogTitle("Seleccionar Plantilla de Boletín");
         fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos Excel (*.xlsx)", "xlsx"));
 
-        // Establecer directorio inicial en la ruta actual de plantilla
-        File plantillaActual = new File(RUTA_PLANTILLA_DEFAULT);
-        if (plantillaActual.getParentFile() != null && plantillaActual.getParentFile().exists()) {
-            fileChooser.setCurrentDirectory(plantillaActual.getParentFile());
+        // Establecer directorio inicial
+        String rutaActual = obtenerRutaPlantilla();
+        if (rutaActual != null) {
+            File archivoActual = new File(rutaActual);
+            if (archivoActual.getParentFile() != null && archivoActual.getParentFile().exists()) {
+                fileChooser.setCurrentDirectory(archivoActual.getParentFile());
+            }
         }
 
-        int resultado = fileChooser.showOpenDialog(parentComponent);
-        if (resultado == JFileChooser.APPROVE_OPTION) {
-            File nuevaPlantilla = fileChooser.getSelectedFile();
-            configurarRutaPlantilla(nuevaPlantilla.getAbsolutePath());
+        int userSelection = fileChooser.showOpenDialog(parentComponent);
 
-            JOptionPane.showMessageDialog(parentComponent,
-                    "Plantilla configurada exitosamente:\n" + nuevaPlantilla.getAbsolutePath(),
-                    "Configuración Actualizada",
-                    JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File archivoSeleccionado = fileChooser.getSelectedFile();
 
-    /**
-     * Obtiene la ruta actual de la plantilla.
-     */
-    public static String obtenerRutaPlantilla() {
-        return RUTA_PLANTILLA_DEFAULT;
-    }
+            // Verificar que el archivo sea válido
+            if (verificarPlantillaValida(archivoSeleccionado)) {
+                configurarRutaPlantilla(archivoSeleccionado.getAbsolutePath());
 
-    /**
-     * Intenta abrir un archivo con la aplicación predeterminada del sistema.
-     */
-    private static void abrirArchivo(File archivo) {
-        try {
-            if (java.awt.Desktop.isDesktopSupported()) {
-                java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-                if (desktop.isSupported(java.awt.Desktop.Action.OPEN)) {
-                    desktop.open(archivo);
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("❌ Error abriendo archivo: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Intenta abrir una carpeta con el explorador de archivos del sistema.
-     */
-    private static void abrirCarpeta(File carpeta) {
-        try {
-            if (java.awt.Desktop.isDesktopSupported()) {
-                java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-                if (desktop.isSupported(java.awt.Desktop.Action.OPEN)) {
-                    desktop.open(carpeta);
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("❌ Error abriendo carpeta: " + e.getMessage());
-        }
-    }
-
-    /**
-     * NUEVO: Generar boletín individual con integración automática al servidor.
-     * Versión que automáticamente guarda el boletín en la estructura del
-     * servidor.
-     */
-    public static boolean generarBoletinIndividualConServidor(int alumnoId, int cursoId, String periodo) {
-        try {
-            System.out.println("=== GENERANDO BOLETÍN CON INTEGRACIÓN AL SERVIDOR ===");
-            System.out.println("Alumno ID: " + alumnoId + ", Curso ID: " + cursoId + ", Período: " + periodo);
-
-            // 1. Verificar que existe la plantilla
-            File plantilla = new File(RUTA_PLANTILLA_DEFAULT);
-            if (!plantilla.exists()) {
-                System.err.println("❌ No se encontró la plantilla en: " + RUTA_PLANTILLA_DEFAULT);
-                return false;
-            }
-
-            // 2. Obtener datos del estudiante
-            DatosEstudiante datos = obtenerDatosEstudiante(alumnoId, cursoId);
-            if (datos == null) {
-                System.err.println("❌ No se pudieron obtener los datos del estudiante");
-                return false;
-            }
-
-            // 3. Generar nombre temporal para el archivo
-            String nombreTemporal = System.getProperty("java.io.tmpdir") + File.separator
-                    + "boletin_temp_" + System.currentTimeMillis() + ".xlsx";
-
-            // 4. Generar el boletín en ubicación temporal
-            boolean generado = procesarPlantillaBoletin(plantilla, datos, nombreTemporal);
-
-            if (!generado) {
-                System.err.println("❌ Error al generar el boletín temporal");
-                return false;
-            }
-
-            // 5. INTEGRACIÓN CON GESTORBOLETINES: Usar método correcto
-            boolean guardadoEnServidor = main.java.utils.GestorBoletines.guardarBoletinAutomatico(
-                    nombreTemporal, alumnoId, cursoId, periodo);
-
-            if (guardadoEnServidor) {
-                System.out.println("✅ Boletín generado y registrado automáticamente en el servidor");
-
-                // Limpiar archivo temporal después de un tiempo
-                try {
-                    // Programar eliminación del archivo temporal después de 5 minutos
-                    java.util.Timer timer = new java.util.Timer(true);
-                    timer.schedule(new java.util.TimerTask() {
-                        @Override
-                        public void run() {
-                            try {
-                                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(nombreTemporal));
-                                System.out.println("🗑️ Archivo temporal eliminado: " + nombreTemporal);
-                            } catch (Exception e) {
-                                System.err.println("Error al eliminar archivo temporal: " + e.getMessage());
-                            }
-                        }
-                    }, 300000); // 5 minutos
-                } catch (Exception e) {
-                    System.err.println("Error al programar limpieza: " + e.getMessage());
-                }
-
-                return true;
+                JOptionPane.showMessageDialog(parentComponent,
+                        "Plantilla configurada exitosamente:\n" + archivoSeleccionado.getAbsolutePath(),
+                        "Configuración Exitosa",
+                        JOptionPane.INFORMATION_MESSAGE);
             } else {
-                System.err.println("❌ Error al guardar el boletín en el servidor");
-                // El archivo temporal se mantiene para revisión manual
-                System.out.println("📁 Archivo temporal disponible en: " + nombreTemporal);
+                JOptionPane.showMessageDialog(parentComponent,
+                        "El archivo seleccionado no es una plantilla válida.\n"
+                        + "Debe ser un archivo Excel (.xlsx) con el formato correcto.",
+                        "Plantilla Inválida",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Verifica si una plantilla es válida
+     */
+    private static boolean verificarPlantillaValida(File archivo) {
+        try {
+            if (!archivo.exists() || !archivo.getName().toLowerCase().endsWith(".xlsx")) {
                 return false;
+            }
+
+            // Intentar abrir el archivo para verificar que es un Excel válido
+            try (FileInputStream fis = new FileInputStream(archivo); Workbook workbook = new XSSFWorkbook(fis)) {
+
+                // Verificar que tiene al menos una hoja
+                if (workbook.getNumberOfSheets() == 0) {
+                    return false;
+                }
+
+                Sheet hoja = workbook.getSheetAt(0);
+
+                // Verificaciones básicas de la estructura
+                // (Aquí podrías agregar verificaciones más específicas según tu plantilla)
+                return true;
             }
 
         } catch (Exception e) {
-            System.err.println("❌ Error en generarBoletinIndividualConServidor: " + e.getMessage());
+            System.err.println("Error verificando plantilla: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // ========================================================================
+    // CLASES DE DATOS
+    // ========================================================================
+    /**
+     * Clase para almacenar datos del estudiante
+     */
+    public static class DatosEstudiante {
+
+        public String apellidoNombre;
+        public String dni;
+        public String curso;
+        public String division;
+        public String codigoMiEscuela;
+
+        public DatosEstudiante() {
+            this.apellidoNombre = "";
+            this.dni = "";
+            this.curso = "";
+            this.division = "";
+            this.codigoMiEscuela = "";
+        }
+    }
+
+    /**
+     * Clase para almacenar notas por materia
+     */
+    public static class NotasMateria {
+
+        public double bimestre1;
+        public double bimestre2;
+        public double bimestre3;
+        public double bimestre4;
+        public double cuatrimestre1;
+        public double cuatrimestre2;
+        public double diciembre;
+        public double febrero;
+        public String observaciones;
+        public String convivencia;
+
+        public NotasMateria() {
+            this.bimestre1 = -1;
+            this.bimestre2 = -1;
+            this.bimestre3 = -1;
+            this.bimestre4 = -1;
+            this.cuatrimestre1 = -1;
+            this.cuatrimestre2 = -1;
+            this.diciembre = -1;
+            this.febrero = -1;
+            this.observaciones = "";
+            this.convivencia = "";
+        }
+    }
+
+    // ========================================================================
+    // MÉTODOS DE UTILIDAD Y DIAGNÓSTICO
+    // ========================================================================
+    /**
+     * Verifica la configuración actual del sistema
+     */
+    public static void verificarConfiguracion() {
+        System.out.println("=== VERIFICACIÓN DE CONFIGURACIÓN ===");
+
+        // Verificar ruta del servidor
+        String rutaServidor = GestorBoletines.obtenerRutaServidor();
+        System.out.println("Servidor configurado: " + rutaServidor);
+
+        // Verificar plantilla
+        String rutaPlantilla = obtenerRutaPlantilla();
+        File plantilla = new File(rutaPlantilla);
+        System.out.println("Plantilla configurada: " + rutaPlantilla);
+        System.out.println("Plantilla existe: " + (plantilla.exists() ? "✅ Sí" : "❌ No"));
+
+        if (plantilla.exists()) {
+            System.out.println("Tamaño plantilla: " + (plantilla.length() / 1024) + " KB");
+        }
+
+        // Verificar conexión a BD
+        Connection conect = Conexion.getInstancia().verificarConexion();
+        System.out.println("Conexión BD: " + (conect != null ? "✅ Activa" : "❌ Error"));
+
+        System.out.println("=== FIN VERIFICACIÓN ===");
+    }
+
+    /**
+     * Método de prueba para generar un boletín de ejemplo
+     */
+    public static boolean generarBoletinPrueba() {
+        try {
+            System.out.println("=== GENERANDO BOLETÍN DE PRUEBA ===");
+
+            // Usar datos ficticios para la prueba
+            DatosEstudiante estudiante = new DatosEstudiante();
+            estudiante.apellidoNombre = "ALUMNO, Prueba";
+            estudiante.dni = "12345678";
+            estudiante.curso = "1";
+            estudiante.division = "A";
+            estudiante.codigoMiEscuela = "TEST001";
+
+            Map<String, NotasMateria> notas = new HashMap<>();
+
+            // Agregar algunas materias de ejemplo
+            NotasMateria matematicas = new NotasMateria();
+            matematicas.bimestre1 = 8.5;
+            matematicas.bimestre2 = 7.0;
+            matematicas.bimestre3 = 9.0;
+            matematicas.bimestre4 = 8.0;
+            matematicas.observaciones = "Buen desempeño";
+            notas.put("Matemáticas", matematicas);
+
+            NotasMateria lengua = new NotasMateria();
+            lengua.bimestre1 = 9.0;
+            lengua.bimestre2 = 8.5;
+            lengua.bimestre3 = 8.0;
+            lengua.bimestre4 = 9.5;
+            notas.put("Lengua y Literatura", lengua);
+
+            // Generar archivo de prueba
+            String rutaPrueba = System.getProperty("java.io.tmpdir") + File.separator + "boletin_prueba.xlsx";
+
+            boolean exito = generarBoletinConPlantilla(estudiante, notas, "PRUEBA", rutaPrueba);
+
+            if (exito) {
+                System.out.println("✅ Boletín de prueba generado: " + rutaPrueba);
+            } else {
+                System.err.println("❌ Error generando boletín de prueba");
+            }
+
+            return exito;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error en generarBoletinPrueba: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
 
     /**
-     * NUEVO: Generar boletines de todo el curso con integración automática al
-     * servidor.
+     * Limpia archivos temporales de boletines
      */
-    public static int generarBoletinesCursoConServidor(int cursoId, String periodo) {
+    public static void limpiarArchivosTemporales() {
         try {
-            System.out.println("=== GENERANDO BOLETINES DEL CURSO CON INTEGRACIÓN AL SERVIDOR ===");
-            System.out.println("Curso ID: " + cursoId + ", Período: " + periodo);
+            String directorioTemp = System.getProperty("java.io.tmpdir");
+            File carpetaTemp = new File(directorioTemp);
 
-            // Verificar plantilla
-            File plantilla = new File(RUTA_PLANTILLA_DEFAULT);
-            if (!plantilla.exists()) {
-                System.err.println("❌ Plantilla no encontrada: " + RUTA_PLANTILLA_DEFAULT);
-                return 0;
+            File[] archivos = carpetaTemp.listFiles((dir, name)
+                    -> name.startsWith("boletin_") && name.endsWith(".xlsx"));
+
+            int archivosEliminados = 0;
+            if (archivos != null) {
+                for (File archivo : archivos) {
+                    if (archivo.delete()) {
+                        archivosEliminados++;
+                    }
+                }
             }
 
-            // Obtener lista de estudiantes
-            List<Integer> estudiantesIds = obtenerEstudiantesCurso(cursoId);
-            System.out.println("Estudiantes a procesar: " + estudiantesIds.size());
+            System.out.println("✅ Archivos temporales eliminados: " + archivosEliminados);
 
-            if (estudiantesIds.isEmpty()) {
-                System.out.println("⚠️ No hay estudiantes en el curso");
-                return 0;
+        } catch (Exception e) {
+            System.err.println("Error limpiando archivos temporales: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Obtiene estadísticas de uso del sistema
+     */
+    public static String obtenerEstadisticasUso() {
+        try {
+            StringBuilder stats = new StringBuilder();
+            stats.append("=== ESTADÍSTICAS DEL SISTEMA DE BOLETINES ===\n\n");
+
+            // Información de configuración
+            stats.append("📁 Servidor: ").append(GestorBoletines.obtenerRutaServidor()).append("\n");
+            stats.append("📄 Plantilla: ").append(obtenerRutaPlantilla()).append("\n");
+
+            File plantilla = new File(obtenerRutaPlantilla());
+            stats.append("📊 Estado plantilla: ").append(plantilla.exists() ? "✅ Disponible" : "❌ No encontrada").append("\n");
+
+            if (plantilla.exists()) {
+                stats.append("📏 Tamaño plantilla: ").append(plantilla.length() / 1024).append(" KB\n");
             }
 
-            int boletinesGenerados = 0;
-            int errores = 0;
-
-            for (int alumnoId : estudiantesIds) {
+            // Estadísticas de base de datos
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect != null) {
                 try {
-                    boolean exito = generarBoletinIndividualConServidor(alumnoId, cursoId, periodo);
-                    if (exito) {
-                        boletinesGenerados++;
-                        System.out.println("✅ Boletín " + (boletinesGenerados + errores) + "/"
-                                + estudiantesIds.size() + " - Alumno ID: " + alumnoId);
-                    } else {
-                        errores++;
-                        System.err.println("❌ Error " + (boletinesGenerados + errores) + "/"
-                                + estudiantesIds.size() + " - Alumno ID: " + alumnoId);
+                    String query = "SELECT COUNT(*) as total FROM boletin WHERE DATE(creado_at) = CURDATE()";
+                    PreparedStatement ps = conect.prepareStatement(query);
+                    ResultSet rs = ps.executeQuery();
+
+                    if (rs.next()) {
+                        stats.append("📈 Boletines generados hoy: ").append(rs.getInt("total")).append("\n");
                     }
+                    rs.close();
+                    ps.close();
 
-                    // Pequeña pausa para evitar sobrecarga
-                    Thread.sleep(100);
-
-                } catch (Exception e) {
-                    errores++;
-                    System.err.println("❌ Error procesando alumno ID " + alumnoId + ": " + e.getMessage());
+                } catch (SQLException e) {
+                    stats.append("⚠️ Error obteniendo estadísticas de BD\n");
                 }
             }
 
-            System.out.println("=== RESUMEN DE GENERACIÓN ===");
-            System.out.println("✅ Boletines generados exitosamente: " + boletinesGenerados);
-            System.out.println("❌ Errores: " + errores);
-            System.out.println("📊 Éxito: " + (boletinesGenerados * 100.0 / estudiantesIds.size()) + "%");
+            stats.append("\n🕒 Fecha de consulta: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
 
-            return boletinesGenerados;
+            return stats.toString();
 
         } catch (Exception e) {
-            System.err.println("❌ Error general generando boletines del curso: " + e.getMessage());
-            e.printStackTrace();
-            return 0;
-        }
-    }
-
-    /**
-     * NUEVO: Método de conveniencia con interfaz para generar boletines
-     * individuales con servidor.
-     */
-    public static void generarBoletinIndividualConServidorConInterfaz(int alumnoId, int cursoId,
-            String periodo,
-            javax.swing.JComponent parentComponent) {
-        try {
-            System.out.println("=== INICIANDO GENERACIÓN CON INTERFAZ Y SERVIDOR ===");
-
-            // Verificar si existe la plantilla por defecto
-            String rutaPlantilla = obtenerRutaPlantilla();
-            File plantilla = new File(rutaPlantilla);
-
-            if (!plantilla.exists()) {
-                int opcion = javax.swing.JOptionPane.showConfirmDialog(parentComponent,
-                        "No se encontró la plantilla de boletín en:\n" + rutaPlantilla
-                        + "\n\n¿Desea seleccionar la plantilla manualmente?",
-                        "Plantilla no encontrada",
-                        javax.swing.JOptionPane.YES_NO_OPTION,
-                        javax.swing.JOptionPane.QUESTION_MESSAGE);
-
-                if (opcion == javax.swing.JOptionPane.YES_OPTION) {
-                    configurarPlantillaConInterfaz(parentComponent);
-                } else {
-                    return; // Usuario canceló
-                }
-            }
-
-            // Crear worker para operación en segundo plano
-            javax.swing.SwingWorker<Boolean, String> worker = new javax.swing.SwingWorker<Boolean, String>() {
-                @Override
-                protected Boolean doInBackground() throws Exception {
-                    publish("Generando boletín...");
-                    return generarBoletinIndividualConServidor(alumnoId, cursoId, periodo);
-                }
-
-                @Override
-                protected void process(java.util.List<String> chunks) {
-                    // Aquí podrías mostrar un diálogo de progreso si quisieras
-                }
-
-                @Override
-                protected void done() {
-                    try {
-                        boolean exito = get();
-
-                        if (exito) {
-                            javax.swing.JOptionPane.showMessageDialog(parentComponent,
-                                    "Boletín generado exitosamente y guardado en el servidor.\n"
-                                    + "El boletín está disponible en la gestión de boletines.",
-                                    "Boletín Generado",
-                                    javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                        } else {
-                            javax.swing.JOptionPane.showMessageDialog(parentComponent,
-                                    "Error al generar el boletín.\n"
-                                    + "Revise la consola para más detalles.",
-                                    "Error",
-                                    javax.swing.JOptionPane.ERROR_MESSAGE);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        javax.swing.JOptionPane.showMessageDialog(parentComponent,
-                                "Error durante la generación: " + e.getMessage(),
-                                "Error",
-                                javax.swing.JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            };
-
-            worker.execute();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            javax.swing.JOptionPane.showMessageDialog(parentComponent,
-                    "Error al iniciar generación: " + e.getMessage(),
-                    "Error",
-                    javax.swing.JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    /**
-     * NUEVO: Método de conveniencia con interfaz para generar boletines del
-     * curso con servidor.
-     */
-    public static void generarBoletinesCursoConServidorConInterfaz(int cursoId, String periodo,
-            javax.swing.JComponent parentComponent) {
-        try {
-            System.out.println("=== INICIANDO GENERACIÓN MASIVA CON INTERFAZ Y SERVIDOR ===");
-
-            // Verificar si existe la plantilla por defecto
-            String rutaPlantilla = obtenerRutaPlantilla();
-            File plantilla = new File(rutaPlantilla);
-
-            if (!plantilla.exists()) {
-                int opcion = javax.swing.JOptionPane.showConfirmDialog(parentComponent,
-                        "No se encontró la plantilla de boletín en:\n" + rutaPlantilla
-                        + "\n\n¿Desea seleccionar la plantilla manualmente?",
-                        "Plantilla no encontrada",
-                        javax.swing.JOptionPane.YES_NO_OPTION,
-                        javax.swing.JOptionPane.QUESTION_MESSAGE);
-
-                if (opcion == javax.swing.JOptionPane.YES_OPTION) {
-                    configurarPlantillaConInterfaz(parentComponent);
-                } else {
-                    return; // Usuario canceló
-                }
-            }
-
-            // Confirmación antes de proceder
-            int confirmacion = javax.swing.JOptionPane.showConfirmDialog(parentComponent,
-                    "¿Está seguro de generar boletines para todo el curso?\n"
-                    + "Período: " + periodo + "\n"
-                    + "Los boletines se guardarán automáticamente en el servidor.",
-                    "Confirmar Generación Masiva",
-                    javax.swing.JOptionPane.YES_NO_OPTION,
-                    javax.swing.JOptionPane.QUESTION_MESSAGE);
-
-            if (confirmacion != javax.swing.JOptionPane.YES_OPTION) {
-                return;
-            }
-
-            // Crear barra de progreso
-            javax.swing.JProgressBar progressBar = new javax.swing.JProgressBar();
-            progressBar.setStringPainted(true);
-            progressBar.setString("Preparando...");
-
-            javax.swing.JDialog progressDialog = new javax.swing.JDialog(
-                    (java.awt.Frame) javax.swing.SwingUtilities.getWindowAncestor(parentComponent),
-                    "Generando Boletines", true);
-            progressDialog.setLayout(new java.awt.BorderLayout());
-            progressDialog.add(new javax.swing.JLabel("Generando boletines del curso...",
-                    javax.swing.SwingConstants.CENTER), java.awt.BorderLayout.NORTH);
-            progressDialog.add(progressBar, java.awt.BorderLayout.CENTER);
-            progressDialog.setSize(400, 100);
-            progressDialog.setLocationRelativeTo(parentComponent);
-
-            // Worker para operación en segundo plano
-            javax.swing.SwingWorker<Integer, String> worker = new javax.swing.SwingWorker<Integer, String>() {
-                @Override
-                protected Integer doInBackground() throws Exception {
-                    // Obtener número total de estudiantes para progreso
-                    List<Integer> estudiantes = obtenerEstudiantesCurso(cursoId);
-                    int total = estudiantes.size();
-
-                    if (total == 0) {
-                        publish("Sin estudiantes en el curso");
-                        return 0;
-                    }
-
-                    int generados = 0;
-                    for (int i = 0; i < estudiantes.size(); i++) {
-                        int alumnoId = estudiantes.get(i);
-
-                        publish("Procesando alumno " + (i + 1) + " de " + total + "...");
-                        setProgress((i * 100) / total);
-
-                        try {
-                            if (generarBoletinIndividualConServidor(alumnoId, cursoId, periodo)) {
-                                generados++;
-                            }
-                        } catch (Exception e) {
-                            System.err.println("Error con alumno " + alumnoId + ": " + e.getMessage());
-                        }
-
-                        // Pequeña pausa
-                        Thread.sleep(200);
-                    }
-
-                    setProgress(100);
-                    return generados;
-                }
-
-                @Override
-                protected void process(java.util.List<String> chunks) {
-                    for (String message : chunks) {
-                        progressBar.setString(message);
-                    }
-                }
-
-                @Override
-                protected void done() {
-                    progressDialog.dispose();
-                    try {
-                        int generados = get();
-
-                        String mensaje = String.format(
-                                "Generación completada.\n\n"
-                                + "Boletines generados exitosamente: %d\n"
-                                + "Los boletines están disponibles en la gestión de boletines.",
-                                generados);
-
-                        javax.swing.JOptionPane.showMessageDialog(parentComponent,
-                                mensaje,
-                                "Generación Completada",
-                                generados > 0 ? javax.swing.JOptionPane.INFORMATION_MESSAGE
-                                        : javax.swing.JOptionPane.WARNING_MESSAGE);
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        javax.swing.JOptionPane.showMessageDialog(parentComponent,
-                                "Error durante la generación: " + e.getMessage(),
-                                "Error",
-                                javax.swing.JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            };
-
-            // Configurar progreso
-            worker.addPropertyChangeListener(evt -> {
-                if ("progress".equals(evt.getPropertyName())) {
-                    progressBar.setValue((Integer) evt.getNewValue());
-                }
-            });
-
-            // Iniciar
-            worker.execute();
-            progressDialog.setVisible(true);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            javax.swing.JOptionPane.showMessageDialog(parentComponent,
-                    "Error al iniciar generación: " + e.getMessage(),
-                    "Error",
-                    javax.swing.JOptionPane.ERROR_MESSAGE);
+            return "Error obteniendo estadísticas: " + e.getMessage();
         }
     }
 }

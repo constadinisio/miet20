@@ -24,12 +24,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
@@ -40,7 +42,9 @@ import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import main.java.database.Conexion;
+import main.java.utils.BoletinesUtils;
 import main.java.utils.GestorBoletines;
+import main.java.utils.PlantillaBoletinUtility;
 
 /**
  * Panel de Gestión de Boletines MEJORADO
@@ -83,6 +87,7 @@ public class PanelGestionBoletines extends JPanel {
     private JTable tablaBoletines;
     private DefaultTableModel modeloTabla;
     private JScrollPane scrollTabla;
+    private Map<String, Integer> cursosMap = new HashMap<>();
 
     // Datos
     private List<GestorBoletines.InfoBoletin> boletinesActuales;
@@ -387,17 +392,28 @@ public class PanelGestionBoletines extends JPanel {
     /**
      * Carga los cursos disponibles.
      */
-    private void cargarCursos() {
+     private void cargarCursos() {
         try {
+            cursosMap.clear(); // CORREGIDO: Limpiar el map
             comboCurso.removeAllItems();
             comboCurso.addItem("TODOS");
 
-            String query = "SELECT DISTINCT anio FROM cursos WHERE estado = 'activo' ORDER BY anio";
+            String query = "SELECT id, anio, division FROM cursos WHERE estado = 'activo' ORDER BY anio, division";
             PreparedStatement ps = conect.prepareStatement(query);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                comboCurso.addItem(String.valueOf(rs.getInt("anio")));
+                int id = rs.getInt("id");
+                int anio = rs.getInt("anio");
+                int division = rs.getInt("division");
+                
+                // CORREGIDO: Formato numérico para cursos
+                String cursoNombre = String.valueOf(anio) + String.valueOf(division); // "11", "12", "21", etc.
+                
+                cursosMap.put(cursoNombre, id);
+                comboCurso.addItem(cursoNombre);
+                
+                System.out.println("Curso cargado: " + cursoNombre + " (ID: " + id + ")");
             }
 
             rs.close();
@@ -405,6 +421,7 @@ public class PanelGestionBoletines extends JPanel {
 
         } catch (SQLException e) {
             System.err.println("Error cargando cursos: " + e.getMessage());
+            e.printStackTrace(); // CORREGIDO: Ahora debería funcionar
         }
     }
 
@@ -589,13 +606,94 @@ public class PanelGestionBoletines extends JPanel {
      * Abre el panel para generar un nuevo boletín.
      */
     private void generarNuevoBoletin(ActionEvent e) {
-        // Redirigir al panel de notas para generar boletines
-        JOptionPane.showMessageDialog(this,
-                "Para generar nuevos boletines, vaya al panel de 'Notas'\n"
-                + "y utilice el botón 'Generar Boletines'.",
-                "Generar Nuevos Boletines",
-                JOptionPane.INFORMATION_MESSAGE);
+        try {
+            // Crear diálogo para seleccionar opciones
+            JPanel panel = new JPanel(new GridBagLayout());
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.insets = new Insets(5, 5, 5, 5);
+            gbc.anchor = GridBagConstraints.WEST;
+
+            // Combo curso
+            gbc.gridx = 0; gbc.gridy = 0;
+            panel.add(new JLabel("Curso:"), gbc);
+            
+            JComboBox<String> comboCursoNuevo = new JComboBox<>();
+            for (String curso : cursosMap.keySet()) {
+                comboCursoNuevo.addItem(curso);
+            }
+            gbc.gridx = 1;
+            panel.add(comboCursoNuevo, gbc);
+
+            // Combo período
+            gbc.gridx = 0; gbc.gridy = 1;
+            panel.add(new JLabel("Período:"), gbc);
+            
+            JComboBox<String> comboPeriodoNuevo = new JComboBox<>(
+                    new String[]{"1B", "2B", "3B", "4B", "1C", "2C", "Final"});
+            comboPeriodoNuevo.setSelectedItem(BoletinesUtils.obtenerPeriodoActual());
+            gbc.gridx = 1;
+            panel.add(comboPeriodoNuevo, gbc);
+
+            // Radio buttons para tipo
+            gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
+            JRadioButton rbIndividual = new JRadioButton("Boletín Individual", true);
+            JRadioButton rbCursoCompleto = new JRadioButton("Curso Completo");
+            
+            ButtonGroup grupo = new ButtonGroup();
+            grupo.add(rbIndividual);
+            grupo.add(rbCursoCompleto);
+            
+            panel.add(rbIndividual, gbc);
+            gbc.gridy = 3;
+            panel.add(rbCursoCompleto, gbc);
+
+            int result = JOptionPane.showConfirmDialog(this, panel,
+                    "Generar Nuevo Boletín",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE);
+
+            if (result == JOptionPane.OK_OPTION) {
+                String cursoSeleccionado = (String) comboCursoNuevo.getSelectedItem();
+                String periodoSeleccionado = (String) comboPeriodoNuevo.getSelectedItem();
+                
+                if (cursoSeleccionado != null && periodoSeleccionado != null) {
+                    Integer cursoId = cursosMap.get(cursoSeleccionado);
+                    
+                    if (rbIndividual.isSelected()) {
+                        // Generar boletín individual
+                        JOptionPane.showMessageDialog(this,
+                                "Para boletines individuales, use el panel de Notas",
+                                "Información",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        // Generar boletines para todo el curso
+                        int confirmacion = JOptionPane.showConfirmDialog(this,
+                                "¿Generar boletines para todo el curso " + cursoSeleccionado + "?\n" +
+                                "Período: " + periodoSeleccionado + "\n" +
+                                "Los boletines se guardarán automáticamente en el servidor.",
+                                "Confirmar Generación Masiva",
+                                JOptionPane.YES_NO_OPTION,
+                                JOptionPane.WARNING_MESSAGE);
+                        
+                        if (confirmacion == JOptionPane.YES_OPTION) {
+                            // USAR SERVIDOR AUTOMÁTICO
+                            PlantillaBoletinUtility.generarBoletinesCursoConServidorConInterfaz(
+                                    cursoId, periodoSeleccionado, this);
+                        }
+                    }
+                }
+            }
+            
+        } catch (Exception ex) {
+            System.err.println("Error al generar nuevo boletín: " + ex.getMessage());
+            ex.printStackTrace(); // CORREGIDO: Ahora debería funcionar
+            JOptionPane.showMessageDialog(this,
+                    "Error al generar boletín: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
+
 
     /**
      * Configurar el servidor de boletines (solo admin).

@@ -1,9 +1,6 @@
 package main.java;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import main.java.utils.ResponsiveUtils;
 import main.java.utils.ResourceManager;
 import main.java.updater.ActualizadorApp;
 import main.java.views.login.GoogleAuthenticator;
@@ -27,9 +24,6 @@ public class Main {
                     "Error al inicializar recursos: " + e.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
-
-        // Configurar UI responsiva
-        setupResponsiveUI();
 
         // Agregar shutdown hook para cerrar sesión al salir
         agregarShutdownHook();
@@ -61,10 +55,16 @@ public class Main {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 try {
+                    // Cerrar sistema de notificaciones
+                    main.java.utils.NotificationManager.getInstance().dispose();
+
+                    // Cerrar autenticación
                     GoogleAuthenticator authenticator = new GoogleAuthenticator();
                     authenticator.logout();
+
+                    System.out.println("Aplicación cerrada correctamente");
                 } catch (Exception e) {
-                    System.err.println("Error al cerrar sesión durante el apagado: " + e.getMessage());
+                    System.err.println("Error al cerrar la aplicación: " + e.getMessage());
                 }
             }
         });
@@ -78,41 +78,6 @@ public class Main {
                 loginFrame.setVisible(true);
             }
         });
-    }
-
-    /**
-     * Configura la UI para que sea responsive en todas las ventanas
-     */
-    public static void setupResponsiveUI() {
-        // Interceptar la creación de ventanas para hacerlas responsivas
-        Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
-            @Override
-            public void eventDispatched(AWTEvent event) {
-                if (event.getID() == WindowEvent.WINDOW_OPENED) {
-                    Window window = (Window) event.getSource();
-                    if (window instanceof JFrame) {
-                        JFrame frame = (JFrame) window;
-
-                        // Aplicar configuración responsive de forma recursiva
-                        makeAllPanelsResponsive(frame.getContentPane());
-                    }
-                }
-            }
-        }, AWTEvent.WINDOW_EVENT_MASK);
-    }
-
-    private static void makeAllPanelsResponsive(Container container) {
-        // Procesar este contenedor si es un panel
-        if (container instanceof JPanel) {
-            ResponsiveUtils.makeResponsive((JPanel) container);
-        }
-
-        // Procesar recursivamente todos los componentes
-        for (Component comp : container.getComponents()) {
-            if (comp instanceof Container) {
-                makeAllPanelsResponsive((Container) comp);
-            }
-        }
     }
 
 }

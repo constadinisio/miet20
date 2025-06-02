@@ -9,55 +9,92 @@ import main.java.views.login.LoginForm;
 import main.java.updater.ActualizadorApp;
 import main.java.views.users.common.RolPanelManagerFactory;
 import main.java.views.users.common.VentanaInicio;
+import main.java.views.notifications.NotificationSenderWindow;
+import main.java.views.notifications.NotificationsWindow;
+import main.java.controllers.NotificationGroupManager;
+import java.util.Arrays;
+import java.util.List;
+import main.java.views.notifications.NotificationGroupWindow;
 
 /**
- * Clase utilitaria para crear y gestionar la barra de menú común que incluye la
- * funcionalidad de cambio de roles.
- * Versión corregida que actualiza correctamente el rol actual.
+ * MenuBarManager COMPLETAMENTE REDISEÑADO v3.0 Sistema de notificaciones
+ * integrado en el menú principal
+ *
+ * @author Sistema de Gestión Escolar ET20
+ * @version 3.0 - Sistema de notificaciones completo en menú
  */
 public class MenuBarManager {
 
     private int userId;
     private JFrame currentFrame;
-    private String rolColumnName = "rol_id"; // Valor por defecto que se actualizará
-    private int rolActual; // Variable para trackear el rol actual
+    private String rolColumnName = "rol_id";
+    private int rolActual;
 
-    /**
-     * Constructor que inicializa el gestor de menú.
-     *
-     * @param userId ID del usuario actual
-     * @param currentFrame Ventana actual donde se añadirá el menú
-     */
+    // SISTEMA DE NOTIFICACIONES
+    private NotificationManager notificationManager;
+    private boolean notificationsEnabled = false;
+
+    // Roles que pueden enviar notificaciones
+    private static final List<Integer> SENDER_ROLES = Arrays.asList(1, 2, 3, 5); // Admin, Preceptor, Profesor, ATTP
+
     public MenuBarManager(int userId, JFrame currentFrame) {
         this.userId = userId;
         this.currentFrame = currentFrame;
 
-        // Obtener el rol actual del usuario
+        System.out.println("=== INICIALIZANDO MenuBarManager v3.0 ===");
+        System.out.println("Usuario ID: " + userId);
+
         this.rolActual = obtenerRolActual();
+        System.out.println("Rol actual detectado: " + rolActual + " (" + obtenerTextoRol(rolActual) + ")");
 
-        // Determinar el nombre correcto de la columna de rol en la base de datos
         determinarNombreColumnaRol();
-
-        // Crear y configurar la barra de menú
+        initializeNotificationSystem();
         setupMenuBar();
+
+        System.out.println("✅ MenuBarManager inicializado correctamente");
     }
 
-    /**
-     * Obtiene el rol actual del usuario desde la base de datos.
-     */
+    private void initializeNotificationSystem() {
+        try {
+            System.out.println("--- Inicializando Sistema de Notificaciones ---");
+
+            notificationManager = NotificationManager.getInstance();
+
+            if (!notificationManager.isInitialized()) {
+                notificationManager.initialize(userId, rolActual);
+            } else {
+                notificationManager.updateUser(userId, rolActual);
+            }
+
+            if (notificationManager.getNotificationService() != null) {
+                System.out.println("✅ NotificationService conectado");
+                int unreadCount = notificationManager.getUnreadCount();
+                System.out.println("📧 Notificaciones no leídas: " + unreadCount);
+                notificationsEnabled = true;
+            } else {
+                System.err.println("⚠️ NotificationService no está disponible");
+                notificationsEnabled = false;
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error inicializando sistema de notificaciones: " + e.getMessage());
+            e.printStackTrace();
+            notificationsEnabled = false;
+        }
+    }
+
     private int obtenerRolActual() {
         try {
             Connection conect = Conexion.getInstancia().verificarConexion();
             if (conect == null) {
                 System.err.println("ERROR: No se pudo establecer conexión a la base de datos");
-                return 1; // Rol por defecto
+                return 1;
             }
 
-            // Primero intentar obtener desde usuario_roles (rol por defecto)
-            String query = "SELECT ur." + rolColumnName + " as rol_id " +
-                          "FROM usuario_roles ur " +
-                          "WHERE ur.usuario_id = ? AND ur.is_default = 1";
-            
+            String query = "SELECT ur." + rolColumnName + " as rol_id "
+                    + "FROM usuario_roles ur "
+                    + "WHERE ur.usuario_id = ? AND ur.is_default = 1";
+
             PreparedStatement ps = conect.prepareStatement(query);
             ps.setInt(1, userId);
             ResultSet rs = ps.executeQuery();
@@ -68,7 +105,6 @@ public class MenuBarManager {
                 return rol;
             }
 
-            // Si no hay rol por defecto en usuario_roles, obtener desde usuarios
             query = "SELECT rol FROM usuarios WHERE id = ?";
             ps = conect.prepareStatement(query);
             ps.setInt(1, userId);
@@ -88,22 +124,40 @@ public class MenuBarManager {
         return 1; // Rol por defecto si hay error
     }
 
-    /**
-     * Actualiza el rol actual y refresca la barra de menú.
-     * Este método debe ser llamado después de cambiar de rol.
-     */
     public void actualizarRolActual(int nuevoRol) {
+        System.out.println("=== ACTUALIZANDO ROL ===");
+        System.out.println("Rol anterior: " + rolActual + " (" + obtenerTextoRol(rolActual) + ")");
+        System.out.println("Nuevo rol: " + nuevoRol + " (" + obtenerTextoRol(nuevoRol) + ")");
+
         this.rolActual = nuevoRol;
-        System.out.println("MenuBarManager: Actualizando rol actual a: " + nuevoRol);
-        
+
+        // ACTUALIZAR SISTEMA DE NOTIFICACIONES CON NUEVO ROL
+        if (notificationManager != null && notificationsEnabled) {
+            try {
+                notificationManager.updateUser(userId, nuevoRol);
+                System.out.println("✅ Sistema de notificaciones actualizado para nuevo rol");
+
+                if (notificationManager.canSendNotifications(nuevoRol)) {
+                    SwingUtilities.invokeLater(() -> {
+                        notificationManager.enviarNotificacionRapida(
+                                "Cambio de Rol",
+                                "Has cambiado tu rol a: " + obtenerTextoRol(nuevoRol),
+                                userId
+                        );
+                    });
+                }
+
+            } catch (Exception e) {
+                System.err.println("⚠️ Error actualizando sistema de notificaciones: " + e.getMessage());
+            }
+        }
+
         // Refrescar la barra de menú para mostrar el nuevo rol como actual
         setupMenuBar();
+
+        System.out.println("✅ Cambio de rol completado");
     }
 
-    /**
-     * Determina el nombre correcto de la columna de rol en la tabla
-     * usuario_roles.
-     */
     private void determinarNombreColumnaRol() {
         try {
             Connection conect = Conexion.getInstancia().verificarConexion();
@@ -112,36 +166,28 @@ public class MenuBarManager {
                 return;
             }
 
-            // Obtener metadatos de la base de datos
             DatabaseMetaData meta = conect.getMetaData();
-
-            // Buscar columnas en la tabla usuario_roles
             ResultSet columns = meta.getColumns(null, null, "usuario_roles", null);
 
             boolean encontrada = false;
-
-            System.out.println("Buscando nombre de columna para rol en la tabla usuario_roles:");
-
-            // Buscar columna de rol (podría ser 'rol' o 'rol_id')
             while (columns.next()) {
                 String columnName = columns.getString("COLUMN_NAME");
-                System.out.println("- Columna encontrada: " + columnName);
 
                 if (columnName.equalsIgnoreCase("rol")) {
                     rolColumnName = "rol";
                     encontrada = true;
-                    System.out.println("  → Usando nombre de columna: 'rol'");
                     break;
                 } else if (columnName.equalsIgnoreCase("rol_id")) {
                     rolColumnName = "rol_id";
                     encontrada = true;
-                    System.out.println("  → Usando nombre de columna: 'rol_id'");
                     break;
                 }
             }
 
             if (!encontrada) {
                 System.out.println("ADVERTENCIA: No se encontró columna 'rol' o 'rol_id'. Usando valor por defecto: " + rolColumnName);
+            } else {
+                System.out.println("✅ Columna de rol detectada: " + rolColumnName);
             }
 
         } catch (SQLException ex) {
@@ -151,18 +197,260 @@ public class MenuBarManager {
     }
 
     /**
-     * Configura y añade la barra de menú a la ventana actual.
+     * CONFIGURACIÓN COMPLETA DE LA BARRA DE MENÚ CON NOTIFICACIONES
+     * REORGANIZADAS
      */
     private void setupMenuBar() {
-        // Crear la barra de menú
+        System.out.println("--- Configurando Barra de Menú ---");
+
         JMenuBar menuBar = new JMenuBar();
 
-        // Menú de usuario
-        JMenu userMenu = new JMenu("Usuario");
+        // CREAR MENÚS PRINCIPALES
+        createUserMenu(menuBar);
+        createNotificationsMenu(menuBar); // MENÚ DE NOTIFICACIONES REORGANIZADO
+        createHelpMenu(menuBar);
 
-        // Obtener roles y crear submenú de roles si hay más de uno
+        // INTEGRAR CAMPANITA DE NOTIFICACIONES (solo el indicador visual)
+        if (notificationsEnabled && notificationManager != null) {
+            try {
+                System.out.println("🔔 Integrando campanita de notificaciones...");
+                notificationManager.integrateWithMenuBar(menuBar);
+                System.out.println("✅ Campanita de notificaciones integrada exitosamente");
+            } catch (Exception e) {
+                System.err.println("❌ Error integrando notificaciones: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("⚠️ Sistema de notificaciones no disponible");
+        }
+
+        currentFrame.setJMenuBar(menuBar);
+        currentFrame.revalidate();
+        currentFrame.repaint();
+
+        System.out.println("✅ Barra de menú configurada completamente");
+        System.out.println("📊 Estado: Rol=" + obtenerTextoRol(rolActual)
+                + ", Notificaciones=" + (notificationsEnabled ? "Activas" : "Inactivas"));
+    }
+
+    /**
+     * NUEVO: Crea el menú específico de notificaciones REORGANIZADO
+     */
+    private void createNotificationsMenu(JMenuBar menuBar) {
+        JMenu notificationsMenu = new JMenu("📬 Notificaciones");
+
+        // === SECCIÓN PARA TODOS LOS USUARIOS ===
+        // Opción "Mis Notificaciones" - disponible para TODOS los roles
+        JMenuItem myNotificationsItem = new JMenuItem("📬 Mis Notificaciones");
+        myNotificationsItem.addActionListener(e -> openMyNotifications());
+        notificationsMenu.add(myNotificationsItem);
+
+        // === SECCIÓN SOLO PARA ROLES AUTORIZADOS ===
+        // Verificar si el usuario puede enviar notificaciones
+        if (SENDER_ROLES.contains(rolActual)) {
+            notificationsMenu.addSeparator();
+
+            // Opción "Enviar Notificación"
+            JMenuItem sendNotificationItem = new JMenuItem("📤 Enviar Notificación");
+            sendNotificationItem.addActionListener(e -> openSendNotification());
+            notificationsMenu.add(sendNotificationItem);
+
+            // Opción "Gestionar Mis Grupos"
+            JMenuItem manageGroupsItem = new JMenuItem("👥 Gestionar Mis Grupos");
+            manageGroupsItem.addActionListener(e -> openGroupManager());
+            notificationsMenu.add(manageGroupsItem);
+        }
+
+        // === SECCIÓN ADICIONAL PARA ADMINISTRADORES ===
+        if (rolActual == 1) { // Solo admin
+            notificationsMenu.addSeparator();
+
+            JMenuItem statsItem = new JMenuItem("📊 Estadísticas del Sistema");
+            statsItem.addActionListener(e -> showNotificationStats());
+            notificationsMenu.add(statsItem);
+
+            JMenuItem broadcastItem = new JMenuItem("📢 Envío Masivo");
+            broadcastItem.addActionListener(e -> openBroadcastNotification());
+            notificationsMenu.add(broadcastItem);
+        }
+
+        // Agregar menú a la barra
+        menuBar.add(notificationsMenu);
+    }
+
+    /**
+     * Abre la ventana de mis notificaciones
+     */
+    private void openMyNotifications() {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                NotificationsWindow window = new NotificationsWindow(userId);
+                window.setVisible(true);
+            } catch (Exception e) {
+                System.err.println("Error abriendo ventana de notificaciones: " + e.getMessage());
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Error al abrir las notificaciones: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }
+
+    /**
+     * Abre la ventana para enviar notificaciones
+     */
+    private void openSendNotification() {
+        if (!SENDER_ROLES.contains(rolActual)) {
+            JOptionPane.showMessageDialog(currentFrame,
+                    "No tienes permisos para enviar notificaciones.",
+                    "Acceso Denegado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                NotificationSenderWindow senderWindow = new NotificationSenderWindow(userId, rolActual);
+                senderWindow.setVisible(true);
+            } catch (Exception e) {
+                System.err.println("Error abriendo ventana de envío: " + e.getMessage());
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Error al abrir la ventana de envío: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }
+
+    /**
+     * Abre el gestor de grupos personalizados
+     */
+    private void openGroupManager() {
+        if (!SENDER_ROLES.contains(rolActual)) {
+            JOptionPane.showMessageDialog(currentFrame,
+                    "No tienes permisos para gestionar grupos.",
+                    "Acceso Denegado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // ✅ CORRECCIÓN: Usar NotificationGroupWindow en lugar de NotificationGroupManager
+                NotificationGroupWindow groupWindow = new NotificationGroupWindow(userId, rolActual);
+                groupWindow.setVisible(true);
+            } catch (Exception e) {
+                System.err.println("Error abriendo gestor de grupos: " + e.getMessage());
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Error al abrir el gestor de grupos: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }
+
+    /**
+     * Muestra estadísticas del sistema de notificaciones (solo admin)
+     */
+    private void showNotificationStats() {
+        if (rolActual != 1) {
+            JOptionPane.showMessageDialog(currentFrame,
+                    "Solo los administradores pueden ver las estadísticas.",
+                    "Acceso Denegado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (notificationManager != null && notificationManager.canManageNotifications()) {
+            String stats = notificationManager.getNotificationStats();
+
+            JTextArea textArea = new JTextArea(stats);
+            textArea.setEditable(false);
+            textArea.setRows(15);
+            textArea.setColumns(60);
+            textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
+
+            JScrollPane scrollPane = new JScrollPane(textArea);
+
+            JOptionPane.showMessageDialog(currentFrame,
+                    scrollPane,
+                    "Estadísticas del Sistema de Notificaciones",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(currentFrame,
+                    "Sistema de notificaciones no disponible.",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Abre ventana para envío masivo (solo admin)
+     */
+    private void openBroadcastNotification() {
+        if (rolActual != 1) {
+            JOptionPane.showMessageDialog(currentFrame,
+                    "Solo los administradores pueden realizar envíos masivos.",
+                    "Acceso Denegado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Formulario simple para envío masivo
+        JPanel panel = new JPanel(new java.awt.GridBagLayout());
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.insets = new java.awt.Insets(5, 5, 5, 5);
+        gbc.anchor = java.awt.GridBagConstraints.WEST;
+
+        JTextField titleField = new JTextField(30);
+        JTextArea contentArea = new JTextArea(5, 30);
+        contentArea.setLineWrap(true);
+        contentArea.setWrapStyleWord(true);
+
+        String[] eventTypes = {"Información General", "Mantenimiento", "Urgente", "Evento"};
+        JComboBox<String> eventTypeCombo = new JComboBox<>(eventTypes);
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        panel.add(new JLabel("Título:"), gbc);
+        gbc.gridx = 1;
+        panel.add(titleField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        panel.add(new JLabel("Tipo:"), gbc);
+        gbc.gridx = 1;
+        panel.add(eventTypeCombo, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        panel.add(new JLabel("Contenido:"), gbc);
+        gbc.gridx = 1;
+        panel.add(new JScrollPane(contentArea), gbc);
+
+        int result = JOptionPane.showConfirmDialog(currentFrame, panel,
+                "Envío Masivo a Todos los Usuarios", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            String title = titleField.getText().trim();
+            String content = contentArea.getText().trim();
+            String eventType = (String) eventTypeCombo.getSelectedItem();
+
+            if (!title.isEmpty() && !content.isEmpty()) {
+                String tipoEvento = eventType.toLowerCase().replace(" ", "_");
+                notificationManager.notificarEventoGeneral(title, content, tipoEvento);
+
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Notificación enviada a todos los usuarios del sistema.",
+                        "Envío Completado", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Por favor complete el título y contenido.",
+                        "Campos Requeridos", JOptionPane.WARNING_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Crea el menú de usuario con opciones de cambio de rol
+     */
+    private void createUserMenu(JMenuBar menuBar) {
+        JMenu userMenu = new JMenu("👤 Usuario");
+
         try {
-            // Consulta para obtener roles disponibles
             Connection conect = Conexion.getInstancia().verificarConexion();
 
             String query = "SELECT ur." + rolColumnName + " as rol_id, r.nombre AS rol_nombre, ur.is_default "
@@ -175,28 +463,22 @@ public class MenuBarManager {
             ps.setInt(1, userId);
             ResultSet rs = ps.executeQuery();
 
-            // Contar roles y crear submenú si hay más de uno
             int rolesCount = 0;
-            JMenu rolesMenu = new JMenu("Cambiar Rol");
+            JMenu rolesMenu = new JMenu("🔄 Cambiar Rol");
 
-            // Procesar roles
             while (rs.next()) {
                 rolesCount++;
                 final String rolNombre = rs.getString("rol_nombre");
                 final int rolId = rs.getInt("rol_id");
-                final boolean isDefault = rs.getBoolean("is_default");
 
-                // Crear elemento de menú para este rol
                 JMenuItem rolItem = new JMenuItem(rolNombre);
-                
-                // Marcar el rol actual (no solo el default de la BD)
+
                 if (rolId == rolActual) {
                     rolItem.setFont(rolItem.getFont().deriveFont(java.awt.Font.BOLD));
                     rolItem.setText(rolNombre + " (Actual)");
-                    rolItem.setEnabled(false); // Deshabilitar el rol actual para evitar clicks innecesarios
+                    rolItem.setEnabled(false);
                 }
 
-                // Añadir acción para cambiar a este rol (solo si no es el actual)
                 if (rolId != rolActual) {
                     rolItem.addActionListener(new ActionListener() {
                         @Override
@@ -206,22 +488,23 @@ public class MenuBarManager {
                     });
                 }
 
-                // Añadir al submenú de roles
                 rolesMenu.add(rolItem);
             }
 
-            // Añadir submenú de roles si hay más de uno
             if (rolesCount > 1) {
                 userMenu.add(rolesMenu);
+                userMenu.addSeparator();
             }
+
+            System.out.println("📋 Roles cargados en menú: " + rolesCount);
 
         } catch (SQLException ex) {
             System.err.println("ERROR al cargar roles para el menú: " + ex.getMessage());
             ex.printStackTrace();
         }
 
-        // Añadir opción de cerrar sesión
-        JMenuItem logoutItem = new JMenuItem("Cerrar Sesión");
+        // Opción de cerrar sesión
+        JMenuItem logoutItem = new JMenuItem("🚪 Cerrar Sesión");
         logoutItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -230,14 +513,17 @@ public class MenuBarManager {
         });
         userMenu.add(logoutItem);
 
-        // Añadir menú de usuario a la barra
         menuBar.add(userMenu);
+    }
 
-        // Añadir menú de Ayuda con opción de actualizaciones
-        JMenu helpMenu = new JMenu("Ayuda");
-        
+    /**
+     * Crea el menú de ayuda
+     */
+    private void createHelpMenu(JMenuBar menuBar) {
+        JMenu helpMenu = new JMenu("❓ Ayuda");
+
         // Opción para verificar actualizaciones
-        JMenuItem updateItem = new JMenuItem("Verificar actualizaciones");
+        JMenuItem updateItem = new JMenuItem("🔄 Verificar actualizaciones");
         updateItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -245,132 +531,149 @@ public class MenuBarManager {
             }
         });
         helpMenu.add(updateItem);
-        
+
+        helpMenu.addSeparator();
+
+        // Opción de prueba de notificaciones (para desarrollo)
+        if (notificationManager != null && notificationManager.canSendNotifications(rolActual)) {
+            JMenuItem testNotifItem = new JMenuItem("🧪 Probar Notificaciones");
+            testNotifItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    notificationManager.enviarNotificacionPrueba();
+                }
+            });
+            helpMenu.add(testNotifItem);
+            helpMenu.addSeparator();
+        }
+
         // Opción de Acerca de con versión
-        JMenuItem aboutItem = new JMenuItem("Acerca de");
+        JMenuItem aboutItem = new JMenuItem("ℹ️ Acerca de");
         aboutItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                String mensaje = "Sistema de Gestión Escolar ET20\n"
+                        + "Versión: " + ActualizadorApp.VERSION_ACTUAL + "\n\n"
+                        + "Características:\n"
+                        + "• Sistema de notificaciones completo\n"
+                        + "• Gestión de grupos personalizados\n"
+                        + "• Selección jerárquica de destinatarios\n"
+                        + "• Gestión multi-rol\n"
+                        + "• Interface responsive\n"
+                        + "• Gestión completa de usuarios";
+
                 JOptionPane.showMessageDialog(
-                    currentFrame,
-                    "Sistema de Gestión Escolar ET20\nVersión: " + ActualizadorApp.VERSION_ACTUAL,
-                    "Acerca de",
-                    JOptionPane.INFORMATION_MESSAGE
+                        currentFrame,
+                        mensaje,
+                        "Acerca de",
+                        JOptionPane.INFORMATION_MESSAGE
                 );
             }
         });
         helpMenu.add(aboutItem);
-        
-        // Añadir menú de Ayuda a la barra
+
         menuBar.add(helpMenu);
-
-        // Establecer la barra de menú en el frame actual
-        currentFrame.setJMenuBar(menuBar);
-
-        // Forzar actualización visual
-        currentFrame.revalidate();
-        currentFrame.repaint();
-
-        System.out.println("Barra de menú configurada. Rol actual marcado: " + rolActual + " (" + obtenerTextoRol(rolActual) + ")");
     }
 
     /**
-     * Cambia al rol seleccionado.
-     *
-     * @param rolId ID del rol seleccionado
-     * @param rolNombre Nombre del rol para mostrar en mensajes
+     * Cambia al rol seleccionado CON NOTIFICACIÓN DEL CAMBIO.
      */
     private void cambiarARol(int rolId, String rolNombre) {
         int confirm = JOptionPane.showConfirmDialog(
                 currentFrame,
-                "¿Cambiar al rol " + rolNombre + "?",
+                "¿Cambiar al rol " + rolNombre + "?\n\n"
+                + "Esto actualizará tu perfil y las funciones disponibles.",
                 "Cambiar Rol",
-                JOptionPane.YES_NO_OPTION
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
-            System.out.println("Usuario confirmó cambio al rol: " + rolNombre + " (ID: " + rolId + ")");
-            actualizarRolPredeterminado(rolId);
-            abrirPantallaPorRol(rolId);
+            System.out.println("=== PROCESANDO CAMBIO DE ROL ===");
+            System.out.println("Usuario: " + userId);
+            System.out.println("Rol destino: " + rolNombre + " (ID: " + rolId + ")");
+
+            try {
+                actualizarRolPredeterminado(rolId);
+                abrirPantallaPorRol(rolId);
+                System.out.println("✅ Cambio de rol completado exitosamente");
+
+            } catch (Exception e) {
+                System.err.println("❌ Error durante cambio de rol: " + e.getMessage());
+                e.printStackTrace();
+
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Error al cambiar de rol: " + e.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
     /**
      * Actualiza el rol predeterminado del usuario en la base de datos.
-     *
-     * @param rolId El ID del rol que se establecerá como predeterminado
      */
     private void actualizarRolPredeterminado(int rolId) {
         try {
             Connection conect = Conexion.getInstancia().verificarConexion();
             if (conect == null) {
-                System.err.println("ERROR: No se pudo establecer conexión a la base de datos");
-                return;
+                throw new SQLException("No se pudo establecer conexión a la base de datos");
             }
 
-            // Iniciar transacción
             conect.setAutoCommit(false);
 
             try {
-                // Primero, establecer todos los roles como no predeterminados
                 String resetQuery = "UPDATE usuario_roles SET is_default = 0 WHERE usuario_id = ?";
                 PreparedStatement resetPs = conect.prepareStatement(resetQuery);
                 resetPs.setInt(1, userId);
                 int resetRows = resetPs.executeUpdate();
-                System.out.println("Filas reseteadas: " + resetRows);
 
-                // Luego, establecer el rol seleccionado como predeterminado
                 String updateQuery = "UPDATE usuario_roles SET is_default = 1 WHERE usuario_id = ? AND " + rolColumnName + " = ?";
                 PreparedStatement updatePs = conect.prepareStatement(updateQuery);
                 updatePs.setInt(1, userId);
                 updatePs.setInt(2, rolId);
                 int updatedRows = updatePs.executeUpdate();
-                System.out.println("Filas actualizadas: " + updatedRows);
 
-                // Actualizar también la tabla usuarios
                 String userUpdateQuery = "UPDATE usuarios SET rol = ? WHERE id = ?";
                 PreparedStatement userUpdatePs = conect.prepareStatement(userUpdateQuery);
                 userUpdatePs.setInt(1, rolId);
                 userUpdatePs.setInt(2, userId);
                 int userUpdatedRows = userUpdatePs.executeUpdate();
-                System.out.println("Filas de usuario actualizadas: " + userUpdatedRows);
 
-                // Confirmar transacción
                 conect.commit();
-                System.out.println("Transacción completada. Rol predeterminado actualizado a: " + rolId);
+
+                System.out.println("📊 Base de datos actualizada:");
+                System.out.println("  - Roles reseteados: " + resetRows);
+                System.out.println("  - Rol predeterminado actualizado: " + updatedRows);
+                System.out.println("  - Usuario actualizado: " + userUpdatedRows);
 
             } catch (SQLException ex) {
-                // Revertir cambios en caso de error
                 try {
                     conect.rollback();
-                    System.err.println("Transacción revertida debido a un error");
+                    System.err.println("❌ Transacción revertida");
                 } catch (SQLException rollbackEx) {
-                    System.err.println("Error al revertir la transacción: " + rollbackEx.getMessage());
+                    System.err.println("❌ Error al revertir transacción: " + rollbackEx.getMessage());
                 }
                 throw ex;
             } finally {
-                // Restaurar modo auto-commit
                 conect.setAutoCommit(true);
             }
 
         } catch (SQLException ex) {
-            System.err.println("ERROR al actualizar rol predeterminado: " + ex.getMessage());
+            System.err.println("❌ Error actualizando rol predeterminado: " + ex.getMessage());
             ex.printStackTrace();
+            throw new RuntimeException("Error en base de datos: " + ex.getMessage());
         }
     }
 
     /**
-     * Cambia la visualización al rol seleccionado. Versión adaptada para
-     * VentanaInicio.
-     *
-     * @param rolId ID del rol
+     * Cambia la visualización al rol seleccionado CON NOTIFICACIONES.
      */
     private void abrirPantallaPorRol(int rolId) {
         try {
             Connection conect = Conexion.getInstancia().verificarConexion();
             if (conect == null) {
-                System.err.println("ERROR: No se pudo establecer conexión a la base de datos");
-                return;
+                throw new SQLException("No se pudo establecer conexión a la base de datos");
             }
 
             String query = "SELECT nombre, apellido, mail, anio, division, foto_url FROM usuarios WHERE id = ?";
@@ -383,105 +686,95 @@ public class MenuBarManager {
                 String apellido = rs.getString("apellido");
                 String nombreCompleto = nombre + " " + apellido;
                 String fotoUrl = rs.getString("foto_url");
-                System.out.println("Cambiando a rol: " + rolId + " - Usuario: " + nombreCompleto);
 
-                // Si la ventana actual es VentanaInicio
+                System.out.println("👤 Usuario: " + nombreCompleto);
+                System.out.println("🎭 Cambiando a rol: " + obtenerTextoRol(rolId));
+
                 if (currentFrame instanceof VentanaInicio) {
                     VentanaInicio ventana = (VentanaInicio) currentFrame;
 
-                    // IMPORTANTE: Actualizar el rol actual ANTES de refrescar la barra de menú
                     actualizarRolActual(rolId);
-
-                    // Actualizar el gestor de paneles según el nuevo rol
                     ventana.setRolPanelManager(RolPanelManagerFactory.createManager(ventana, userId, rolId));
-
-                    // Actualizar al nuevo rol usando métodos públicos
                     ventana.setUserRol(rolId);
-
-                    // Reconfigurar los botones
                     ventana.configurePanelBotones();
 
-                    // Actualizar etiquetas según el rol
                     if (rolId == 4) { // Alumno
-                        // Obtener curso y división
                         int anio = rs.getInt("anio");
                         String division = rs.getString("division");
                         String cursoDiv = anio + "°" + division;
-
-                        // Actualizar etiquetas de alumno
                         ventana.updateAlumnoLabels(nombreCompleto, obtenerTextoRol(rolId), cursoDiv);
                     } else {
-                        // Actualizar etiquetas estándar
                         ventana.updateLabels(nombreCompleto, obtenerTextoRol(rolId));
                     }
 
-                    // Actualizar foto de perfil si existe
                     if (fotoUrl != null && !fotoUrl.isEmpty()) {
                         ventana.updateFotoPerfil(fotoUrl);
                     }
 
-                    // Restaurar la vista principal para el nuevo rol
                     ventana.restaurarVistaPrincipal();
+                    System.out.println("✅ Vista actualizada para rol: " + obtenerTextoRol(rolId));
 
-                    System.out.println("Rol cambiado a: " + obtenerTextoRol(rolId));
                 } else {
-                    // Cerrar ventana actual y crear nueva ventana unificada
                     if (currentFrame != null) {
                         currentFrame.dispose();
                     }
 
-                    // Crear nueva instancia de VentanaInicio
                     VentanaInicio nuevaVentana = new VentanaInicio(userId, rolId);
 
-                    // Actualizar etiquetas según el rol
                     if (rolId == 4) { // Alumno
-                        // Obtener curso y división
                         int anio = rs.getInt("anio");
                         String division = rs.getString("division");
                         String cursoDiv = anio + "°" + division;
-
-                        // Actualizar etiquetas de alumno
                         nuevaVentana.updateAlumnoLabels(nombreCompleto, obtenerTextoRol(rolId), cursoDiv);
                     } else {
-                        // Actualizar etiquetas estándar
                         nuevaVentana.updateLabels(nombreCompleto, obtenerTextoRol(rolId));
                     }
 
-                    // Actualizar foto de perfil si existe
                     if (fotoUrl != null && !fotoUrl.isEmpty()) {
                         nuevaVentana.updateFotoPerfil(fotoUrl);
                     }
 
-                    // Actualizar referencia a la ventana actual
                     currentFrame = nuevaVentana;
-
-                    // IMPORTANTE: Actualizar el rol actual para la nueva ventana
                     actualizarRolActual(rolId);
-
-                    // Mostrar la nueva ventana
                     nuevaVentana.setVisible(true);
-                    System.out.println("Pantalla de " + obtenerTextoRol(rolId) + " abierta");
+
+                    System.out.println("✅ Nueva ventana creada para rol: " + obtenerTextoRol(rolId));
                 }
+
+                // ENVIAR NOTIFICACIÓN DE CONFIRMACIÓN DEL CAMBIO
+                if (notificationManager != null && notificationsEnabled) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            Thread.sleep(1000);
+                            notificationManager.enviarNotificacionRapida(
+                                    "Cambio de Rol Exitoso",
+                                    "Has cambiado exitosamente al rol: " + obtenerTextoRol(rolId)
+                                    + ". Ya tienes acceso a las nuevas funciones.",
+                                    userId
+                            );
+                        } catch (Exception e) {
+                            System.err.println("Error env notif cambio rol: " + e.getMessage());
+                        }
+                    });
+                }
+
             } else {
-                System.err.println("No se encontró el usuario con ID: " + userId);
-                JOptionPane.showMessageDialog(null,
-                        "No se encontró información del usuario",
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                throw new SQLException("No se encontró información del usuario con ID: " + userId);
             }
+
         } catch (SQLException ex) {
-            System.err.println("ERROR al cambiar de rol: " + ex.getMessage());
+            System.err.println("❌ Error cambiando pantalla por rol: " + ex.getMessage());
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(null,
+
+            JOptionPane.showMessageDialog(currentFrame,
                     "Error al cambiar de rol: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     /**
      * Obtiene el texto descriptivo del rol.
-     *
-     * @param rol Código numérico del rol
-     * @return Descripción textual del rol
      */
     private String obtenerTextoRol(int rol) {
         switch (rol) {
@@ -501,20 +794,155 @@ public class MenuBarManager {
     }
 
     /**
-     * Cierra la sesión actual y vuelve a la pantalla de login.
+     * Cierra la sesión actual CON LIMPIEZA DE NOTIFICACIONES.
      */
     private void cerrarSesion() {
         int confirm = JOptionPane.showConfirmDialog(
                 currentFrame,
-                "¿Está seguro que desea cerrar sesión?",
+                "¿Está seguro que desea cerrar sesión?\n\n"
+                + "Se perderán las notificaciones no guardadas y se cerrará la aplicación.",
                 "Confirmar Cierre de Sesión",
-                JOptionPane.YES_NO_OPTION
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
+            System.out.println("=== CERRANDO SESIÓN ===");
+
+            if (notificationManager != null) {
+                try {
+                    if (notificationsEnabled) {
+                        notificationManager.enviarNotificacionRapida(
+                                "Sesión Cerrada",
+                                "Has cerrado sesión correctamente. ¡Hasta pronto!",
+                                userId
+                        );
+
+                        Thread.sleep(500);
+                    }
+
+                    notificationManager.dispose();
+                    System.out.println("✅ Recursos de notificaciones liberados");
+
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error liberando recursos de notificaciones: " + e.getMessage());
+                }
+            }
+
             currentFrame.dispose();
             LoginForm loginForm = new LoginForm();
             loginForm.setVisible(true);
+
+            System.out.println("✅ Sesión cerrada correctamente");
+        }
+    }
+
+    // ========================================
+    // MÉTODOS PÚBLICOS PARA USO EXTERNO
+    // ========================================
+    public NotificationManager getNotificationManager() {
+        return notificationManager;
+    }
+
+    public void enviarNotificacionRapida(String titulo, String contenido, int... destinatarios) {
+        if (notificationManager != null && notificationsEnabled) {
+            notificationManager.enviarNotificacionRapida(titulo, contenido, destinatarios);
+        } else {
+            System.err.println("⚠️ Sistema de notificaciones no disponible");
+        }
+    }
+
+    public void enviarNotificacionARol(String titulo, String contenido, int rolDestino) {
+        if (notificationManager != null && notificationsEnabled) {
+            notificationManager.enviarNotificacionARol(titulo, contenido, rolDestino);
+        } else {
+            System.err.println("⚠️ Sistema de notificaciones no disponible");
+        }
+    }
+
+    public void enviarNotificacionUrgente(String titulo, String contenido, int... destinatarios) {
+        if (notificationManager != null && notificationsEnabled) {
+            notificationManager.enviarNotificacionUrgente(titulo, contenido, destinatarios);
+        } else {
+            System.err.println("⚠️ Sistema de notificaciones no disponible");
+        }
+    }
+
+    // ========================================
+    // MÉTODOS DE INFORMACIÓN Y ESTADO
+    // ========================================
+    public int getUserId() {
+        return userId;
+    }
+
+    public int getRolActual() {
+        return rolActual;
+    }
+
+    public String getRolActualTexto() {
+        return obtenerTextoRol(rolActual);
+    }
+
+    public boolean puedeEnviarNotificaciones() {
+        if (notificationManager != null && notificationsEnabled) {
+            return notificationManager.canSendNotifications(rolActual);
+        }
+        return false;
+    }
+
+    public boolean puedeGestionarNotificaciones() {
+        if (notificationManager != null && notificationsEnabled) {
+            return notificationManager.canManageNotifications();
+        }
+        return false;
+    }
+
+    public int getNotificacionesNoLeidas() {
+        if (notificationManager != null && notificationsEnabled) {
+            return notificationManager.getUnreadCount();
+        }
+        return 0;
+    }
+
+    public boolean isNotificacionesHabilitadas() {
+        return notificationsEnabled && notificationManager != null;
+    }
+
+    public void actualizarNotificaciones() {
+        if (notificationManager != null && notificationsEnabled) {
+            notificationManager.forceRefresh();
+        }
+    }
+
+    // ========================================
+    // MÉTODOS DE LIMPIEZA Y CIERRE
+    // ========================================
+    public void dispose() {
+        System.out.println("=== LIMPIANDO RECURSOS MenuBarManager ===");
+
+        try {
+            if (notificationManager != null) {
+                notificationManager.dispose();
+                System.out.println("✅ NotificationManager limpiado");
+            }
+
+            notificationManager = null;
+            currentFrame = null;
+
+            System.out.println("✅ MenuBarManager limpiado correctamente");
+
+        } catch (Exception e) {
+            System.err.println("⚠️ Error durante limpieza: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            dispose();
+        } finally {
+            super.finalize();
         }
     }
 }

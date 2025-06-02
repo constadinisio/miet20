@@ -30,28 +30,14 @@ public class BoletinExportUtility {
      * @return true si la exportación fue exitosa
      */
     public static boolean exportarBoletinAlumno(int alumnoId, int cursoId, String rutaDestino) {
-        try {
-            System.out.println("=== EXPORTANDO BOLETÍN CON PLANTILLA ===");
-            System.out.println("Alumno ID: " + alumnoId + ", Curso ID: " + cursoId);
-            System.out.println("Destino: " + rutaDestino);
-
-            // Delegar a la nueva implementación basada en plantilla
-            boolean resultado = PlantillaBoletinUtility.generarBoletinIndividual(alumnoId, cursoId, rutaDestino);
-
-            if (resultado) {
-                System.out.println("✅ Boletín exportado exitosamente usando plantilla institucional");
-            } else {
-                System.err.println("❌ Error al exportar boletín con plantilla");
-            }
-
-            return resultado;
-
-        } catch (Exception e) {
-            System.err.println("❌ Error en exportarBoletinAlumno: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
+    // DEPRECADO - Ahora usar el método automático del servidor
+    System.out.println("⚠️ Método deprecado. Usando generación automática en servidor...");
+    
+    // Extraer período de la ruta de destino si es posible, sino usar actual
+    String periodo = BoletinesUtils.obtenerPeriodoActual();
+    
+    return PlantillaBoletinUtility.generarBoletinIndividualEnServidor(alumnoId, cursoId, periodo);
+}
 
     /**
      * Exporta boletines para todos los alumnos de un curso usando la plantilla
@@ -62,73 +48,63 @@ public class BoletinExportUtility {
      * @return Número de boletines exportados exitosamente
      */
     public static int exportarBoletinesCurso(int cursoId, String carpetaDestino) {
-        try {
-            System.out.println("=== EXPORTANDO BOLETINES DEL CURSO CON PLANTILLA ===");
-            System.out.println("Curso ID: " + cursoId);
-            System.out.println("Carpeta destino: " + carpetaDestino);
-
-            // Crear subcarpeta con fecha si no existe
-            String nombreSubcarpeta = "Boletines_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-            File subcarpeta = new File(carpetaDestino, nombreSubcarpeta);
-
-            if (!subcarpeta.exists()) {
-                subcarpeta.mkdirs();
-            }
-
-            // Delegar a la nueva implementación basada en plantilla
-            int resultado = PlantillaBoletinUtility.generarBoletinesCurso(cursoId, subcarpeta.getAbsolutePath());
-
-            System.out.println("✅ Boletines exportados: " + resultado + " usando plantilla institucional");
-            return resultado;
-
-        } catch (Exception e) {
-            System.err.println("❌ Error en exportarBoletinesCurso: " + e.getMessage());
-            e.printStackTrace();
-            return 0;
-        }
-    }
+    // DEPRECADO - Ahora usar el método automático del servidor
+    System.out.println("⚠️ Método deprecado. Usando generación automática en servidor...");
+    
+    String periodo = BoletinesUtils.obtenerPeriodoActual();
+    
+    return PlantillaBoletinUtility.generarBoletinesCursoEnServidor(cursoId, periodo);
+}
 
     /**
      * Método público para exportar boletines con interfaz de usuario.
      *
      * ACTUALIZADO: Utiliza la nueva implementación basada en plantilla.
      */
-    public static void exportarBoletinesConInterfaz(int cursoId, javax.swing.JComponent parentComponent) {
-        try {
-            System.out.println("=== INICIANDO EXPORTACIÓN CON INTERFAZ (PLANTILLA) ===");
-
-            // Verificar si existe la plantilla por defecto
-            String rutaPlantilla = PlantillaBoletinUtility.obtenerRutaPlantilla();
-            File plantilla = new File(rutaPlantilla);
-
-            if (!plantilla.exists()) {
-                int opcion = JOptionPane.showConfirmDialog(parentComponent,
-                        "No se encontró la plantilla de boletín en:\n" + rutaPlantilla
-                        + "\n\n¿Desea seleccionar la plantilla manualmente?",
-                        "Plantilla no encontrada",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE);
-
-                if (opcion == JOptionPane.YES_OPTION) {
-                    // Permitir configurar la plantilla
-                    PlantillaBoletinUtility.configurarPlantillaConInterfaz(parentComponent);
-                } else {
-                    return; // Usuario canceló
-                }
-            }
-
-            // Delegar a la nueva implementación
-            PlantillaBoletinUtility.generarBoletinesCursoConInterfaz(cursoId, parentComponent);
-
-        } catch (Exception e) {
-            System.err.println("❌ Error en exportarBoletinesConInterfaz: " + e.getMessage());
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(parentComponent,
-                    "Error al iniciar exportación de boletines:\n" + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+   public static void exportarBoletinesConInterfaz(int cursoId, javax.swing.JComponent parentComponent) {
+    try {
+        System.out.println("=== EXPORTACIÓN CON INTERFAZ - SERVIDOR AUTOMÁTICO ===");
+        
+        // Solicitar período al usuario
+        String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+        String periodoSeleccionado = (String) JOptionPane.showInputDialog(
+                parentComponent,
+                "Seleccione el período del boletín:",
+                "Seleccionar Período",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                periodos,
+                BoletinesUtils.obtenerPeriodoActual()
+        );
+        
+        if (periodoSeleccionado == null) {
+            return; // Usuario canceló
         }
+        
+        // Confirmar generación
+        int confirmacion = JOptionPane.showConfirmDialog(parentComponent,
+                "¿Generar boletines para todo el curso?\n" +
+                "Período: " + periodoSeleccionado + "\n" +
+                "Los boletines se guardarán automáticamente en el servidor.",
+                "Confirmar Generación Masiva",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+        
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            // Usar el nuevo método con servidor automático
+            PlantillaBoletinUtility.generarBoletinesCursoConServidorConInterfaz(
+                    cursoId, periodoSeleccionado, parentComponent);
+        }
+        
+    } catch (Exception e) {
+        System.err.println("❌ Error en exportarBoletinesConInterfaz: " + e.getMessage());
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(parentComponent,
+                "Error al iniciar exportación de boletines: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
     }
+}
 
     /**
      * Método de utilidad para exportar un solo boletín con interfaz.
@@ -136,42 +112,39 @@ public class BoletinExportUtility {
      * ACTUALIZADO: Utiliza la nueva implementación basada en plantilla.
      */
     public static void exportarBoletinIndividualConInterfaz(int alumnoId, int cursoId,
-            javax.swing.JComponent parentComponent) {
-        try {
-            System.out.println("=== INICIANDO EXPORTACIÓN INDIVIDUAL CON INTERFAZ (PLANTILLA) ===");
-
-            // Verificar si existe la plantilla por defecto
-            String rutaPlantilla = PlantillaBoletinUtility.obtenerRutaPlantilla();
-            File plantilla = new File(rutaPlantilla);
-
-            if (!plantilla.exists()) {
-                int opcion = JOptionPane.showConfirmDialog(parentComponent,
-                        "No se encontró la plantilla de boletín en:\n" + rutaPlantilla
-                        + "\n\n¿Desea seleccionar la plantilla manualmente?",
-                        "Plantilla no encontrada",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE);
-
-                if (opcion == JOptionPane.YES_OPTION) {
-                    // Permitir configurar la plantilla
-                    PlantillaBoletinUtility.configurarPlantillaConInterfaz(parentComponent);
-                } else {
-                    return; // Usuario canceló
-                }
-            }
-
-            // Delegar a la nueva implementación
-            PlantillaBoletinUtility.generarBoletinIndividualConInterfaz(alumnoId, cursoId, parentComponent);
-
-        } catch (Exception e) {
-            System.err.println("❌ Error en exportarBoletinIndividualConInterfaz: " + e.getMessage());
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(parentComponent,
-                    "Error al iniciar exportación del boletín:\n" + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+        javax.swing.JComponent parentComponent) {
+    try {
+        System.out.println("=== EXPORTACIÓN INDIVIDUAL CON INTERFAZ - SERVIDOR AUTOMÁTICO ===");
+        
+        // Solicitar período al usuario
+        String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+        String periodoSeleccionado = (String) JOptionPane.showInputDialog(
+                parentComponent,
+                "Seleccione el período del boletín:",
+                "Seleccionar Período",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                periodos,
+                BoletinesUtils.obtenerPeriodoActual()
+        );
+        
+        if (periodoSeleccionado == null) {
+            return; // Usuario canceló
         }
+        
+        // Usar el nuevo método con servidor automático
+        PlantillaBoletinUtility.generarBoletinIndividualConServidorConInterfaz(
+                alumnoId, cursoId, periodoSeleccionado, parentComponent);
+        
+    } catch (Exception e) {
+        System.err.println("❌ Error en exportarBoletinIndividualConInterfaz: " + e.getMessage());
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(parentComponent,
+                "Error al iniciar exportación del boletín: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
     }
+}
 
     // =================================================================
     // MÉTODOS DE COMPATIBILIDAD Y CONFIGURACIÓN

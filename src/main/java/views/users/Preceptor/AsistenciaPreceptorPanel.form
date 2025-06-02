@@ -277,7 +277,7 @@
             <Component class="javax.swing.JTextArea" name="txtObservacionesExistentes">
               <Properties>
                 <Property name="editable" type="boolean" value="false"/>
-                <Property name="columns" type="int" value="40"/>
+                <Property name="columns" type="int" value="20"/>
                 <Property name="rows" type="int" value="5"/>
               </Properties>
             </Component>

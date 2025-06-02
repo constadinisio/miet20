@@ -74,6 +74,7 @@ public class LoginForm extends javax.swing.JFrame {
 
         uiUtils.configurarVentana(this);
     }
+    
 
     /**
      * Aplica un diseño responsivo y centrado a todo el formulario de login

@@ -1,239 +1,297 @@
 package main.java.utils;
 
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 
 /**
- * Utilidad para hacer que cualquier panel sea responsive y tenga scroll automático.
- * Esta clase envuelve cualquier panel y lo hace adaptable al tamaño de la ventana.
+ * Utilidad para hacer que cualquier panel sea responsive y tenga scroll
+ * automático. VERSIÓN FINAL CORREGIDA - Soluciona problemas de scroll infinito
+ * y contenido cortado.
  */
 public class ResponsivePanelWrapper extends JPanel {
-    
-    private JScrollPane scrollPane; // No final para poder inicializar en constructor
+
+    private JScrollPane scrollPane;
     private final JPanel contentPanel;
     private final Container parentContainer;
-    private Dimension minSize = new Dimension(800, 600);
-    private Dimension maxSize = new Dimension(1920, 1080);
-    
+    private Dimension minContentSize = new Dimension(800, 600);
+    private Dimension maxContentSize = new Dimension(1920, 1080);
+
+    // NUEVO: Control para evitar loops de redimensionamiento
+    private boolean isAdjusting = false;
+    private long lastAdjustTime = 0;
+    private static final long ADJUST_COOLDOWN = 100; // 100ms entre ajustes
+
     /**
      * Constructor que envuelve un panel existente.
-     *
-     * @param panel Panel a envolver
-     * @param parent Contenedor padre para calcular tamaños
      */
     public ResponsivePanelWrapper(JPanel panel, Container parent) {
         this.contentPanel = panel;
         this.parentContainer = parent;
-        
+
         setupLayout();
         setupScrollPane();
         addResizeListener();
+
+        // Ajuste inicial con delay para evitar problemas
+        SwingUtilities.invokeLater(() -> {
+            SwingUtilities.invokeLater(() -> {
+                adjustContentSizeOnce();
+            });
+        });
     }
-    
+
     /**
      * Configura el layout principal del wrapper.
      */
     private void setupLayout() {
         setLayout(new BorderLayout());
         setBackground(new Color(240, 240, 240));
+
+        // IMPORTANTE: NO establecer tamaños fijos para el wrapper
+        // Dejar que se ajuste naturalmente
     }
-    
+
     /**
      * Configura el JScrollPane con configuraciones optimizadas.
      */
     private void setupScrollPane() {
-        // Crear scroll pane con configuraciones optimizadas
-        scrollPane = new JScrollPane(contentPanel); // Ahora no es final, puede asignarse
-        
-        // Configuraciones de scroll
+        // CRÍTICO: Asegurar que el contenido tenga su tamaño preferido original
+        Dimension originalPreferred = contentPanel.getPreferredSize();
+        if (originalPreferred.width <= 0 || originalPreferred.height <= 0) {
+            // Solo si no tiene tamaño, establecer uno por defecto
+            contentPanel.setPreferredSize(new Dimension(800, 600));
+        }
+
+        // Crear scroll pane
+        scrollPane = new JScrollPane(contentPanel);
+
+        // CONFIGURACIONES CRÍTICAS
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        
-        // Velocidad de scroll optimizada
+
+        // Velocidad de scroll
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
         scrollPane.getVerticalScrollBar().setBlockIncrement(64);
         scrollPane.getHorizontalScrollBar().setBlockIncrement(64);
-        
+
         // Scroll suave
         scrollPane.setWheelScrollingEnabled(true);
-        
+
         // Configurar viewport
         scrollPane.getViewport().setBackground(Color.WHITE);
         scrollPane.getViewport().setOpaque(true);
-        
+
+        // IMPORTANTE: No forzar tamaños en el viewport
+        // scrollPane.setPreferredSize(...) <- NUNCA hacer esto
         // Añadir al wrapper
         add(scrollPane, BorderLayout.CENTER);
+
+        System.out.println("ScrollPane configurado - Contenido original: " + contentPanel.getPreferredSize());
     }
-    
+
     /**
-     * Añade listener para redimensionamiento automático.
+     * Añade listener para redimensionamiento, pero controlado.
      */
     private void addResizeListener() {
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                adjustContentSize();
+                // CONTROL: Solo ajustar si ha pasado suficiente tiempo
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastAdjustTime > ADJUST_COOLDOWN && !isAdjusting) {
+                    SwingUtilities.invokeLater(() -> adjustContentSizeOnce());
+                }
             }
         });
     }
-    
+
     /**
-     * Ajusta el tamaño del contenido basado en el contenedor padre.
+     * NUEVO: Ajusta el contenido UNA SOLA VEZ para evitar loops.
      */
-    private void adjustContentSize() {
-        if (parentContainer == null) return;
-        
-        SwingUtilities.invokeLater(() -> {
-            try {
-                // Obtener dimensiones disponibles
-                Dimension parentSize = parentContainer.getSize();
-                Dimension availableSize = calculateAvailableSize(parentSize);
-                
-                // Ajustar tamaño del wrapper
-                setPreferredSize(availableSize);
-                
-                // Ajustar contenido si es necesario
-                adjustContentPanel(availableSize);
-                
-                // Forzar actualización
-                revalidate();
-                repaint();
-                
-            } catch (Exception ex) {
-                System.err.println("Error al ajustar tamaño responsive: " + ex.getMessage());
-            }
-        });
-    }
-    
-    /**
-     * Calcula el tamaño disponible considerando márgenes y otros componentes.
-     */
-    private Dimension calculateAvailableSize(Dimension parentSize) {
-        int width = Math.max(minSize.width, 
-                    Math.min(maxSize.width, parentSize.width - 20));
-        int height = Math.max(minSize.height, 
-                     Math.min(maxSize.height, parentSize.height - 20));
-        
-        return new Dimension(width, height);
-    }
-    
-    /**
-     * Ajusta el panel de contenido para que use el espacio disponible de manera óptima.
-     */
-    private void adjustContentPanel(Dimension availableSize) {
-        if (contentPanel == null) return;
-        
-        // Calcular tamaño óptimo para el contenido
-        Dimension contentSize = contentPanel.getPreferredSize();
-        
-        // Si el contenido es más pequeño que el área disponible, expandirlo
-        if (contentSize.width < availableSize.width - 50) {
-            contentSize.width = availableSize.width - 50; // Margen para scroll
+    private void adjustContentSizeOnce() {
+        if (isAdjusting) {
+            return; // Ya se está ajustando, evitar loop
         }
-        
-        if (contentSize.height < availableSize.height - 50) {
-            contentSize.height = availableSize.height - 50; // Margen para scroll
-        }
-        
-        // Establecer tamaño preferido del contenido
-        contentPanel.setPreferredSize(contentSize);
-        
-        // Hacer responsive todas las tablas del panel usando try-catch por si la clase no existe
+
+        isAdjusting = true;
+        lastAdjustTime = System.currentTimeMillis();
+
         try {
-            ResponsiveTableUtils.makeAllTablesResponsive(contentPanel);
-        } catch (Exception e) {
-            // Si ResponsiveTableUtils no está disponible, usar método básico
-            adjustTablesBasic(contentPanel);
+            adjustContentSizeInternal();
+        } finally {
+            isAdjusting = false;
         }
-        
-        // Forzar layout del contenido
-        contentPanel.revalidate();
     }
-    
+
     /**
-     * Ajusta tablas de manera básica si ResponsiveTableUtils no está disponible.
+     * Ajuste interno del contenido.
      */
-    private void adjustTablesBasic(Container container) {
+    private void adjustContentSizeInternal() {
+        if (parentContainer == null || contentPanel == null) {
+            return;
+        }
+
+        try {
+            // Obtener tamaños
+            Dimension parentSize = getAvailableParentSize();
+            Dimension contentOriginalSize = contentPanel.getPreferredSize();
+
+            System.out.println("=== AJUSTE ÚNICO ===");
+            System.out.println("Parent disponible: " + parentSize);
+            System.out.println("Contenido original: " + contentOriginalSize);
+
+            // CLAVE: Respetar el tamaño original del contenido si es más grande
+            int finalWidth = Math.max(contentOriginalSize.width, minContentSize.width);
+            int finalHeight = Math.max(contentOriginalSize.height, minContentSize.height);
+
+            // Solo ajustar si el contenido es muy pequeño comparado con el espacio disponible
+            if (finalWidth < parentSize.width - 100) {
+                finalWidth = Math.min(parentSize.width - 50, maxContentSize.width);
+            }
+
+            Dimension finalContentSize = new Dimension(finalWidth, finalHeight);
+
+            System.out.println("Tamaño final del contenido: " + finalContentSize);
+
+            // CRÍTICO: Establecer el tamaño del contenido, NO del wrapper
+            contentPanel.setPreferredSize(finalContentSize);
+            contentPanel.setSize(finalContentSize);
+
+            // Hacer responsive las tablas sin cambiar tamaños
+            makeTablesResponsiveOnly(contentPanel);
+
+            // Actualizar solo el contenido
+            contentPanel.revalidate();
+            contentPanel.repaint();
+
+            // Actualizar scroll
+            SwingUtilities.invokeLater(() -> {
+                scrollPane.revalidate();
+                scrollPane.repaint();
+            });
+
+        } catch (Exception ex) {
+            System.err.println("Error en ajuste interno: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Obtiene el tamaño disponible del contenedor padre.
+     */
+    private Dimension getAvailableParentSize() {
+        Dimension parentSize = parentContainer.getSize();
+
+        // Si el padre no tiene tamaño válido, usar valores por defecto
+        if (parentSize.width <= 0 || parentSize.height <= 0) {
+            // Buscar en la jerarquía
+            Container topLevel = parentContainer;
+            while (topLevel.getParent() != null && !(topLevel instanceof JFrame)) {
+                topLevel = topLevel.getParent();
+            }
+            if (topLevel instanceof JFrame) {
+                JFrame frame = (JFrame) topLevel;
+                parentSize = frame.getContentPane().getSize();
+                // Descontar panel lateral y márgenes
+                parentSize.width = Math.max(600, parentSize.width - 260);
+                parentSize.height = Math.max(500, parentSize.height - 100);
+            } else {
+                // Fallback a tamaños por defecto
+                parentSize = new Dimension(1000, 700);
+            }
+        }
+
+        return parentSize;
+    }
+
+    /**
+     * NUEVO: Solo hace responsive las tablas SIN cambiar tamaños de
+     * contenedores.
+     */
+    private void makeTablesResponsiveOnly(Container container) {
         Component[] components = container.getComponents();
-        
+
         for (Component comp : components) {
             if (comp instanceof JTable) {
-                makeTableResponsiveBasic((JTable) comp);
+                configureTableOnly((JTable) comp);
             } else if (comp instanceof JScrollPane) {
                 JScrollPane sp = (JScrollPane) comp;
-                if (sp.getViewport().getView() instanceof JTable) {
-                    makeTableResponsiveBasic((JTable) sp.getViewport().getView());
+                Component view = sp.getViewport().getView();
+                if (view instanceof JTable) {
+                    configureTableOnly((JTable) view);
                 }
+                // Configurar scroll pane
+                sp.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+                sp.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             } else if (comp instanceof Container) {
-                adjustTablesBasic((Container) comp);
+                makeTablesResponsiveOnly((Container) comp);
             }
         }
     }
-    
+
     /**
-     * Hace que una tabla específica sea responsive de manera básica.
+     * NUEVO: Configura SOLO la tabla sin afectar contenedores.
      */
-    private void makeTableResponsiveBasic(JTable table) {
-        // Configurar auto-resize
-        table.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
-        
-        // Ajustar altura de filas
-        table.setRowHeight(Math.max(25, table.getRowHeight()));
-        
-        // Configurar header
-        if (table.getTableHeader() != null) {
-            table.getTableHeader().setReorderingAllowed(false);
-            table.getTableHeader().setResizingAllowed(true);
+    private void configureTableOnly(JTable table) {
+        if (table == null) {
+            return;
         }
-        
-        // Forzar actualización
-        table.revalidate();
+
+        try {
+            // Configurar auto-resize
+            table.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+
+            // Ajustar altura de filas
+            if (table.getRowHeight() < 25) {
+                table.setRowHeight(25);
+            }
+
+            // Configurar header
+            if (table.getTableHeader() != null) {
+                table.getTableHeader().setReorderingAllowed(false);
+                table.getTableHeader().setResizingAllowed(true);
+            }
+
+            // Habilitar viewport height
+            table.setFillsViewportHeight(true);
+
+            // NO hacer revalidate/repaint aquí para evitar loops
+        } catch (Exception e) {
+            System.err.println("Error configurando tabla: " + e.getMessage());
+        }
     }
-    
-    /**
-     * Establece el tamaño mínimo permitido.
-     */
+
+    // Métodos públicos para configuración
     public void setMinimumContentSize(Dimension minSize) {
-        this.minSize = minSize;
-        adjustContentSize();
+        this.minContentSize = minSize;
+        // NO llamar ajuste automáticamente
     }
-    
-    /**
-     * Establece el tamaño máximo permitido.
-     */
+
     public void setMaximumContentSize(Dimension maxSize) {
-        this.maxSize = maxSize;
-        adjustContentSize();
+        this.maxContentSize = maxSize;
+        // NO llamar ajuste automáticamente
     }
-    
-    /**
-     * Obtiene el panel de contenido original.
-     */
+
     public JPanel getContentPanel() {
         return contentPanel;
     }
-    
-    /**
-     * Obtiene el JScrollPane interno.
-     */
+
     public JScrollPane getScrollPane() {
         return scrollPane;
     }
-    
+
     /**
-     * Fuerza una actualización del tamaño.
+     * MODIFICADO: Solo fuerza un ajuste si no se está ajustando ya.
      */
     public void forceResize() {
-        adjustContentSize();
+        if (!isAdjusting) {
+            SwingUtilities.invokeLater(() -> adjustContentSizeOnce());
+        }
     }
-    
-    /**
-     * Configura el scroll para ir a la parte superior.
-     */
+
     public void scrollToTop() {
         SwingUtilities.invokeLater(() -> {
             if (scrollPane != null) {
@@ -242,26 +300,59 @@ public class ResponsivePanelWrapper extends JPanel {
             }
         });
     }
-    
+
     /**
-     * Método estático para crear un wrapper responsive rápidamente.
+     * NUEVO: Scroll hasta abajo para verificar que todo el contenido es
+     * accesible.
      */
+    public void scrollToBottom() {
+        SwingUtilities.invokeLater(() -> {
+            if (scrollPane != null) {
+                JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+                verticalBar.setValue(verticalBar.getMaximum());
+            }
+        });
+    }
+
+    /**
+     * NUEVO: Obtiene información de debug sobre el contenido.
+     */
+    public void printDebugInfo() {
+        System.out.println("=== DEBUG INFO ===");
+        System.out.println("Wrapper size: " + getSize());
+        System.out.println("Content preferred: " + contentPanel.getPreferredSize());
+        System.out.println("Content actual: " + contentPanel.getSize());
+        System.out.println("ScrollPane size: " + scrollPane.getSize());
+        System.out.println("Vertical scroll max: " + scrollPane.getVerticalScrollBar().getMaximum());
+        System.out.println("Content component count: " + contentPanel.getComponentCount());
+
+        // Mostrar información de componentes del contenido
+        listComponents(contentPanel, 0);
+    }
+
+    private void listComponents(Container container, int level) {
+        String indent = "  ".repeat(level);
+        for (Component comp : container.getComponents()) {
+            System.out.println(indent + "- " + comp.getClass().getSimpleName()
+                    + " [" + comp.getBounds() + "] visible=" + comp.isVisible());
+            if (comp instanceof Container && level < 3) {
+                listComponents((Container) comp, level + 1);
+            }
+        }
+    }
+
+    // Métodos estáticos de utilidad
     public static ResponsivePanelWrapper wrap(JPanel panel, Container parent) {
         return new ResponsivePanelWrapper(panel, parent);
     }
-    
-    /**
-     * Método estático para crear un wrapper con tamaños personalizados.
-     */
-    public static ResponsivePanelWrapper wrap(JPanel panel, Container parent, 
-                                            Dimension minSize, Dimension maxSize) {
+
+    public static ResponsivePanelWrapper wrap(JPanel panel, Container parent,
+            Dimension minSize, Dimension maxSize) {
         ResponsivePanelWrapper wrapper = new ResponsivePanelWrapper(panel, parent);
         wrapper.setMinimumContentSize(minSize);
         wrapper.setMaximumContentSize(maxSize);
         return wrapper;
     }
-
-
 
     /**
      * This method is called from within the constructor to initialize the form.

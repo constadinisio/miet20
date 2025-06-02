@@ -104,7 +104,7 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
 
         // Aplicar configuraciones para scrolling y responsividad
         configurarScrollingYTabla();
-        hacerPanelResponsive();
+        
 
         // Asegurar visibilidad
         setVisible(true);
@@ -907,35 +907,7 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
     /**
      * Configura aspectos responsive del panel.
      */
-    private void hacerPanelResponsive() {
-        // Aplicar utilidades responsive
-        ResponsiveUtils.makeResponsive(this);
-
-        // Aplicar a subpaneles si existen
-        if (jPanel1 != null) {
-            ResponsiveUtils.makeResponsive(jPanel1);
-        }
-        if (jPanel2 != null) {
-            ResponsiveUtils.makeResponsive(jPanel2);
-        }
-        if (jPanel3 != null) {
-            ResponsiveUtils.makeResponsive(jPanel3);
-        }
-        if (panelObservacionesCompleto != null) {
-            ResponsiveUtils.makeResponsive(panelObservacionesCompleto);
-        }
-        if (panelEstadisticas != null) {
-            ResponsiveUtils.makeResponsive(panelEstadisticas);
-        }
-
-        // Agregar listener para ajustes dinámicos
-        addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentResized(java.awt.event.ComponentEvent evt) {
-                ajustarComponentesSegunTamano();
-            }
-        });
-    }
+    
 
     /**
      * Configura el scrolling y la tabla para asegurar visibilidad.
@@ -1152,7 +1124,7 @@ public class AsistenciaPreceptorPanel extends AsistenciaPanel {
         });
 
         txtObservacionesExistentes.setEditable(false);
-        txtObservacionesExistentes.setColumns(40);
+        txtObservacionesExistentes.setColumns(20);
         txtObservacionesExistentes.setRows(5);
         scrollObservaciones.setViewportView(txtObservacionesExistentes);
 

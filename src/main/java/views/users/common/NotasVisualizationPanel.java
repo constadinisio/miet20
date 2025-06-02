@@ -31,6 +31,8 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 import main.java.database.Conexion;
+import main.java.utils.BoletinesUtils;
+import main.java.utils.PlantillaBoletinUtility;
 
 /**
  * Panel para visualización de notas y reportes. Permite ver notas por materia,
@@ -2987,74 +2989,107 @@ public class NotasVisualizationPanel extends JPanel {
     /**
      * Genera un boletín individual para un alumno específico
      */
-    private void generarBoletinIndividual(int cursoId) {
-        try {
-            // Cargar alumnos del curso
-            cargarAlumnos(cursoId);
+   private void generarBoletinIndividual(int cursoId) {
+    try {
+        // Cargar alumnos del curso
+        cargarAlumnos(cursoId);
 
-            if (alumnosMap.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "No se encontraron alumnos en el curso seleccionado",
-                        "Sin alumnos",
-                        JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-
-            // Seleccionar alumno
-            String[] alumnosArray = alumnosMap.keySet().toArray(new String[0]);
-            String alumnoSeleccionado = (String) JOptionPane.showInputDialog(this,
-                    "Seleccione el alumno:",
-                    "Seleccionar Alumno",
-                    JOptionPane.PLAIN_MESSAGE,
-                    null,
-                    alumnosArray,
-                    alumnosArray[0]);
-
-            if (alumnoSeleccionado != null) {
-                Integer alumnoId = alumnosMap.get(alumnoSeleccionado);
-                if (alumnoId != null) {
-                    // Usar la utilidad de boletines
-                    main.java.utils.BoletinExportUtility.exportarBoletinIndividualConInterfaz(
-                            alumnoId, cursoId, this);
-                }
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error al generar boletín individual: " + e.getMessage());
-            e.printStackTrace();
+        if (alumnosMap.isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                    "Error al generar boletín individual: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    "No se encontraron alumnos en el curso seleccionado",
+                    "Sin alumnos",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
         }
+
+        // Seleccionar alumno
+        String[] alumnosArray = alumnosMap.keySet().toArray(new String[0]);
+        String alumnoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                "Seleccione el alumno:",
+                "Seleccionar Alumno",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                alumnosArray,
+                alumnosArray[0]);
+
+        if (alumnoSeleccionado == null) {
+            return; // Usuario canceló
+        }
+
+        // Seleccionar período
+        String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+        String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                "Seleccione el período del boletín:",
+                "Seleccionar Período",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                periodos,
+                BoletinesUtils.obtenerPeriodoActual());
+
+        if (periodoSeleccionado == null) {
+            return; // Usuario canceló
+        }
+
+        Integer alumnoId = alumnosMap.get(alumnoSeleccionado);
+        if (alumnoId != null) {
+            // USAR SERVIDOR AUTOMÁTICO
+            PlantillaBoletinUtility.generarBoletinIndividualConServidorConInterfaz(
+                    alumnoId, cursoId, periodoSeleccionado, this);
+        }
+
+    } catch (Exception e) {
+        System.err.println("Error al generar boletín individual: " + e.getMessage());
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this,
+                "Error al generar boletín individual: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
     }
+}
 
     /**
      * Genera boletines para todos los alumnos del curso
      */
     private void generarBoletinesTodoCurso(int cursoId) {
-        try {
-            int confirmacion = JOptionPane.showConfirmDialog(this,
-                    "¿Está seguro de que desea generar boletines para todos los alumnos del curso?\n"
-                    + "Esto puede tomar varios minutos dependiendo de la cantidad de alumnos.",
-                    "Confirmar Generación Masiva",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE);
+    try {
+        // Seleccionar período
+        String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+        String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                "Seleccione el período del boletín:",
+                "Seleccionar Período",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                periodos,
+                BoletinesUtils.obtenerPeriodoActual());
 
-            if (confirmacion == JOptionPane.YES_OPTION) {
-                // Usar la utilidad de boletines
-                main.java.utils.BoletinExportUtility.exportarBoletinesConInterfaz(cursoId, this);
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error al generar boletines del curso: " + e.getMessage());
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error al generar boletines del curso: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+        if (periodoSeleccionado == null) {
+            return; // Usuario canceló
         }
+
+        int confirmacion = JOptionPane.showConfirmDialog(this,
+                "¿Está seguro de generar boletines para todos los alumnos del curso?\n" +
+                "Período: " + periodoSeleccionado + "\n" +
+                "Los boletines se guardarán automáticamente en el servidor.\n" +
+                "Esta operación puede tomar varios minutos.",
+                "Confirmar Generación Masiva",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            // USAR SERVIDOR AUTOMÁTICO
+            PlantillaBoletinUtility.generarBoletinesCursoConServidorConInterfaz(
+                    cursoId, periodoSeleccionado, this);
+        }
+
+    } catch (Exception e) {
+        System.err.println("Error al generar boletines del curso: " + e.getMessage());
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this,
+                "Error al generar boletines del curso: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
     }
+}
 
     /**
      * Muestra estadísticas del curso antes de generar boletines

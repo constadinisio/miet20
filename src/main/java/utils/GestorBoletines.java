@@ -214,73 +214,73 @@ public class GestorBoletines {
     /**
      * NUEVO: Crea una carpeta física en el servidor usando diferentes métodos
      */
-     private static boolean crearCarpetaFisica(String rutaCarpeta) {
+    private static boolean crearCarpetaFisica(String rutaCarpeta) {
         try {
             System.out.println("=== Creando carpeta física ===");
             System.out.println("Ruta completa: " + rutaCarpeta);
             System.out.println("Servidor base: " + RUTA_BASE_SERVIDOR);
-            
+
             // Verificar tipo de servidor
             if (RUTA_BASE_SERVIDOR.startsWith("http://") || RUTA_BASE_SERVIDOR.startsWith("https://")) {
-                
+
                 System.out.println("Servidor web detectado, usando métodos web...");
                 return crearCarpetaEnServidorWeb(rutaCarpeta);
-                
-            } else if (RUTA_BASE_SERVIDOR.startsWith("file://") || 
-                       RUTA_BASE_SERVIDOR.startsWith("/") || 
-                       RUTA_BASE_SERVIDOR.matches("^[A-Za-z]:\\\\.*")) {
-                
+
+            } else if (RUTA_BASE_SERVIDOR.startsWith("file://")
+                    || RUTA_BASE_SERVIDOR.startsWith("/")
+                    || RUTA_BASE_SERVIDOR.matches("^[A-Za-z]:\\\\.*")) {
+
                 System.out.println("Ruta local detectada, creando carpeta directamente...");
-                
+
                 // Es una ruta local - crear carpeta directamente
                 String rutaLocal = RUTA_BASE_SERVIDOR.replace("file://", "");
                 String carpetaRelativa = rutaCarpeta.replace(RUTA_BASE_SERVIDOR, "");
                 java.io.File carpeta = new java.io.File(rutaLocal + carpetaRelativa);
-                
+
                 boolean creada = carpeta.mkdirs();
                 System.out.println("Carpeta local " + (creada || carpeta.exists() ? "OK" : "ERROR") + ": " + carpeta.getAbsolutePath());
                 return creada || carpeta.exists();
-                
+
             } else {
                 System.err.println("❌ Formato de servidor no reconocido: " + RUTA_BASE_SERVIDOR);
                 return false;
             }
-            
+
         } catch (Exception e) {
             System.err.println("❌ Error al crear carpeta física: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
-     
-     /**
+
+    /**
      * NUEVO: Método de prueba para verificar el script PHP
      */
     public static boolean probarScriptPHP() {
         try {
             System.out.println("=== PROBANDO SCRIPT PHP ===");
-            
+
             String baseUrl = RUTA_BASE_SERVIDOR.replace("/boletines/", "/");
             String scriptUrl = baseUrl + "crear_carpeta.php";
             String testUrl = scriptUrl + "?carpeta=test/prueba";
-            
+
             System.out.println("URL de prueba: " + testUrl);
-            
+
             java.net.URL url = new java.net.URL(testUrl);
             java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
-            
+
             int responseCode = connection.getResponseCode();
             System.out.println("Código de respuesta: " + responseCode);
-            
+
             if (responseCode == 200) {
                 java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(connection.getInputStream()));
+                        new java.io.InputStreamReader(connection.getInputStream()));
                 String response = reader.readLine();
                 reader.close();
-                
+
                 System.out.println("Respuesta: " + response);
                 System.out.println("✅ Script PHP funciona correctamente");
                 return true;
@@ -288,7 +288,7 @@ public class GestorBoletines {
                 System.err.println("❌ Script PHP no responde correctamente");
                 return false;
             }
-            
+
         } catch (Exception e) {
             System.err.println("❌ Error probando script PHP: " + e.getMessage());
             e.printStackTrace();
@@ -302,44 +302,44 @@ public class GestorBoletines {
     private static boolean crearCarpetaEnServidorWeb(String rutaCarpeta) {
         try {
             System.out.println("Intentando crear carpeta en servidor web: " + rutaCarpeta);
-            
+
             // Extraer la ruta relativa desde la URL completa
             String carpetaRelativa = rutaCarpeta.replace(RUTA_BASE_SERVIDOR, "");
-            
+
             // URL del script PHP - CORREGIDA
             String baseUrl = RUTA_BASE_SERVIDOR.replace("/boletines/", "/");
             String scriptUrl = baseUrl + "crear_carpeta.php";
-            
+
             System.out.println("Script URL: " + scriptUrl);
             System.out.println("Carpeta relativa: " + carpetaRelativa);
-            
+
             // Método PHP (método principal)
             try {
-                String fullScriptUrl = scriptUrl + "?carpeta=" + 
-                    java.net.URLEncoder.encode(carpetaRelativa, "UTF-8");
-                
+                String fullScriptUrl = scriptUrl + "?carpeta="
+                        + java.net.URLEncoder.encode(carpetaRelativa, "UTF-8");
+
                 System.out.println("URL completa: " + fullScriptUrl);
-                
+
                 java.net.URL url = new java.net.URL(fullScriptUrl);
                 java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(10000); // 10 segundos
                 connection.setReadTimeout(10000);
-                
+
                 // Agregar headers
                 connection.setRequestProperty("User-Agent", "JavaApp-BoletinManager/1.0");
                 connection.setRequestProperty("Accept", "application/json,text/plain,*/*");
-                
+
                 int responseCode = connection.getResponseCode();
                 System.out.println("Código de respuesta PHP: " + responseCode);
-                
+
                 if (responseCode == 200) {
                     // Leer la respuesta
                     java.io.BufferedReader reader = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(connection.getInputStream()));
+                            new java.io.InputStreamReader(connection.getInputStream()));
                     String response = reader.readLine();
                     reader.close();
-                    
+
                     System.out.println("Respuesta del servidor: " + response);
                     System.out.println("✅ Carpeta procesada vía PHP: " + rutaCarpeta);
                     return true;
@@ -347,7 +347,7 @@ public class GestorBoletines {
                     // Leer error si hay
                     try {
                         java.io.BufferedReader errorReader = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(connection.getErrorStream()));
+                                new java.io.InputStreamReader(connection.getErrorStream()));
                         String errorResponse = errorReader.readLine();
                         errorReader.close();
                         System.err.println("Error del servidor: " + errorResponse);
@@ -355,12 +355,12 @@ public class GestorBoletines {
                         System.err.println("No se pudo leer el error del servidor");
                     }
                 }
-                
+
             } catch (Exception phpError) {
                 System.err.println("Error con script PHP: " + phpError.getMessage());
                 phpError.printStackTrace();
             }
-            
+
             // Método alternativo: WebDAV (si está habilitado)
             try {
                 java.net.URL url = new java.net.URL(rutaCarpeta);
@@ -369,23 +369,23 @@ public class GestorBoletines {
                 connection.setDoOutput(true);
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
-                
+
                 int responseCode = connection.getResponseCode();
                 if (responseCode == 201 || responseCode == 405) { // 201 = Created, 405 = Already exists
                     System.out.println("✅ Carpeta creada vía WebDAV: " + rutaCarpeta);
                     return true;
                 }
-                
+
             } catch (java.net.ProtocolException webdavError) {
                 System.out.println("WebDAV no soportado: " + webdavError.getMessage());
             } catch (Exception webdavError) {
                 System.out.println("WebDAV falló: " + webdavError.getMessage());
             }
-            
+
             // Si todos los métodos fallan, pero queremos continuar
             System.out.println("⚠️ No se pudo crear carpeta física, continuando con registro virtual: " + rutaCarpeta);
             return false; // Cambiar a false para mostrar que no se creó físicamente
-            
+
         } catch (Exception e) {
             System.err.println("❌ Error en crearCarpetaEnServidorWeb: " + e.getMessage());
             e.printStackTrace();
@@ -407,49 +407,56 @@ public class GestorBoletines {
      * CORREGIDO: Crear InfoBoletin con formato numérico correcto
      */
     private static InfoBoletin crearInfoBoletinDesdeBD(int alumnoId, int cursoId, String periodo) {
-        try {
-            Connection conect = Conexion.getInstancia().verificarConexion();
-            if (conect == null) {
-                return null;
-            }
-
-            String query = """
-                SELECT u.nombre, u.apellido, u.dni, c.anio, c.division
-                FROM usuarios u 
-                INNER JOIN cursos c ON c.id = ?
-                WHERE u.id = ?
-                """;
-
-            PreparedStatement ps = conect.prepareStatement(query);
-            ps.setInt(1, cursoId);
-            ps.setInt(2, alumnoId);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                InfoBoletin info = new InfoBoletin();
-                info.alumnoId = alumnoId;
-                info.alumnoNombre = rs.getString("apellido") + ", " + rs.getString("nombre");
-                info.alumnoDni = rs.getString("dni");
-                info.cursoId = cursoId;
-                info.curso = String.valueOf(rs.getInt("anio"));
-
-                // CORREGIDO: Usar formato numérico para división
-                int divisionNum = rs.getInt("division");
-                info.division = String.valueOf(divisionNum); // "1", "2", "3", etc.
-
-                info.anioLectivo = LocalDate.now().getYear();
-                info.periodo = periodo;
-
-                System.out.println("InfoBoletin creado - Curso: " + info.curso + info.division + " (formato numérico)");
-                return info;
-            }
-
-        } catch (SQLException e) {
-            System.err.println("❌ Error obteniendo datos de BD: " + e.getMessage());
+    try {
+        Connection conect = Conexion.getInstancia().verificarConexion();
+        if (conect == null) {
+            return null;
         }
 
-        return null;
+        String query = """
+            SELECT u.nombre, u.apellido, u.dni, c.anio, c.division
+            FROM usuarios u 
+            INNER JOIN cursos c ON c.id = ?
+            WHERE u.id = ?
+            """;
+
+        PreparedStatement ps = conect.prepareStatement(query);
+        ps.setInt(1, cursoId);
+        ps.setInt(2, alumnoId);
+        ResultSet rs = ps.executeQuery();
+
+        if (rs.next()) {
+            InfoBoletin info = new InfoBoletin();
+            info.alumnoId = alumnoId;
+            info.alumnoNombre = rs.getString("apellido") + ", " + rs.getString("nombre");
+            info.alumnoDni = rs.getString("dni");
+            info.cursoId = cursoId;
+            
+            // CORREGIDO: Usar formato numérico para cursos
+            int anio = rs.getInt("anio");
+            int division = rs.getInt("division");
+            
+            info.curso = String.valueOf(anio);      // "1", "2", "3", etc.
+            info.division = String.valueOf(division); // "1", "2", "3", etc.
+
+            info.anioLectivo = LocalDate.now().getYear();
+            info.periodo = periodo;
+
+            System.out.println("InfoBoletin creado - Curso: " + info.curso + info.division + " (formato numérico)");
+            rs.close();
+            ps.close();
+            return info;
+        }
+
+        rs.close();
+        ps.close();
+    } catch (SQLException e) {
+        System.err.println("❌ Error obteniendo datos de BD: " + e.getMessage());
+        e.printStackTrace();
     }
+
+    return null;
+}
 
     /**
      * Registra información del boletín en la base de datos
@@ -885,4 +892,44 @@ public class GestorBoletines {
             return false;
         }
     }
+    
+    public static String construirRutaBoletinServidor(int alumnoId, int cursoId, String periodo) {
+        try {
+            // Obtener información del alumno y curso
+            InfoBoletin info = crearInfoBoletinDesdeBD(alumnoId, cursoId, periodo);
+            if (info == null) {
+                System.err.println("❌ No se pudo obtener información para construir ruta");
+                return null;
+            }
+
+            // Construir ruta: servidor/año/curso/periodo/
+            String nombreCurso = info.curso + info.division;
+            String rutaCarpeta = RUTA_BASE_SERVIDOR + info.anioLectivo + "/" + nombreCurso + "/" + periodo + "/";
+
+            // Crear carpeta si no existe (solo para rutas locales)
+            if (!RUTA_BASE_SERVIDOR.startsWith("http")) {
+                boolean carpetaCreada = crearCarpetaFisica(rutaCarpeta);
+                if (!carpetaCreada) {
+                    System.err.println("⚠️ No se pudo crear la carpeta, pero continuando: " + rutaCarpeta);
+                }
+            }
+
+            // Generar nombre de archivo
+            String fechaStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            String nombreLimpio = info.alumnoNombre.replaceAll("[^a-zA-Z0-9\\s]", "").trim().replaceAll("\\s+", "_");
+            String nombreArchivo = String.format("Boletin_%s_%s_%s_%s.xlsx",
+                    nombreLimpio, nombreCurso, periodo, fechaStr);
+
+            String rutaCompleta = rutaCarpeta + nombreArchivo;
+            System.out.println("✅ Ruta construida: " + rutaCompleta);
+
+            return rutaCompleta;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error construyendo ruta del servidor: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 }
