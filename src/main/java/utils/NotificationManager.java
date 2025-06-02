@@ -32,6 +32,11 @@ public class NotificationManager {
     private int currentUserRole;
     private boolean initialized = false;
 
+    // ✅ CAMBIO PRINCIPAL: Inicialización lazy para evitar dependencia circular
+    private main.java.tickets.TicketBellComponent ticketBellComponent;
+    private main.java.tickets.TicketService ticketService; // No inicializar en constructor
+    private boolean ticketServiceInitialized = false;
+
     // Roles permitidos para enviar notificaciones
     private static final List<Integer> SENDER_ROLES = Arrays.asList(1, 2, 3, 5); // Admin, Preceptor, Profesor, ATTP
     private static final int ADMIN_ROLE = 1;
@@ -45,6 +50,23 @@ public class NotificationManager {
             instance = new NotificationManager();
         }
         return instance;
+    }
+
+    /**
+     * ✅ NUEVO: Inicialización lazy del TicketService
+     */
+    private void initializeTicketServiceIfNeeded() {
+        if (!ticketServiceInitialized) {
+            try {
+                this.ticketService = main.java.tickets.TicketService.getInstance();
+                this.ticketServiceInitialized = true;
+                System.out.println("✅ TicketService inicializado correctamente");
+            } catch (Exception e) {
+                System.err.println("⚠️ Error inicializando TicketService: " + e.getMessage());
+                this.ticketService = null;
+                this.ticketServiceInitialized = false;
+            }
+        }
     }
 
     /**
@@ -83,15 +105,31 @@ public class NotificationManager {
         }
 
         try {
-            // Crear campanita de notificaciones
+            // Crear campanita de notificaciones normal
             bellComponent = new NotificationBellComponent(currentUserId);
 
             // Crear panel contenedor para los componentes de notificación
             JPanel notificationPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
             notificationPanel.setOpaque(false);
 
-            // Agregar campanita
+            // Agregar campanita normal
             notificationPanel.add(bellComponent);
+
+            // ✅ NUEVO: Agregar campanita de tickets si es desarrollador (inicialización segura)
+            if (isTicketDeveloper()) {
+                try {
+                    main.java.tickets.TicketBellComponent ticketBell
+                            = new main.java.tickets.TicketBellComponent(currentUserId);
+                    notificationPanel.add(ticketBell);
+
+                    // Guardar referencia para poder refrescar
+                    this.ticketBellComponent = ticketBell;
+                    System.out.println("✅ Campanita de tickets agregada para desarrollador");
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error creando campanita de tickets: " + e.getMessage());
+                    // Continuar sin la campanita de tickets
+                }
+            }
 
             // Si el usuario puede enviar notificaciones, agregar botón de envío
             if (canSendNotifications()) {
@@ -103,10 +141,10 @@ public class NotificationManager {
             menuBar.add(javax.swing.Box.createHorizontalGlue());
             menuBar.add(notificationPanel);
 
-            System.out.println("✅ Campanita de notificaciones integrada en MenuBar");
+            System.out.println("✅ Campanitas de notificaciones integradas en MenuBar");
 
         } catch (Exception e) {
-            System.err.println("❌ Error integrando campanita de notificaciones: " + e.getMessage());
+            System.err.println("❌ Error integrando campanitas: " + e.getMessage());
             e.printStackTrace();
 
             SwingUtilities.invokeLater(() -> {
@@ -116,6 +154,34 @@ public class NotificationManager {
                         JOptionPane.WARNING_MESSAGE);
             });
         }
+    }
+
+    /**
+     * ✅ NUEVO: Fuerza actualización de la campanita de tickets
+     */
+    public void refreshTicketBell() {
+        if (ticketBellComponent != null) {
+            try {
+                ticketBellComponent.forceRefresh();
+            } catch (Exception e) {
+                System.err.println("Error refrescando campanita de tickets: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Obtiene el componente de tickets (para acceso externo)
+     */
+    public main.java.tickets.TicketBellComponent getTicketBellComponent() {
+        return ticketBellComponent;
+    }
+
+    /**
+     * ✅ NUEVO: Obtiene el TicketService de forma segura
+     */
+    public main.java.tickets.TicketService getTicketService() {
+        initializeTicketServiceIfNeeded();
+        return ticketService;
     }
 
     /**
@@ -595,6 +661,22 @@ public class NotificationManager {
             bellComponent = new NotificationBellComponent(userId);
         }
 
+        // ✅ ACTUALIZAR: También actualizar campanita de tickets si existe
+        if (ticketBellComponent != null) {
+            ticketBellComponent.dispose();
+            ticketBellComponent = null;
+        }
+
+        // Verificar si el nuevo usuario es desarrollador
+        if (isTicketDeveloper()) {
+            try {
+                ticketBellComponent = new main.java.tickets.TicketBellComponent(userId);
+                System.out.println("✅ Campanita de tickets actualizada para nuevo usuario");
+            } catch (Exception e) {
+                System.err.println("⚠️ Error actualizando campanita de tickets: " + e.getMessage());
+            }
+        }
+
         System.out.println("✅ Usuario actualizado en NotificationManager");
     }
 
@@ -826,9 +908,16 @@ public class NotificationManager {
             bellComponent = null;
         }
 
+        if (ticketBellComponent != null) {
+            ticketBellComponent.dispose();
+            ticketBellComponent = null;
+        }
+
         currentUserId = 0;
         currentUserRole = 0;
         initialized = false;
+        ticketServiceInitialized = false;
+        ticketService = null;
 
         System.out.println("🔄 NotificationManager reiniciado");
     }
@@ -847,9 +936,17 @@ public class NotificationManager {
                 notificationService.shutdown();
             }
 
+            // ✅ NUEVO: Limpiar campanita de tickets
+            if (ticketBellComponent != null) {
+                ticketBellComponent.dispose();
+                ticketBellComponent = null;
+            }
+
             initialized = false;
             currentUserId = 0;
             currentUserRole = 0;
+            ticketServiceInitialized = false;
+            ticketService = null;
 
             System.out.println("✅ NotificationManager recursos liberados");
 
@@ -1231,4 +1328,18 @@ public class NotificationManager {
             }
         }
     }
+
+    /**
+     * ✅ NUEVO: Verifica si el usuario actual es desarrollador de tickets
+     */
+    private boolean isTicketDeveloper() {
+        try {
+            initializeTicketServiceIfNeeded(); // Inicialización lazy
+            return ticketService != null && ticketService.esDeveloper(currentUserId);
+        } catch (Exception e) {
+            System.err.println("Error verificando desarrollador de tickets: " + e.getMessage());
+            return false;
+        }
+    }
+
 }

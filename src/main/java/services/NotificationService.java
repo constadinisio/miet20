@@ -108,6 +108,7 @@ public class NotificationService {
                 AND nd.estado_lectura = 'NO_LEIDA'
                 AND n.estado = 'ACTIVA'
                 AND (n.fecha_expiracion IS NULL OR n.fecha_expiracion > NOW())
+                AND (n.tipo_especial IS NULL OR n.tipo_especial != 'TICKET')
                 ORDER BY n.prioridad DESC, n.fecha_creacion DESC
                 """;
 

@@ -1,5 +1,6 @@
 package main.java.utils;
 
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.*;
@@ -15,6 +16,7 @@ import main.java.controllers.NotificationGroupManager;
 import java.util.Arrays;
 import java.util.List;
 import main.java.views.notifications.NotificationGroupWindow;
+import main.java.tickets.TicketService;
 
 /**
  * MenuBarManager COMPLETAMENTE REDISEÑADO v3.0 Sistema de notificaciones
@@ -34,6 +36,8 @@ public class MenuBarManager {
     private NotificationManager notificationManager;
     private boolean notificationsEnabled = false;
 
+    private TicketService ticketService;
+
     // Roles que pueden enviar notificaciones
     private static final List<Integer> SENDER_ROLES = Arrays.asList(1, 2, 3, 5); // Admin, Preceptor, Profesor, ATTP
 
@@ -45,6 +49,7 @@ public class MenuBarManager {
         System.out.println("Usuario ID: " + userId);
 
         this.rolActual = obtenerRolActual();
+        this.ticketService = TicketService.getInstance();
         System.out.println("Rol actual detectado: " + rolActual + " (" + obtenerTextoRol(rolActual) + ")");
 
         determinarNombreColumnaRol();
@@ -245,6 +250,11 @@ public class MenuBarManager {
         myNotificationsItem.addActionListener(e -> openMyNotifications());
         notificationsMenu.add(myNotificationsItem);
 
+        // ✅ NUEVO: Opción "Mis Tickets" - disponible para TODOS los roles
+        JMenuItem myTicketsItem = new JMenuItem("🎫 Mis Tickets");
+        myTicketsItem.addActionListener(e -> abrirMisTickets());
+        notificationsMenu.add(myTicketsItem);
+
         // === SECCIÓN SOLO PARA ROLES AUTORIZADOS ===
         // Verificar si el usuario puede enviar notificaciones
         if (SENDER_ROLES.contains(rolActual)) {
@@ -272,6 +282,28 @@ public class MenuBarManager {
             JMenuItem broadcastItem = new JMenuItem("📢 Envío Masivo");
             broadcastItem.addActionListener(e -> openBroadcastNotification());
             notificationsMenu.add(broadcastItem);
+        }
+
+        // === SECCIÓN PARA DESARROLLADORES (Gestión de Tickets) ===
+        try {
+            if (ticketService != null && ticketService.esDeveloper(userId)) {
+                notificationsMenu.addSeparator();
+
+                JMenuItem ticketManagementItem = new JMenuItem("🎫 Gestión de Tickets (Dev)");
+                ticketManagementItem.addActionListener(e -> abrirGestionTickets());
+                notificationsMenu.add(ticketManagementItem);
+
+                // Mostrar contador de tickets pendientes
+                int ticketsPendientes = ticketService.contarTicketsPendientes();
+                if (ticketsPendientes > 0) {
+                    JMenuItem ticketsCountItem = new JMenuItem("🔴 " + ticketsPendientes + " tickets pendientes");
+                    ticketsCountItem.setForeground(new Color(220, 53, 69));
+                    ticketsCountItem.addActionListener(e -> abrirGestionTickets());
+                    notificationsMenu.add(ticketsCountItem);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error verificando desarrollador para menú: " + e.getMessage());
         }
 
         // Agregar menú a la barra
@@ -534,8 +566,60 @@ public class MenuBarManager {
 
         helpMenu.addSeparator();
 
+        // === SECCIÓN DE TICKETS ===
+        // ✅ NUEVO: Opción para ver mis tickets (TODOS LOS USUARIOS)
+        JMenuItem misTicketsItem = new JMenuItem("🎫 Mis Tickets Reportados");
+        misTicketsItem.addActionListener(e -> abrirMisTickets());
+        helpMenu.add(misTicketsItem);
+
+        // Mostrar contador de tickets del usuario si tiene algunos
+        try {
+            TicketService ticketService = TicketService.getInstance();
+            List<main.java.tickets.Ticket> misTickets = ticketService.obtenerTicketsUsuario(userId);
+
+            if (!misTickets.isEmpty()) {
+                long pendientes = misTickets.stream()
+                        .filter(t -> "ABIERTO".equals(t.getEstado()) || "EN_REVISION".equals(t.getEstado()))
+                        .count();
+
+                if (pendientes > 0) {
+                    JMenuItem ticketsCountItem = new JMenuItem("🟡 " + pendientes + " ticket(s) pendiente(s)");
+                    ticketsCountItem.setForeground(new Color(255, 193, 7));
+                    ticketsCountItem.addActionListener(e -> abrirMisTickets());
+                    helpMenu.add(ticketsCountItem);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error obteniendo contador de tickets del usuario: " + e.getMessage());
+        }
+
+        // === SECCIÓN PARA DESARROLLADORES (solo si es desarrollador) ===
+        if (ticketService.esDeveloper(userId)) {
+            helpMenu.addSeparator();
+
+            JMenuItem ticketManagementItem = new JMenuItem("🎫 Gestión de Tickets (Desarrollador)");
+            ticketManagementItem.addActionListener(e -> abrirGestionTickets());
+            helpMenu.add(ticketManagementItem);
+
+            // Mostrar contador de tickets pendientes para desarrollador
+            int ticketsPendientes = ticketService.contarTicketsPendientes();
+            if (ticketsPendientes > 0) {
+                JMenuItem devTicketsCountItem = new JMenuItem("🔴 " + ticketsPendientes + " tickets pendientes (Dev)");
+                devTicketsCountItem.setForeground(new Color(220, 53, 69));
+                devTicketsCountItem.addActionListener(e -> abrirGestionTickets());
+                helpMenu.add(devTicketsCountItem);
+            }
+        }
+
+        // === OPCIÓN DE REPORTAR PARA TODOS ===
+        helpMenu.addSeparator();
+        JMenuItem reportarTicketItem = new JMenuItem("🎫 Reportar Error/Sugerencia");
+        reportarTicketItem.addActionListener(e -> abrirReporteTicket());
+        helpMenu.add(reportarTicketItem);
+
         // Opción de prueba de notificaciones (para desarrollo)
         if (notificationManager != null && notificationManager.canSendNotifications(rolActual)) {
+            helpMenu.addSeparator();
             JMenuItem testNotifItem = new JMenuItem("🧪 Probar Notificaciones");
             testNotifItem.addActionListener(new ActionListener() {
                 @Override
@@ -544,8 +628,9 @@ public class MenuBarManager {
                 }
             });
             helpMenu.add(testNotifItem);
-            helpMenu.addSeparator();
         }
+
+        helpMenu.addSeparator();
 
         // Opción de Acerca de con versión
         JMenuItem aboutItem = new JMenuItem("ℹ️ Acerca de");
@@ -556,6 +641,7 @@ public class MenuBarManager {
                         + "Versión: " + ActualizadorApp.VERSION_ACTUAL + "\n\n"
                         + "Características:\n"
                         + "• Sistema de notificaciones completo\n"
+                        + "• Sistema de tickets y seguimiento\n"
                         + "• Gestión de grupos personalizados\n"
                         + "• Selección jerárquica de destinatarios\n"
                         + "• Gestión multi-rol\n"
@@ -944,5 +1030,59 @@ public class MenuBarManager {
         } finally {
             super.finalize();
         }
+    }
+
+    /**
+     * Abre la ventana de gestión de tickets (solo desarrolladores)
+     */
+    private void abrirGestionTickets() {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                main.java.tickets.TicketManagementWindow ticketWindow
+                        = new main.java.tickets.TicketManagementWindow(userId);
+                ticketWindow.setVisible(true);
+            } catch (Exception e) {
+                System.err.println("Error abriendo gestión de tickets: " + e.getMessage());
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Error al abrir la gestión de tickets: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }
+
+    /**
+     * Abre la ventana de reporte de tickets (todos los usuarios)
+     */
+    private void abrirReporteTicket() {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                main.java.tickets.TicketReportWindow reportWindow
+                        = new main.java.tickets.TicketReportWindow(userId);
+                reportWindow.setVisible(true);
+            } catch (Exception e) {
+                System.err.println("Error abriendo reporte de ticket: " + e.getMessage());
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Error al abrir el reporte de tickets: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }
+
+    /**
+     * ✅ NUEVO: Abre la ventana de seguimiento de tickets del usuario
+     */
+    private void abrirMisTickets() {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                main.java.tickets.UserTicketsWindow userTicketsWindow
+                        = new main.java.tickets.UserTicketsWindow(userId);
+                userTicketsWindow.setVisible(true);
+            } catch (Exception e) {
+                System.err.println("Error abriendo mis tickets: " + e.getMessage());
+                JOptionPane.showMessageDialog(currentFrame,
+                        "Error al abrir el seguimiento de tickets: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
     }
 }
