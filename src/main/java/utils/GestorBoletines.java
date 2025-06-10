@@ -407,56 +407,56 @@ public class GestorBoletines {
      * CORREGIDO: Crear InfoBoletin con formato numérico correcto
      */
     private static InfoBoletin crearInfoBoletinDesdeBD(int alumnoId, int cursoId, String periodo) {
-    try {
-        Connection conect = Conexion.getInstancia().verificarConexion();
-        if (conect == null) {
-            return null;
-        }
+        try {
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                return null;
+            }
 
-        String query = """
+            String query = """
             SELECT u.nombre, u.apellido, u.dni, c.anio, c.division
             FROM usuarios u 
             INNER JOIN cursos c ON c.id = ?
             WHERE u.id = ?
             """;
 
-        PreparedStatement ps = conect.prepareStatement(query);
-        ps.setInt(1, cursoId);
-        ps.setInt(2, alumnoId);
-        ResultSet rs = ps.executeQuery();
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, cursoId);
+            ps.setInt(2, alumnoId);
+            ResultSet rs = ps.executeQuery();
 
-        if (rs.next()) {
-            InfoBoletin info = new InfoBoletin();
-            info.alumnoId = alumnoId;
-            info.alumnoNombre = rs.getString("apellido") + ", " + rs.getString("nombre");
-            info.alumnoDni = rs.getString("dni");
-            info.cursoId = cursoId;
-            
-            // CORREGIDO: Usar formato numérico para cursos
-            int anio = rs.getInt("anio");
-            int division = rs.getInt("division");
-            
-            info.curso = String.valueOf(anio);      // "1", "2", "3", etc.
-            info.division = String.valueOf(division); // "1", "2", "3", etc.
+            if (rs.next()) {
+                InfoBoletin info = new InfoBoletin();
+                info.alumnoId = alumnoId;
+                info.alumnoNombre = rs.getString("apellido") + ", " + rs.getString("nombre");
+                info.alumnoDni = rs.getString("dni");
+                info.cursoId = cursoId;
 
-            info.anioLectivo = LocalDate.now().getYear();
-            info.periodo = periodo;
+                // CORREGIDO: Usar formato numérico para cursos
+                int anio = rs.getInt("anio");
+                int division = rs.getInt("division");
 
-            System.out.println("InfoBoletin creado - Curso: " + info.curso + info.division + " (formato numérico)");
+                info.curso = String.valueOf(anio);      // "1", "2", "3", etc.
+                info.division = String.valueOf(division); // "1", "2", "3", etc.
+
+                info.anioLectivo = LocalDate.now().getYear();
+                info.periodo = periodo;
+
+                System.out.println("InfoBoletin creado - Curso: " + info.curso + info.division + " (formato numérico)");
+                rs.close();
+                ps.close();
+                return info;
+            }
+
             rs.close();
             ps.close();
-            return info;
+        } catch (SQLException e) {
+            System.err.println("❌ Error obteniendo datos de BD: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        rs.close();
-        ps.close();
-    } catch (SQLException e) {
-        System.err.println("❌ Error obteniendo datos de BD: " + e.getMessage());
-        e.printStackTrace();
+        return null;
     }
-
-    return null;
-}
 
     /**
      * Registra información del boletín en la base de datos
@@ -465,16 +465,26 @@ public class GestorBoletines {
         try {
             Connection conect = Conexion.getInstancia().verificarConexion();
             if (conect == null) {
+                System.err.println("❌ Error de conexión a BD");
                 return false;
             }
 
             String periodoParaBD = MAPEO_PERIODOS.getOrDefault(info.periodo, info.periodo);
 
-            // Verificar si ya existe
+            // OBTENER USUARIO ACTUAL DEL SISTEMA
+            int usuarioActual = PlantillaBoletinUtility.obtenerUsuarioActual();
+            if (usuarioActual <= 0) {
+                System.err.println("❌ No se pudo obtener un usuario válido del sistema");
+                return false;
+            }
+
+            System.out.println("Registrando boletín con usuario: " + usuarioActual);
+
+            // Verificar si ya existe un boletín para este alumno/curso/período
             String queryVerificar = """
-                SELECT id FROM boletin 
-                WHERE alumno_id = ? AND curso_id = ? AND anio_lectivo = ? AND periodo = ?
-                """;
+            SELECT id FROM boletin 
+            WHERE alumno_id = ? AND curso_id = ? AND anio_lectivo = ? AND periodo = ?
+            """;
 
             PreparedStatement psVerificar = conect.prepareStatement(queryVerificar);
             psVerificar.setInt(1, info.alumnoId);
@@ -490,31 +500,39 @@ public class GestorBoletines {
             psVerificar.close();
 
             if (existe) {
-                // Actualizar registro
+                // Actualizar registro existente
                 String queryUpdate = """
-                    UPDATE boletin SET 
-                    fecha_emision = NOW(),
-                    estado = 'publicado',
-                    publicado_at = NOW(),
-                    observaciones = ?
-                    WHERE id = ?
-                    """;
+                UPDATE boletin SET 
+                fecha_emision = NOW(),
+                estado = 'publicado',
+                publicado_at = NOW(),
+                observaciones = ?,
+                creado_por = ?
+                WHERE id = ?
+                """;
 
                 PreparedStatement psUpdate = conect.prepareStatement(queryUpdate);
                 psUpdate.setString(1, "Boletín en servidor - URL: " + info.rutaArchivo);
-                psUpdate.setInt(2, boletinId);
+                psUpdate.setInt(2, usuarioActual); // CORREGIDO: usar usuario válido
+                psUpdate.setInt(3, boletinId);
 
                 int filasAfectadas = psUpdate.executeUpdate();
                 psUpdate.close();
-                return filasAfectadas > 0;
 
+                if (filasAfectadas > 0) {
+                    System.out.println("✅ Registro de boletín actualizado en BD");
+                    return true;
+                } else {
+                    System.err.println("❌ No se pudo actualizar el registro");
+                    return false;
+                }
             } else {
                 // Crear nuevo registro
                 String queryInsert = """
-                    INSERT INTO boletin (alumno_id, curso_id, anio_lectivo, periodo, fecha_emision, 
-                                       observaciones, estado, publicado_at, creado_por) 
-                    VALUES (?, ?, ?, ?, NOW(), ?, 'publicado', NOW(), 1)
-                    """;
+                INSERT INTO boletin (alumno_id, curso_id, anio_lectivo, periodo, fecha_emision, 
+                                   observaciones, estado, publicado_at, creado_por) 
+                VALUES (?, ?, ?, ?, NOW(), ?, 'publicado', NOW(), ?)
+                """;
 
                 PreparedStatement psInsert = conect.prepareStatement(queryInsert);
                 psInsert.setInt(1, info.alumnoId);
@@ -522,14 +540,23 @@ public class GestorBoletines {
                 psInsert.setInt(3, info.anioLectivo);
                 psInsert.setString(4, periodoParaBD);
                 psInsert.setString(5, "Boletín en servidor - URL: " + info.rutaArchivo);
+                psInsert.setInt(6, usuarioActual); // CORREGIDO: usar usuario válido
 
                 int filasAfectadas = psInsert.executeUpdate();
                 psInsert.close();
-                return filasAfectadas > 0;
+
+                if (filasAfectadas > 0) {
+                    System.out.println("✅ Nuevo registro de boletín creado en BD");
+                    return true;
+                } else {
+                    System.err.println("❌ No se pudo crear el registro");
+                    return false;
+                }
             }
 
         } catch (SQLException e) {
             System.err.println("❌ Error al registrar boletín en BD: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -892,7 +919,7 @@ public class GestorBoletines {
             return false;
         }
     }
-    
+
     public static String construirRutaBoletinServidor(int alumnoId, int cursoId, String periodo) {
         try {
             // Obtener información del alumno y curso
@@ -929,6 +956,413 @@ public class GestorBoletines {
             System.err.println("❌ Error construyendo ruta del servidor: " + e.getMessage());
             e.printStackTrace();
             return null;
+        }
+    }
+
+    /**
+     * NUEVO: Registra un boletín PDF en BD junto con el Excel
+     */
+    public static boolean registrarBoletinPdfEnServidor(int alumnoId, int cursoId, String periodo,
+            String nombreArchivoExcel, String nombreArchivoPdf) {
+        try {
+            System.out.println("=== REGISTRANDO BOLETÍN COMPLETO (EXCEL + PDF) ===");
+
+            InfoBoletin info = crearInfoBoletinDesdeBD(alumnoId, cursoId, periodo);
+            if (info == null) {
+                return false;
+            }
+
+            // Generar URLs completas
+            String urlExcel = generarUrlBoletin(info, nombreArchivoExcel);
+            String urlPdf = generarUrlBoletin(info, nombreArchivoPdf);
+
+            // Registrar Excel
+            info.rutaArchivo = urlExcel;
+            info.nombreArchivo = nombreArchivoExcel;
+            info.archivoExiste = true;
+            boolean excelRegistrado = registrarBoletinEnBD(info);
+
+            // Registrar PDF (con período modificado para distinguir)
+            info.rutaArchivo = urlPdf;
+            info.nombreArchivo = nombreArchivoPdf;
+            boolean pdfRegistrado = registrarBoletinEnBD(info, periodo + "_PDF");
+
+            if (excelRegistrado && pdfRegistrado) {
+                System.out.println("✅ Boletín completo registrado en BD (Excel + PDF)");
+                return true;
+            } else {
+                System.err.println("⚠️ Registro parcial - Excel: " + excelRegistrado + ", PDF: " + pdfRegistrado);
+                return false;
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error registrando boletín completo: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * NUEVO: Versión sobrecargada de registrarBoletinEnBD para manejar períodos
+     * personalizados
+     */
+    private static boolean registrarBoletinEnBD(InfoBoletin info, String periodoCustom) {
+        try {
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                System.err.println("❌ Error de conexión a BD");
+                return false;
+            }
+
+            String periodoParaBD = MAPEO_PERIODOS.getOrDefault(periodoCustom, periodoCustom);
+
+            // Obtener usuario actual del sistema
+            int usuarioActual = PlantillaBoletinUtility.obtenerUsuarioActual();
+            if (usuarioActual <= 0) {
+                System.err.println("❌ No se pudo obtener un usuario válido del sistema");
+                return false;
+            }
+
+            // Verificar si ya existe
+            String queryVerificar = """
+            SELECT id FROM boletin 
+            WHERE alumno_id = ? AND curso_id = ? AND anio_lectivo = ? AND periodo = ?
+            """;
+
+            PreparedStatement psVerificar = conect.prepareStatement(queryVerificar);
+            psVerificar.setInt(1, info.alumnoId);
+            psVerificar.setInt(2, info.cursoId);
+            psVerificar.setInt(3, info.anioLectivo);
+            psVerificar.setString(4, periodoParaBD);
+            ResultSet rs = psVerificar.executeQuery();
+
+            boolean existe = rs.next();
+            int boletinId = existe ? rs.getInt("id") : -1;
+
+            rs.close();
+            psVerificar.close();
+
+            if (existe) {
+                // Actualizar registro existente
+                String queryUpdate = """
+                UPDATE boletin SET 
+                fecha_emision = NOW(),
+                estado = 'publicado',
+                publicado_at = NOW(),
+                observaciones = ?,
+                creado_por = ?
+                WHERE id = ?
+                """;
+
+                PreparedStatement psUpdate = conect.prepareStatement(queryUpdate);
+                psUpdate.setString(1, "Boletín en servidor - URL: " + info.rutaArchivo);
+                psUpdate.setInt(2, usuarioActual);
+                psUpdate.setInt(3, boletinId);
+
+                int filasAfectadas = psUpdate.executeUpdate();
+                psUpdate.close();
+
+                return filasAfectadas > 0;
+            } else {
+                // Crear nuevo registro
+                String queryInsert = """
+                INSERT INTO boletin (alumno_id, curso_id, anio_lectivo, periodo, fecha_emision, 
+                                   observaciones, estado, publicado_at, creado_por) 
+                VALUES (?, ?, ?, ?, NOW(), ?, 'publicado', NOW(), ?)
+                """;
+
+                PreparedStatement psInsert = conect.prepareStatement(queryInsert);
+                psInsert.setInt(1, info.alumnoId);
+                psInsert.setInt(2, info.cursoId);
+                psInsert.setInt(3, info.anioLectivo);
+                psInsert.setString(4, periodoParaBD);
+                psInsert.setString(5, "Boletín en servidor - URL: " + info.rutaArchivo);
+                psInsert.setInt(6, usuarioActual);
+
+                int filasAfectadas = psInsert.executeUpdate();
+                psInsert.close();
+
+                return filasAfectadas > 0;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error al registrar boletín en BD: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * NUEVO: Obtiene boletines PDF disponibles
+     */
+    public static List<InfoBoletin> obtenerBoletinesPdfDisponibles(int anioLectivo, String curso, String division, String periodo) {
+        List<InfoBoletin> boletinesPdf = new ArrayList<>();
+
+        try {
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                return boletinesPdf;
+            }
+
+            StringBuilder queryBuilder = new StringBuilder();
+            queryBuilder.append("""
+            SELECT b.id, b.alumno_id, b.curso_id, b.anio_lectivo, b.periodo, b.fecha_emision, b.estado,
+                   u.nombre, u.apellido, u.dni,
+                   c.anio as curso_anio, c.division as curso_division
+            FROM boletin b
+            INNER JOIN usuarios u ON b.alumno_id = u.id
+            INNER JOIN cursos c ON b.curso_id = c.id
+            WHERE b.anio_lectivo = ? AND b.periodo LIKE '%_PDF'
+            """);
+
+            List<Object> parametros = new ArrayList<>();
+            parametros.add(anioLectivo);
+
+            if (curso != null && !curso.isEmpty() && !curso.equals("TODOS")) {
+                queryBuilder.append(" AND c.anio = ?");
+                parametros.add(Integer.parseInt(curso));
+            }
+
+            if (division != null && !division.isEmpty() && !division.equals("TODAS")) {
+                queryBuilder.append(" AND c.division = ?");
+                parametros.add(division.charAt(0) - 'A' + 1);
+            }
+
+            if (periodo != null && !periodo.isEmpty() && !periodo.equals("TODOS")) {
+                String periodoParaBD = MAPEO_PERIODOS.getOrDefault(periodo, periodo) + "_PDF";
+                queryBuilder.append(" AND b.periodo = ?");
+                parametros.add(periodoParaBD);
+            }
+
+            queryBuilder.append(" ORDER BY c.anio, c.division, u.apellido, u.nombre");
+
+            PreparedStatement ps = conect.prepareStatement(queryBuilder.toString());
+            for (int i = 0; i < parametros.size(); i++) {
+                ps.setObject(i + 1, parametros.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                InfoBoletin info = new InfoBoletin();
+                info.alumnoId = rs.getInt("alumno_id");
+                info.alumnoNombre = rs.getString("apellido") + ", " + rs.getString("nombre");
+                info.alumnoDni = rs.getString("dni");
+                info.cursoId = rs.getInt("curso_id");
+                info.curso = String.valueOf(rs.getInt("curso_anio"));
+
+                int divisionNum = rs.getInt("curso_division");
+                info.division = String.valueOf((char) ('A' + divisionNum - 1));
+
+                info.anioLectivo = rs.getInt("anio_lectivo");
+                info.estadoBoletin = rs.getString("estado");
+
+                String periodoBD = rs.getString("periodo");
+                info.periodo = mapearPeriodoDesdeBD(periodoBD.replace("_PDF", ""));
+
+                // Generar URL esperada del PDF
+                info.rutaArchivo = generarUrlBoletinPdfEsperada(info);
+                info.archivoExiste = true; // Asumimos que existe en servidor
+                info.tamanioArchivo = 0; // No podemos verificar tamaño desde URL
+
+                boletinesPdf.add(info);
+            }
+
+            rs.close();
+            ps.close();
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error al obtener boletines PDF: " + e.getMessage());
+        }
+
+        return boletinesPdf;
+    }
+
+    /**
+     * NUEVO: Genera URL esperada del boletín PDF
+     */
+    private static String generarUrlBoletinPdfEsperada(InfoBoletin info) {
+        String nombreCurso = info.curso + info.division;
+        String fechaStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String nombreLimpio = info.alumnoNombre.replaceAll("[^a-zA-Z0-9\\s]", "").trim().replaceAll("\\s+", "_");
+        String nombreArchivo = String.format("Boletin_%s_%s_%s_%s.pdf", nombreLimpio, nombreCurso, info.periodo, fechaStr);
+
+        return RUTA_BASE_SERVIDOR + info.anioLectivo + "/" + nombreCurso + "/" + info.periodo + "/" + nombreArchivo;
+    }
+
+    /**
+     * NUEVO: Elimina tanto el Excel como el PDF de un boletín
+     */
+    public static boolean eliminarBoletinCompleto(InfoBoletin info) {
+        try {
+            System.out.println("🗑️ Eliminando boletín completo: " + info.alumnoNombre + " - " + info.periodo);
+
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                return false;
+            }
+
+            String periodoParaBD = MAPEO_PERIODOS.getOrDefault(info.periodo, info.periodo);
+
+            // Eliminar registro Excel
+            String queryExcel = """
+            DELETE FROM boletin 
+            WHERE alumno_id = ? AND curso_id = ? AND anio_lectivo = ? AND periodo = ?
+            """;
+
+            PreparedStatement psExcel = conect.prepareStatement(queryExcel);
+            psExcel.setInt(1, info.alumnoId);
+            psExcel.setInt(2, info.cursoId);
+            psExcel.setInt(3, info.anioLectivo);
+            psExcel.setString(4, periodoParaBD);
+
+            int filasExcel = psExcel.executeUpdate();
+            psExcel.close();
+
+            // Eliminar registro PDF
+            String queryPdf = """
+            DELETE FROM boletin 
+            WHERE alumno_id = ? AND curso_id = ? AND anio_lectivo = ? AND periodo = ?
+            """;
+
+            PreparedStatement psPdf = conect.prepareStatement(queryPdf);
+            psPdf.setInt(1, info.alumnoId);
+            psPdf.setInt(2, info.cursoId);
+            psPdf.setInt(3, info.anioLectivo);
+            psPdf.setString(4, periodoParaBD + "_PDF");
+
+            int filasPdf = psPdf.executeUpdate();
+            psPdf.close();
+
+            boolean exito = (filasExcel > 0 || filasPdf > 0);
+
+            if (exito) {
+                System.out.println("✅ Registros eliminados - Excel: " + filasExcel + ", PDF: " + filasPdf);
+            }
+
+            return exito;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error eliminando boletín completo: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * NUEVO: Obtiene estadísticas incluyendo PDFs
+     */
+    public static String obtenerEstadisticasCompletas(int anioLectivo) {
+        try {
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                return "Error de conexión";
+            }
+
+            StringBuilder stats = new StringBuilder();
+            stats.append("=== ESTADÍSTICAS COMPLETAS DE BOLETINES ===\n");
+            stats.append("Año lectivo: ").append(anioLectivo).append("\n");
+            stats.append("Servidor: ").append(RUTA_BASE_SERVIDOR).append("\n\n");
+
+            // Total de boletines Excel
+            String queryTotalExcel = "SELECT COUNT(*) as total FROM boletin WHERE anio_lectivo = ? AND periodo NOT LIKE '%_PDF'";
+            PreparedStatement psExcel = conect.prepareStatement(queryTotalExcel);
+            psExcel.setInt(1, anioLectivo);
+            ResultSet rsExcel = psExcel.executeQuery();
+
+            if (rsExcel.next()) {
+                stats.append("📊 Total boletines Excel: ").append(rsExcel.getInt("total")).append("\n");
+            }
+            rsExcel.close();
+            psExcel.close();
+
+            // Total de boletines PDF
+            String queryTotalPdf = "SELECT COUNT(*) as total FROM boletin WHERE anio_lectivo = ? AND periodo LIKE '%_PDF'";
+            PreparedStatement psPdf = conect.prepareStatement(queryTotalPdf);
+            psPdf.setInt(1, anioLectivo);
+            ResultSet rsPdf = psPdf.executeQuery();
+
+            if (rsPdf.next()) {
+                stats.append("📄 Total boletines PDF: ").append(rsPdf.getInt("total")).append("\n");
+            }
+            rsPdf.close();
+            psPdf.close();
+
+            // Boletines por período (Excel)
+            String queryPeriodosExcel = """
+            SELECT periodo, COUNT(*) as cantidad 
+            FROM boletin 
+            WHERE anio_lectivo = ? AND periodo NOT LIKE '%_PDF'
+            GROUP BY periodo 
+            ORDER BY periodo
+            """;
+
+            PreparedStatement psPeriodosExcel = conect.prepareStatement(queryPeriodosExcel);
+            psPeriodosExcel.setInt(1, anioLectivo);
+            ResultSet rsPeriodosExcel = psPeriodosExcel.executeQuery();
+
+            stats.append("\n📅 Boletines Excel por período:\n");
+            while (rsPeriodosExcel.next()) {
+                String periodo = rsPeriodosExcel.getString("periodo");
+                String periodoCorto = mapearPeriodoDesdeBD(periodo);
+                stats.append("  ").append(periodoCorto).append(": ").append(rsPeriodosExcel.getInt("cantidad")).append("\n");
+            }
+            rsPeriodosExcel.close();
+            psPeriodosExcel.close();
+
+            // Boletines por período (PDF)
+            String queryPeriodosPdf = """
+            SELECT periodo, COUNT(*) as cantidad 
+            FROM boletin 
+            WHERE anio_lectivo = ? AND periodo LIKE '%_PDF'
+            GROUP BY periodo 
+            ORDER BY periodo
+            """;
+
+            PreparedStatement psPeriodosPdf = conect.prepareStatement(queryPeriodosPdf);
+            psPeriodosPdf.setInt(1, anioLectivo);
+            ResultSet rsPeriodosPdf = psPeriodosPdf.executeQuery();
+
+            stats.append("\n📄 Boletines PDF por período:\n");
+            while (rsPeriodosPdf.next()) {
+                String periodo = rsPeriodosPdf.getString("periodo");
+                String periodoCorto = mapearPeriodoDesdeBD(periodo.replace("_PDF", ""));
+                stats.append("  ").append(periodoCorto).append(": ").append(rsPeriodosPdf.getInt("cantidad")).append("\n");
+            }
+            rsPeriodosPdf.close();
+            psPeriodosPdf.close();
+
+            return stats.toString();
+
+        } catch (SQLException e) {
+            return "Error obteniendo estadísticas completas: " + e.getMessage();
+        }
+    }
+
+    /**
+     * NUEVO: Limpieza mejorada (Excel y PDF)
+     */
+    public static int limpiarBoletinesAntiguosCompletos(int aniosAntiguedad) {
+        try {
+            int anioLimite = LocalDate.now().getYear() - aniosAntiguedad;
+
+            Connection conect = Conexion.getInstancia().verificarConexion();
+            if (conect == null) {
+                return 0;
+            }
+
+            // Eliminar tanto Excel como PDF
+            String query = "DELETE FROM boletin WHERE anio_lectivo < ?";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, anioLimite);
+
+            int eliminados = ps.executeUpdate();
+            ps.close();
+
+            System.out.println("✅ Registros antiguos eliminados (Excel + PDF): " + eliminados);
+            return eliminados;
+
+        } catch (SQLException e) {
+            System.err.println("Error en limpieza completa: " + e.getMessage());
+            return 0;
         }
     }
 

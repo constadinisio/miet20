@@ -1,13 +1,19 @@
 package main.java.tickets;
 
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Window;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import main.java.database.Conexion;
 import main.java.utils.NotificationManager;
+import javax.swing.Timer;
 
 /**
  * TicketService - Servicio principal del sistema de tickets Reutiliza al máximo
@@ -21,6 +27,10 @@ public class TicketService {
     private static TicketService instance;
     private final Connection connection;
     private NotificationManager notificationManager;
+
+    private Timer notificationPollingTimer;
+    private static final long LAST_CHECK_NOTIFICATION_TIME_KEY = System.currentTimeMillis();
+    private long lastNotificationCheck = 0;
 
     // Tu ID de usuario hardcodeado como fallback
     private static final int DEVELOPER_USER_ID = 960;
@@ -70,10 +80,10 @@ public class TicketService {
 
                 // 2. Insertar ticket en base de datos
                 String insertQuery = """
-                    INSERT INTO tickets (ticket_number, asunto, descripcion, categoria, prioridad, 
-                                       usuario_reporta_id, archivo_adjunto_url) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """;
+                INSERT INTO tickets (ticket_number, asunto, descripcion, categoria, prioridad, 
+                                   usuario_reporta_id, archivo_adjunto_url) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
 
                 PreparedStatement ps = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
                 ps.setString(1, ticketNumber);
@@ -92,9 +102,23 @@ public class TicketService {
                     ticketId = rs.getInt(1);
                 }
 
-                // 3. Enviar notificación al desarrollador usando el sistema existente
+                // 3. ENVÍO INMEDIATO de notificación al desarrollador
                 if (ticketId > 0) {
-                    enviarNotificacionNuevoTicket(ticketId, ticketNumber, asunto, usuarioReportaId);
+                    System.out.println("🚀 ENVIANDO NOTIFICACIÓN INMEDIATA de nuevo ticket: " + ticketNumber);
+
+                    // FORZAR notificación inmediata usando CompletableFuture
+                    enviarNotificacionNuevoTicketInmediata(ticketId, ticketNumber, asunto, usuarioReportaId)
+                            .thenRun(() -> {
+                                System.out.println("✅ Notificación de ticket enviada exitosamente: " + ticketNumber);
+
+                                // FORZAR actualización en todas las ventanas abiertas
+                                notificarCambiosAVentanasAbiertas();
+                            })
+                            .exceptionally(throwable -> {
+                                System.err.println("❌ Error enviando notificación de ticket: " + throwable.getMessage());
+                                return null;
+                            });
+
                     System.out.println("✅ Ticket creado: " + ticketNumber + " por usuario: " + usuarioReportaId);
                 }
 
@@ -295,14 +319,28 @@ public class TicketService {
     /**
      * Cuenta tickets pendientes (para mostrar en el menú)
      */
+    private volatile int cachedPendingCount = -1;
+    private volatile long lastCountCheck = 0;
+    private static final long COUNT_CACHE_DURATION = 5000; // 5 segundos
+
     public int contarTicketsPendientes() {
+        long currentTime = System.currentTimeMillis();
+
+        // Si tenemos cache válido, usarlo
+        if (cachedPendingCount >= 0 && (currentTime - lastCountCheck) < COUNT_CACHE_DURATION) {
+            return cachedPendingCount;
+        }
+
+        // Si no, consultar BD y cachear
         try {
             String query = "SELECT COUNT(*) FROM tickets WHERE estado IN ('ABIERTO', 'EN_REVISION') AND activo = 1";
             PreparedStatement ps = connection.prepareStatement(query);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                return rs.getInt(1);
+                cachedPendingCount = rs.getInt(1);
+                lastCountCheck = currentTime;
+                return cachedPendingCount;
             }
         } catch (SQLException e) {
             System.err.println("Error contando tickets pendientes: " + e.getMessage());
@@ -310,6 +348,11 @@ public class TicketService {
 
         return 0;
     }
+
+    public void invalidateCountCache() {
+        cachedPendingCount = -1;
+        lastCountCheck = 0;
+    }   
 
     // ========================================
     // MÉTODOS AUXILIARES PRIVADOS
@@ -661,6 +704,211 @@ public class TicketService {
 
         } catch (SQLException e) {
             System.err.println("Error buscando tickets: " + e.getMessage());
+        }
+
+        return tickets;
+    }
+
+    // NUEVO MÉTODO para envío inmediato de notificaciones:
+    private CompletableFuture<Void> enviarNotificacionNuevoTicketInmediata(int ticketId, String ticketNumber,
+            String asunto, int usuarioReportaId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                int developerId = obtenerDeveloperUserId();
+                System.out.println("📨 Enviando notificación inmediata a desarrollador ID: " + developerId);
+
+                String titulo = "🎫 NUEVO TICKET: " + ticketNumber;
+                String contenido = String.format(
+                        "⚡ TICKET RECIÉN CREADO ⚡\n\n"
+                        + "📋 Número: %s\n"
+                        + "👤 Usuario: %s\n"
+                        + "📝 Asunto: %s\n"
+                        + "⏰ Hora: %s\n\n"
+                        + "Revisa inmediatamente el Centro de Ayuda.",
+                        ticketNumber,
+                        obtenerNombreUsuario(usuarioReportaId),
+                        asunto,
+                        java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))
+                );
+
+                // MÉTODO 1: Usar NotificationManager con prioridad alta
+                NotificationManager notifManager = getNotificationManager();
+                if (notifManager != null) {
+                    System.out.println("📤 Usando NotificationManager para envío inmediato...");
+
+                    // Enviar con prioridad URGENTE para que llegue inmediatamente
+                    notifManager.enviarNotificacionConDetalles(
+                            titulo, contenido, "URGENTE", "#ff4444", "🚨", developerId
+                    ).thenAccept(exito -> {
+                        if (exito) {
+                            System.out.println("✅ Notificación inmediata enviada via NotificationManager");
+                            // Crear registro adicional en BD
+                            try {
+                                insertarNotificacionConTicket(ticketId, titulo, contenido, developerId, usuarioReportaId);
+                            } catch (Exception e) {
+                                System.err.println("Error creando registro BD: " + e.getMessage());
+                            }
+                        } else {
+                            System.err.println("❌ Falló envío via NotificationManager");
+                        }
+                    }).exceptionally(throwable -> {
+                        System.err.println("❌ Excepción en NotificationManager: " + throwable.getMessage());
+                        return null;
+                    });
+
+                } else {
+                    System.err.println("⚠️ NotificationManager no disponible, usando método directo");
+                    // MÉTODO 2: Inserción directa en BD como fallback
+                    insertarNotificacionConTicket(ticketId, titulo, contenido, developerId, usuarioReportaId);
+                }
+
+            } catch (Exception e) {
+                System.err.println("❌ Error en envío inmediato: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+// NUEVO MÉTODO para notificar cambios a ventanas abiertas:
+    private void notificarCambiosAVentanasAbiertas() {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                System.out.println("🔄 Notificando cambios a ventanas abiertas...");
+
+                // Notificar a todas las ventanas Frame abiertas
+                for (Window window : Window.getWindows()) {
+                    if (window instanceof JFrame && window.isVisible()) {
+                        if (window.getClass().getSimpleName().contains("VentanaInicio")) {
+                            // Forzar actualización de campanitas de notificación
+                            System.out.println("🔔 Actualizando campanita en VentanaInicio");
+                            actualizarCampanitasEnVentana((JFrame) window);
+                        }
+                    }
+                }
+
+            } catch (Exception e) {
+                System.err.println("Error notificando a ventanas: " + e.getMessage());
+            }
+        });
+    }
+    // MÉTODO auxiliar para actualizar campanitas:
+
+    private void actualizarCampanitasEnVentana(JFrame ventana) {
+        try {
+            // Buscar componentes TicketBellComponent recursivamente
+            Component[] components = ventana.getContentPane().getComponents();
+            buscarYActualizarCampanitas(components);
+
+        } catch (Exception e) {
+            System.err.println("Error actualizando campanitas: " + e.getMessage());
+        }
+    }
+
+    private void buscarYActualizarCampanitas(Component[] components) {
+        for (Component comp : components) {
+            if (comp instanceof main.java.tickets.TicketBellComponent) {
+                System.out.println("🔔 Encontrada campanita de tickets, actualizando...");
+                ((main.java.tickets.TicketBellComponent) comp).forceRefresh();
+            } else if (comp instanceof Container) {
+                // Buscar recursivamente en contenedores
+                buscarYActualizarCampanitas(((Container) comp).getComponents());
+            }
+        }
+    }
+
+// NUEVO MÉTODO para inicializar polling de notificaciones:
+    public void iniciarPollingNotificaciones() {
+        if (notificationPollingTimer != null && notificationPollingTimer.isRunning()) {
+            return; // Ya está ejecutándose
+        }
+
+        System.out.println("🕐 Iniciando polling de notificaciones de tickets cada 15 segundos...");
+
+        notificationPollingTimer = new Timer(15000, e -> verificarNuevosTicketsYNotificar());
+        notificationPollingTimer.setRepeats(true);
+        notificationPollingTimer.start();
+
+        lastNotificationCheck = System.currentTimeMillis();
+    }
+
+// MÉTODO para verificar nuevos tickets periódicamente:
+    private void verificarNuevosTicketsYNotificar() {
+        SwingWorker<Integer, Void> worker = new SwingWorker<Integer, Void>() {
+            @Override
+            protected Integer doInBackground() throws Exception {
+                try {
+                    // Contar tickets creados en los últimos 30 segundos
+                    String query = """
+                    SELECT COUNT(*) FROM tickets 
+                    WHERE fecha_creacion >= DATE_SUB(NOW(), INTERVAL 30 SECOND)
+                    AND activo = 1
+                    """;
+
+                    PreparedStatement ps = connection.prepareStatement(query);
+                    ResultSet rs = ps.executeQuery();
+
+                    if (rs.next()) {
+                        return rs.getInt(1);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error verificando nuevos tickets: " + e.getMessage());
+                }
+                return 0;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    int nuevosTickets = get();
+                    if (nuevosTickets > 0) {
+                        System.out.println("🚨 Detectados " + nuevosTickets + " tickets nuevos, actualizando interfaz...");
+                        notificarCambiosAVentanasAbiertas();
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error procesando verificación: " + e.getMessage());
+                }
+            }
+        };
+        worker.execute();
+    }
+
+// MÉTODO para detener polling:
+    public void detenerPollingNotificaciones() {
+        if (notificationPollingTimer != null && notificationPollingTimer.isRunning()) {
+            notificationPollingTimer.stop();
+            System.out.println("⏸️ Polling de notificaciones detenido");
+        }
+    }
+
+    /**
+     * NUEVO: Obtiene tickets creados en los últimos N segundos
+     */
+    public List<Ticket> obtenerTicketsRecientes(int segundos) {
+        List<Ticket> tickets = new ArrayList<>();
+
+        try {
+            String query = """
+            SELECT t.*, u.nombre, u.apellido,
+                   CONCAT(u.apellido, ', ', u.nombre) as nombre_completo
+            FROM tickets t
+            INNER JOIN usuarios u ON t.usuario_reporta_id = u.id
+            WHERE t.fecha_creacion >= DATE_SUB(NOW(), INTERVAL ? SECOND)
+            AND t.activo = 1
+            ORDER BY t.fecha_creacion DESC
+            """;
+
+            PreparedStatement ps = connection.prepareStatement(query);
+            ps.setInt(1, segundos);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Ticket ticket = mapearTicketDesdeResultSet(rs);
+                ticket.setNombreCompleto(rs.getString("nombre_completo"));
+                tickets.add(ticket);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error obteniendo tickets recientes: " + e.getMessage());
         }
 
         return tickets;

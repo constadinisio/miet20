@@ -74,7 +74,7 @@ public class DatosComplementariosManager {
                 () -> showBirthDateForm()));
 
         // Datos específicos según el rol
-        if (userSession.getRol() != 4) { // Si no es alumno (rol 4)
+        if (userSession.getRol() != 4 && userSession.getRol() != 0) { // Si no es alumno (rol 4)
             dataVerifiers.add(new DataVerifier("ficha_censal",
                     (userId) -> checkEmptyField("ficha_censal", userId),
                     () -> showFichaCensalForm()));

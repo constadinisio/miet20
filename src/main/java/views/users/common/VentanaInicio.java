@@ -48,6 +48,8 @@ import java.util.concurrent.CompletableFuture;
 import javax.swing.JDialog;
 import main.java.components.NotificationStartupBanner;
 import main.java.views.notifications.NotificationsWindow;
+import main.java.tickets.TicketService;
+import javax.swing.Timer;
 
 /**
  * Ventana principal unificada para todos los roles del sistema. VERSIÓN
@@ -141,12 +143,18 @@ public class VentanaInicio extends javax.swing.JFrame {
     private JButton viewNotificationsButton;
     private JButton dismissButton;
 
+    private TicketService ticketService;
+
     // Control de tiempo para evitar mostrar múltiples carteles
     private volatile long lastNotificationCheck = 0;
     private static final long NOTIFICATION_CHECK_COOLDOWN = 5000; // 5 segundos
 
     /**
      * Constructor principal optimizado de la ventana unificada.
+     */
+    /**
+     * Constructor principal optimizado de la ventana unificada. VERSIÓN
+     * MODIFICADA con soporte para tickets en tiempo real
      */
     public VentanaInicio(int userId, int rolId) {
         // Verificar si ya se está inicializando
@@ -201,6 +209,21 @@ public class VentanaInicio extends javax.swing.JFrame {
             isInitialized.set(true);
             System.out.println("✅ VentanaInicio inicializada completamente con cartel de notificaciones");
 
+            // PASO 11: NUEVO - Inicializar TicketService y polling si es desarrollador
+            try {
+                this.ticketService = TicketService.getInstance();
+
+                if (ticketService.esDeveloper(userId)) {
+                    System.out.println("👨‍💻 Usuario es desarrollador, iniciando polling de tickets...");
+                    ticketService.iniciarPollingNotificaciones();
+                } else {
+                    System.out.println("👤 Usuario regular, no se inicia polling de tickets");
+                }
+            } catch (Exception ex) {
+                System.err.println("⚠️ Error inicializando TicketService: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+
         } catch (Exception ex) {
             System.err.println("❌ Error crítico en inicialización: " + ex.getMessage());
             ex.printStackTrace();
@@ -210,7 +233,6 @@ public class VentanaInicio extends javax.swing.JFrame {
         } finally {
             isInitializing.set(false);
         }
-
     }
 
     // ========================================
@@ -1334,42 +1356,102 @@ public class VentanaInicio extends javax.swing.JFrame {
      * Actualiza las etiquetas de nombre y rol.
      */
     public void updateLabels(String nombreCompleto, String rolTexto) {
-        if (labelNomApe != null && labelRol != null) {
-            SwingUtilities.invokeLater(() -> {
-                labelNomApe.setText(nombreCompleto);
-                labelRol.setText("Rol: " + rolTexto);
+        System.out.println("🔄 Actualizando labels del usuario: " + nombreCompleto + " - " + rolTexto);
 
-                // Forzar actualización visual
-                labelNomApe.revalidate();
-                labelNomApe.repaint();
-                labelRol.revalidate();
-                labelRol.repaint();
-            });
-        }
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // Asegurar que las etiquetas existen
+                if (labelNomApe == null || labelRol == null) {
+                    System.err.println("⚠️ Las etiquetas son null, inicializando...");
+                    inicializarEtiquetasUsuario();
+                }
+
+                if (labelNomApe != null) {
+                    labelNomApe.setText(nombreCompleto);
+                    labelNomApe.setVisible(true);
+                    System.out.println("✅ Nombre actualizado: " + nombreCompleto);
+                }
+
+                if (labelRol != null) {
+                    labelRol.setText("Rol: " + rolTexto);
+                    labelRol.setVisible(true);
+                    System.out.println("✅ Rol actualizado: " + rolTexto);
+                }
+
+                // FORZAR actualización del panel de botones si ya existe
+                if (panelBotones != null) {
+                    panelBotones.revalidate();
+                    panelBotones.repaint();
+                }
+
+                // FORZAR actualización del panel lateral completo
+                if (jPanel4 != null) {
+                    jPanel4.revalidate();
+                    jPanel4.repaint();
+                }
+
+                System.out.println("✅ Labels actualizados y panel refrescado");
+
+            } catch (Exception e) {
+                System.err.println("❌ Error actualizando labels: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
     }
 
     /**
      * Actualiza las etiquetas para usuario alumno.
      */
     public void updateAlumnoLabels(String nombreCompleto, String rolTexto, String cursoDiv) {
-        if (labelNomApe != null && labelRol != null) {
-            SwingUtilities.invokeLater(() -> {
-                labelNomApe.setText(nombreCompleto);
-                labelRol.setText("Rol: " + rolTexto);
+        System.out.println("🔄 Actualizando labels del alumno: " + nombreCompleto + " - " + rolTexto + " - " + cursoDiv);
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // Asegurar que las etiquetas existen
+                if (labelNomApe == null || labelRol == null) {
+                    System.err.println("⚠️ Las etiquetas son null, inicializando...");
+                    inicializarEtiquetasUsuario();
+                }
+
+                if (labelNomApe != null) {
+                    labelNomApe.setText(nombreCompleto);
+                    labelNomApe.setVisible(true);
+                    System.out.println("✅ Nombre actualizado: " + nombreCompleto);
+                }
+
+                if (labelRol != null) {
+                    labelRol.setText("Rol: " + rolTexto);
+                    labelRol.setVisible(true);
+                    System.out.println("✅ Rol actualizado: " + rolTexto);
+                }
 
                 if (labelCursoDiv != null) {
                     labelCursoDiv.setText("Curso: " + cursoDiv);
-                    labelCursoDiv.revalidate();
-                    labelCursoDiv.repaint();
+                    labelCursoDiv.setVisible(true);
+                    System.out.println("✅ Curso actualizado: " + cursoDiv);
+                } else {
+                    System.err.println("⚠️ labelCursoDiv es null para alumno");
                 }
 
-                // Forzar actualización visual
-                labelNomApe.revalidate();
-                labelNomApe.repaint();
-                labelRol.revalidate();
-                labelRol.repaint();
-            });
-        }
+                // FORZAR actualización del panel de botones si ya existe
+                if (panelBotones != null) {
+                    panelBotones.revalidate();
+                    panelBotones.repaint();
+                }
+
+                // FORZAR actualización del panel lateral completo
+                if (jPanel4 != null) {
+                    jPanel4.revalidate();
+                    jPanel4.repaint();
+                }
+
+                System.out.println("✅ Labels de alumno actualizados y panel refrescado");
+
+            } catch (Exception e) {
+                System.err.println("❌ Error actualizando labels de alumno: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
     }
 
     /**
@@ -2108,6 +2190,16 @@ public class VentanaInicio extends javax.swing.JFrame {
         try {
             System.out.println("🚪 Cerrando VentanaInicio con limpieza completa...");
 
+            // NUEVO: Detener polling de tickets
+            if (ticketService != null) {
+                try {
+                    ticketService.detenerPollingNotificaciones();
+                    System.out.println("✅ Polling de tickets detenido");
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error deteniendo polling: " + e.getMessage());
+                }
+            }
+
             // Limpiar recursos de notificaciones incluyendo cartel
             cleanupNotifications();
 
@@ -2119,6 +2211,74 @@ public class VentanaInicio extends javax.swing.JFrame {
         } catch (Exception e) {
             System.err.println("❌ Error en dispose de VentanaInicio: " + e.getMessage());
             super.dispose();
+        }
+    }
+
+    /**
+     * NUEVO: Método para verificar si el usuario actual es desarrollador
+     */
+    public boolean isCurrentUserDeveloper() {
+        try {
+            return ticketService != null && ticketService.esDeveloper(userId);
+        } catch (Exception e) {
+            System.err.println("Error verificando si es desarrollador: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * NUEVO: Método para actualizar campanitas manualmente (debugging)
+     */
+    public void actualizarCampanitasTickets() {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // Buscar TicketBellComponent en la interfaz
+                buscarYActualizarTicketBells(this.getContentPane());
+            } catch (Exception e) {
+                System.err.println("Error actualizando campanitas: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * NUEVO: Método recursivo para buscar y actualizar campanitas
+     */
+    private void buscarYActualizarTicketBells(Container container) {
+        Component[] components = container.getComponents();
+        for (Component comp : components) {
+            if (comp.getClass().getSimpleName().equals("TicketBellComponent")) {
+                System.out.println("🔔 Encontrada campanita de tickets, actualizando...");
+                try {
+                    // Usar reflexión para llamar forceRefresh() si no tienes import directo
+                    comp.getClass().getMethod("forceRefresh").invoke(comp);
+                } catch (Exception e) {
+                    System.err.println("Error llamando forceRefresh: " + e.getMessage());
+                }
+            } else if (comp instanceof Container) {
+                // Buscar recursivamente en contenedores
+                buscarYActualizarTicketBells((Container) comp);
+            }
+        }
+    }
+
+    /**
+     * NUEVO: Método de debugging para verificar estado de tickets
+     */
+    public void debugTicketSystem() {
+        if (ticketService != null) {
+            System.out.println("\n=== DEBUG SISTEMA TICKETS ===");
+            System.out.println("Usuario ID: " + userId);
+            System.out.println("Es desarrollador: " + isCurrentUserDeveloper());
+            System.out.println("TicketService disponible: " + (ticketService != null));
+
+            try {
+                int pendientes = ticketService.contarTicketsPendientes();
+                System.out.println("Tickets pendientes: " + pendientes);
+            } catch (Exception e) {
+                System.out.println("Error obteniendo tickets: " + e.getMessage());
+            }
+
+            System.out.println("=============================\n");
         }
     }
 

@@ -94,6 +94,14 @@ public class NotasVisualizationPanel extends JPanel {
                     "Error de conexión a la base de datos.",
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
+        } else {
+            // NUEVO: Establecer el usuario actual para el sistema de boletines
+            PlantillaBoletinUtility.establecerUsuarioActual(userId);
+
+            // NUEVO: Verificar sistema PDF en background
+            SwingUtilities.invokeLater(() -> {
+                verificarSistemaPdf();
+            });
         }
     }
 
@@ -1321,14 +1329,10 @@ public class NotasVisualizationPanel extends JPanel {
                 return;
             }
 
-            // MAPEAR EL PERÍODO CORRECTAMENTE
             String periodoParaBD = mapearPeriodoParaBD(periodo);
 
-            System.out.println("=== REPORTE BIMESTRAL POR MATERIA (VERSIÓN FINAL) ===");
+            System.out.println("=== REPORTE BIMESTRAL POR MATERIA (VERSIÓN CORREGIDA) ===");
             System.out.println("Materia: " + materia + " (ID: " + materiaId + ")");
-            System.out.println("Período seleccionado: " + periodo);
-            System.out.println("Período para BD: " + periodoParaBD);
-            System.out.println("Curso ID: " + cursoId);
 
             // Crear modelo de tabla
             DefaultTableModel modelo = new DefaultTableModel();
@@ -1336,23 +1340,7 @@ public class NotasVisualizationPanel extends JPanel {
             modelo.addColumn("DNI");
             modelo.addColumn("Nota " + periodo);
             modelo.addColumn("Promedio Actividades");
-            modelo.addColumn("Estado");
-
-            // VERIFICACIÓN PREVIA: ¿Hay datos para esta materia y período?
-            String queryVerificacion = "SELECT COUNT(*) as total FROM notas_bimestrales WHERE materia_id = ? AND periodo = ?";
-            PreparedStatement psVerif = conect.prepareStatement(queryVerificacion);
-            psVerif.setInt(1, materiaId);
-            psVerif.setString(2, periodoParaBD);
-            ResultSet rsVerif = psVerif.executeQuery();
-
-            int totalRegistros = 0;
-            if (rsVerif.next()) {
-                totalRegistros = rsVerif.getInt("total");
-            }
-            rsVerif.close();
-            psVerif.close();
-
-            System.out.println("Registros encontrados para materia " + materiaId + " y período '" + periodoParaBD + "': " + totalRegistros);
+            modelo.addColumn("Estado"); // CORREGIDO: Usar 'Estado' en lugar de referencias a observaciones
 
             // Obtener alumnos del curso
             String queryAlumnos = "SELECT u.id, CONCAT(u.apellido, ', ', u.nombre) as nombre_completo, u.dni "
@@ -1375,35 +1363,30 @@ public class NotasVisualizationPanel extends JPanel {
                 int alumnoId = rsAlumnos.getInt("id");
                 String alumnoDni = rsAlumnos.getString("dni");
 
-                System.out.println("Procesando alumno: " + fila[0] + " (ID: " + alumnoId + ", DNI: " + alumnoDni + ")");
-
-                // CONSULTA CORREGIDA: Buscar por DNI principalmente, ya que en tu BD el alumno_id parece ser el DNI
+                // CONSULTA CORREGIDA: Remover 'observaciones' de SELECT
                 String queryNota = "SELECT nota, promedio_actividades, estado FROM notas_bimestrales "
                         + "WHERE materia_id = ? AND periodo = ? AND "
-                        + "(alumno_id = ? OR alumno_id = CAST(? AS CHAR))";  // CORREGIDO: manejo consistente
+                        + "(alumno_id = ? OR alumno_id = CAST(? AS CHAR))";
 
                 PreparedStatement psNota = conect.prepareStatement(queryNota);
                 psNota.setInt(1, materiaId);
                 psNota.setString(2, periodoParaBD);
-                psNota.setString(3, alumnoDni);    // Usar DNI como string  
-                psNota.setInt(4, alumnoId);        // También probar con ID como int
+                psNota.setString(3, alumnoDni);
+                psNota.setInt(4, alumnoId);
 
                 ResultSet rsNota = psNota.executeQuery();
 
                 if (rsNota.next()) {
                     fila[2] = rsNota.getDouble("nota");
                     fila[3] = rsNota.getDouble("promedio_actividades");
-                    fila[4] = rsNota.getString("estado");
+                    fila[4] = rsNota.getString("estado"); // CORREGIDO: usar 'estado'
                     notasEncontradas++;
-                    System.out.println("  ✅ Nota encontrada: " + fila[2] + " (promedio: " + fila[3] + ", estado: " + fila[4] + ")");
+                    System.out.println("  ✅ Nota encontrada para " + fila[0] + ": " + fila[2]);
                 } else {
                     fila[2] = "-";
                     fila[3] = "-";
                     fila[4] = "Pendiente";
-                    System.out.println("  ❌ Sin nota bimestral para este alumno");
-
-                    // DEBUG: Mostrar qué valores se buscaron
-                    System.out.println("      Buscado: materia_id=" + materiaId + ", periodo='" + periodoParaBD + "', alumno_id=" + alumnoDni + " o " + alumnoId);
+                    System.out.println("  ❌ Sin nota para " + fila[0]);
                 }
 
                 rsNota.close();
@@ -1415,40 +1398,16 @@ public class NotasVisualizationPanel extends JPanel {
             rsAlumnos.close();
             psAlumnos.close();
 
-            System.out.println("=== REPORTE POR MATERIA COMPLETADO ===");
-            System.out.println("Alumnos procesados: " + contadorAlumnos);
-            System.out.println("Notas encontradas: " + notasEncontradas);
-
             // Asignar modelo
             tablaNotas.setModel(modelo);
             tablaNotas.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
             tablaNotas.setRowHeight(25);
 
-            if (contadorAlumnos == 0) {
-                modelo.addRow(new Object[]{"Sin alumnos", "No hay alumnos en este curso", "-", "-", "-"});
+            if (notasEncontradas == 0) {
                 JOptionPane.showMessageDialog(this,
-                        "No se encontraron alumnos para el curso seleccionado.",
-                        "Sin alumnos",
-                        JOptionPane.INFORMATION_MESSAGE);
-            } else if (notasEncontradas == 0) {
-                JOptionPane.showMessageDialog(this,
-                        "Se encontraron " + contadorAlumnos + " alumnos, pero ninguno tiene notas bimestrales.\n\n"
-                        + "Datos de búsqueda:\n"
-                        + "- Materia: " + materia + " (ID: " + materiaId + ")\n"
-                        + "- Período: " + periodo + " → '" + periodoParaBD + "'\n"
-                        + "- Registros en BD para esta materia/período: " + totalRegistros + "\n\n"
-                        + "Posibles causas:\n"
-                        + "- Los DNI de los alumnos no coinciden con los alumno_id en notas_bimestrales\n"
-                        + "- Los alumnos del curso no están en la tabla notas_bimestrales",
-                        "Diagnóstico detallado",
-                        JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "Reporte cargado exitosamente:\n"
-                        + "- Alumnos: " + contadorAlumnos + "\n"
-                        + "- Con notas: " + notasEncontradas + "\n"
-                        + "- Sin notas: " + (contadorAlumnos - notasEncontradas),
-                        "Reporte completado",
+                        "No se encontraron notas bimestrales para esta materia y período.\n"
+                        + "Verifique que las notas estén cargadas correctamente.",
+                        "Sin notas",
                         JOptionPane.INFORMATION_MESSAGE);
             }
 
@@ -2957,10 +2916,12 @@ public class NotasVisualizationPanel extends JPanel {
             return;
         }
 
-        // Mostrar opciones
+        // NUEVO: Mostrar opciones completas incluyendo PDF
         String[] opciones = {
-            "Generar Boletín Individual",
-            "Generar Boletines de Todo el Curso",
+            "Generar Boletín Individual Completo (Excel + PDF)",
+            "Generar Boletines de Todo el Curso Completo (Excel + PDF)",
+            "Solo Excel (Método Anterior)",
+            "Convertir Excel Existentes a PDF",
             "Cancelar"
         };
 
@@ -2974,13 +2935,19 @@ public class NotasVisualizationPanel extends JPanel {
                 opciones[0]);
 
         switch (seleccion) {
-            case 0: // Boletín individual
+            case 0: // Boletín individual completo
+                generarBoletinIndividualCompleto(cursoId);
+                break;
+            case 1: // Boletines de todo el curso completo
+                generarBoletinesTodoCursoCompleto(cursoId);
+                break;
+            case 2: // Solo Excel (método anterior)
                 generarBoletinIndividual(cursoId);
                 break;
-            case 1: // Boletines de todo el curso
-                generarBoletinesTodoCurso(cursoId);
+            case 3: // Convertir Excel existentes a PDF
+                convertirExcelExistentesAPdf(cursoId);
                 break;
-            case 2: // Cancelar
+            case 4: // Cancelar
             default:
                 break;
         }
@@ -2989,107 +2956,107 @@ public class NotasVisualizationPanel extends JPanel {
     /**
      * Genera un boletín individual para un alumno específico
      */
-   private void generarBoletinIndividual(int cursoId) {
-    try {
-        // Cargar alumnos del curso
-        cargarAlumnos(cursoId);
+    private void generarBoletinIndividual(int cursoId) {
+        try {
+            // Cargar alumnos del curso
+            cargarAlumnos(cursoId);
 
-        if (alumnosMap.isEmpty()) {
+            if (alumnosMap.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "No se encontraron alumnos en el curso seleccionado",
+                        "Sin alumnos",
+                        JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            // Seleccionar alumno
+            String[] alumnosArray = alumnosMap.keySet().toArray(new String[0]);
+            String alumnoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el alumno:",
+                    "Seleccionar Alumno",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    alumnosArray,
+                    alumnosArray[0]);
+
+            if (alumnoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+
+            // Seleccionar período
+            String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+            String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el período del boletín:",
+                    "Seleccionar Período",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    periodos,
+                    BoletinesUtils.obtenerPeriodoActual());
+
+            if (periodoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+
+            Integer alumnoId = alumnosMap.get(alumnoSeleccionado);
+            if (alumnoId != null) {
+                // USAR SOLO EXCEL (método anterior)
+                PlantillaBoletinUtility.generarBoletinIndividualConServidorConInterfaz(
+                        alumnoId, cursoId, periodoSeleccionado, this);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al generar boletín individual: " + e.getMessage());
+            e.printStackTrace();
             JOptionPane.showMessageDialog(this,
-                    "No se encontraron alumnos en el curso seleccionado",
-                    "Sin alumnos",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return;
+                    "Error al generar boletín individual: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
-
-        // Seleccionar alumno
-        String[] alumnosArray = alumnosMap.keySet().toArray(new String[0]);
-        String alumnoSeleccionado = (String) JOptionPane.showInputDialog(this,
-                "Seleccione el alumno:",
-                "Seleccionar Alumno",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                alumnosArray,
-                alumnosArray[0]);
-
-        if (alumnoSeleccionado == null) {
-            return; // Usuario canceló
-        }
-
-        // Seleccionar período
-        String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
-        String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
-                "Seleccione el período del boletín:",
-                "Seleccionar Período",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                periodos,
-                BoletinesUtils.obtenerPeriodoActual());
-
-        if (periodoSeleccionado == null) {
-            return; // Usuario canceló
-        }
-
-        Integer alumnoId = alumnosMap.get(alumnoSeleccionado);
-        if (alumnoId != null) {
-            // USAR SERVIDOR AUTOMÁTICO
-            PlantillaBoletinUtility.generarBoletinIndividualConServidorConInterfaz(
-                    alumnoId, cursoId, periodoSeleccionado, this);
-        }
-
-    } catch (Exception e) {
-        System.err.println("Error al generar boletín individual: " + e.getMessage());
-        e.printStackTrace();
-        JOptionPane.showMessageDialog(this,
-                "Error al generar boletín individual: " + e.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
     }
-}
 
     /**
      * Genera boletines para todos los alumnos del curso
      */
     private void generarBoletinesTodoCurso(int cursoId) {
-    try {
-        // Seleccionar período
-        String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
-        String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
-                "Seleccione el período del boletín:",
-                "Seleccionar Período",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                periodos,
-                BoletinesUtils.obtenerPeriodoActual());
+        try {
+            // Seleccionar período
+            String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+            String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el período del boletín:",
+                    "Seleccionar Período",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    periodos,
+                    BoletinesUtils.obtenerPeriodoActual());
 
-        if (periodoSeleccionado == null) {
-            return; // Usuario canceló
+            if (periodoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+
+            int confirmacion = JOptionPane.showConfirmDialog(this,
+                    "¿Está seguro de generar boletines para todos los alumnos del curso?\n"
+                    + "Período: " + periodoSeleccionado + "\n"
+                    + "Los boletines se guardarán automáticamente en el servidor.\n"
+                    + "Esta operación puede tomar varios minutos.",
+                    "Confirmar Generación Masiva",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+
+            if (confirmacion == JOptionPane.YES_OPTION) {
+                // USAR SERVIDOR AUTOMÁTICO
+                PlantillaBoletinUtility.generarBoletinesCursoConServidorConInterfaz(
+                        cursoId, periodoSeleccionado, this);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al generar boletines del curso: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al generar boletines del curso: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
-
-        int confirmacion = JOptionPane.showConfirmDialog(this,
-                "¿Está seguro de generar boletines para todos los alumnos del curso?\n" +
-                "Período: " + periodoSeleccionado + "\n" +
-                "Los boletines se guardarán automáticamente en el servidor.\n" +
-                "Esta operación puede tomar varios minutos.",
-                "Confirmar Generación Masiva",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-
-        if (confirmacion == JOptionPane.YES_OPTION) {
-            // USAR SERVIDOR AUTOMÁTICO
-            PlantillaBoletinUtility.generarBoletinesCursoConServidorConInterfaz(
-                    cursoId, periodoSeleccionado, this);
-        }
-
-    } catch (Exception e) {
-        System.err.println("Error al generar boletines del curso: " + e.getMessage());
-        e.printStackTrace();
-        JOptionPane.showMessageDialog(this,
-                "Error al generar boletines del curso: " + e.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
     }
-}
 
     /**
      * Muestra estadísticas del curso antes de generar boletines
@@ -3546,4 +3513,186 @@ public class NotasVisualizationPanel extends JPanel {
             return false;
         }
     }
+
+    /**
+     * NUEVO: Genera un boletín individual completo (Excel + PDF)
+     */
+    private void generarBoletinIndividualCompleto(int cursoId) {
+        try {
+            // Cargar alumnos del curso
+            cargarAlumnos(cursoId);
+
+            if (alumnosMap.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "No se encontraron alumnos en el curso seleccionado",
+                        "Sin alumnos",
+                        JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            // Seleccionar alumno
+            String[] alumnosArray = alumnosMap.keySet().toArray(new String[0]);
+            String alumnoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el alumno:",
+                    "Seleccionar Alumno",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    alumnosArray,
+                    alumnosArray[0]);
+
+            if (alumnoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+
+            // Seleccionar período
+            String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+            String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el período del boletín:",
+                    "Seleccionar Período",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    periodos,
+                    BoletinesUtils.obtenerPeriodoActual());
+
+            if (periodoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+
+            Integer alumnoId = alumnosMap.get(alumnoSeleccionado);
+            if (alumnoId != null) {
+                // USAR LA NUEVA FUNCIONALIDAD COMPLETA
+                PlantillaBoletinUtility.generarBoletinCompletoIndividualConServidorConInterfaz(
+                        alumnoId, cursoId, periodoSeleccionado, this);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al generar boletín individual completo: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al generar boletín individual completo: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * NUEVO: Genera boletines completos para todos los alumnos del curso
+     */
+    private void generarBoletinesTodoCursoCompleto(int cursoId) {
+        try {
+            // Seleccionar período
+            String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+            String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el período del boletín:",
+                    "Seleccionar Período",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    periodos,
+                    BoletinesUtils.obtenerPeriodoActual());
+
+            if (periodoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+
+            int confirmacion = JOptionPane.showConfirmDialog(this,
+                    "¿Está seguro de generar boletines completos (Excel + PDF) para todos los alumnos del curso?\n"
+                    + "Período: " + periodoSeleccionado + "\n"
+                    + "Los archivos se guardarán automáticamente en el servidor.\n"
+                    + "Esta operación puede tomar bastante tiempo.",
+                    "Confirmar Generación Masiva Completa",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+
+            if (confirmacion == JOptionPane.YES_OPTION) {
+                // USAR LA NUEVA FUNCIONALIDAD COMPLETA
+                PlantillaBoletinUtility.generarBoletinesCursoCompletoConServidorConInterfaz(
+                        cursoId, periodoSeleccionado, this);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al generar boletines del curso completo: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al generar boletines del curso completo: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * NUEVO: Convierte boletines Excel existentes a PDF
+     */
+    private void convertirExcelExistentesAPdf(int cursoId) {
+        try {
+            // Seleccionar período
+            String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final"};
+            String periodoSeleccionado = (String) JOptionPane.showInputDialog(this,
+                    "Seleccione el período a convertir:",
+                    "Seleccionar Período",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    periodos,
+                    BoletinesUtils.obtenerPeriodoActual());
+
+            if (periodoSeleccionado == null) {
+                return; // Usuario canceló
+            }
+
+            int confirmacion = JOptionPane.showConfirmDialog(this,
+                    "¿Convertir todos los boletines Excel existentes a PDF?\n"
+                    + "Período: " + periodoSeleccionado + "\n"
+                    + "Esta operación puede tomar varios minutos.",
+                    "Confirmar Conversión a PDF",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE);
+
+            if (confirmacion == JOptionPane.YES_OPTION) {
+                // USAR LA FUNCIONALIDAD DE CONVERSIÓN
+                PlantillaBoletinUtility.convertirBoletinesExistentesAPdf(
+                        cursoId, periodoSeleccionado, this);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al convertir boletines existentes: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al convertir boletines existentes: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * NUEVO: Verifica que el sistema PDF esté funcionando
+     */
+    private boolean verificarSistemaPdf() {
+        try {
+            System.out.println("=== VERIFICANDO SISTEMA PDF DESDE NOTAS PANEL ===");
+
+            boolean sistemaOk = PlantillaBoletinUtility.verificarSistemaPdf();
+
+            if (!sistemaOk) {
+                int confirmacion = JOptionPane.showConfirmDialog(this,
+                        "El sistema de conversión a PDF no está disponible.\n"
+                        + "¿Desea continuar solo con Excel?",
+                        "Sistema PDF no disponible",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+
+                return confirmacion == JOptionPane.YES_OPTION;
+            }
+
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("Error verificando sistema PDF: " + e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Error al verificar sistema PDF: " + e.getMessage()
+                    + "\nSe continuará solo con Excel.",
+                    "Advertencia",
+                    JOptionPane.WARNING_MESSAGE);
+            return true; // Continuar con Excel solamente
+        }
+    }
+
 }

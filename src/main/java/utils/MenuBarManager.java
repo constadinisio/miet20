@@ -1,6 +1,8 @@
 package main.java.utils;
 
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.*;
@@ -17,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 import main.java.views.notifications.NotificationGroupWindow;
 import main.java.tickets.TicketService;
+import main.java.tickets.TicketBellComponent;
 
 /**
  * MenuBarManager COMPLETAMENTE REDISEÑADO v3.0 Sistema de notificaciones
@@ -37,6 +40,7 @@ public class MenuBarManager {
     private boolean notificationsEnabled = false;
 
     private TicketService ticketService;
+    private TicketBellComponent ticketBellComponent;
 
     // Roles que pueden enviar notificaciones
     private static final List<Integer> SENDER_ROLES = Arrays.asList(1, 2, 3, 5); // Admin, Preceptor, Profesor, ATTP
@@ -79,6 +83,17 @@ public class MenuBarManager {
             } else {
                 System.err.println("⚠️ NotificationService no está disponible");
                 notificationsEnabled = false;
+            }
+
+            // NUEVO: Inicializar sistema de tickets si es desarrollador
+            if (ticketService != null && ticketService.esDeveloper(userId)) {
+                try {
+                    System.out.println("🎫 Inicializando sistema de tickets para desarrollador...");
+                    ticketService.iniciarPollingNotificaciones();
+                    System.out.println("✅ Polling de tickets iniciado");
+                } catch (Exception e) {
+                    System.err.println("❌ Error iniciando polling de tickets: " + e.getMessage());
+                }
             }
 
         } catch (Exception e) {
@@ -215,19 +230,8 @@ public class MenuBarManager {
         createNotificationsMenu(menuBar); // MENÚ DE NOTIFICACIONES REORGANIZADO
         createHelpMenu(menuBar);
 
-        // INTEGRAR CAMPANITA DE NOTIFICACIONES (solo el indicador visual)
-        if (notificationsEnabled && notificationManager != null) {
-            try {
-                System.out.println("🔔 Integrando campanita de notificaciones...");
-                notificationManager.integrateWithMenuBar(menuBar);
-                System.out.println("✅ Campanita de notificaciones integrada exitosamente");
-            } catch (Exception e) {
-                System.err.println("❌ Error integrando notificaciones: " + e.getMessage());
-                e.printStackTrace();
-            }
-        } else {
-            System.out.println("⚠️ Sistema de notificaciones no disponible");
-        }
+        // INTEGRAR CAMPANITAS DE NOTIFICACIONES (AMBAS AL MISMO TIEMPO)
+        integrarCampanitasNotificaciones(menuBar);
 
         currentFrame.setJMenuBar(menuBar);
         currentFrame.revalidate();
@@ -1007,12 +1011,32 @@ public class MenuBarManager {
         System.out.println("=== LIMPIANDO RECURSOS MenuBarManager ===");
 
         try {
+            // NUEVO: Limpiar recursos de tickets
+            if (ticketService != null) {
+                try {
+                    ticketService.detenerPollingNotificaciones();
+                    System.out.println("✅ Polling de tickets detenido");
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error deteniendo polling de tickets: " + e.getMessage());
+                }
+            }
+
+            if (ticketBellComponent != null) {
+                try {
+                    ticketBellComponent.dispose();
+                    System.out.println("✅ TicketBellComponent limpiado");
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error limpiando TicketBellComponent: " + e.getMessage());
+                }
+            }
+
             if (notificationManager != null) {
                 notificationManager.dispose();
                 System.out.println("✅ NotificationManager limpiado");
             }
 
             notificationManager = null;
+            ticketBellComponent = null;
             currentFrame = null;
 
             System.out.println("✅ MenuBarManager limpiado correctamente");
@@ -1085,4 +1109,115 @@ public class MenuBarManager {
             }
         });
     }
+
+    /**
+     * NUEVO: Integra ambas campanitas (normal y tickets) en el menu bar
+     */
+    private void integrarCampanitasNotificaciones(JMenuBar menuBar) {
+        try {
+            System.out.println("🔔 Integrando campanitas de notificaciones...");
+
+            // MÉTODO SIMPLE: Dejar que NotificationManager maneje TODO
+            if (notificationsEnabled && notificationManager != null) {
+                try {
+                    System.out.println("📬 Integrando campanitas via NotificationManager...");
+
+                    // NotificationManager ya incluye TicketBellComponent para desarrolladores
+                    notificationManager.integrateWithMenuBar(menuBar);
+
+                    System.out.println("✅ Campanitas integradas via NotificationManager");
+
+                } catch (Exception e) {
+                    System.err.println("❌ Error integrando via NotificationManager: " + e.getMessage());
+                    e.printStackTrace();
+
+                    // FALLBACK: Crear campanitas manualmente
+                    integrarCampanitasManualmente(menuBar);
+                }
+            } else {
+                System.out.println("⚠️ NotificationManager no disponible, creando campanitas manualmente");
+                integrarCampanitasManualmente(menuBar);
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error general integrando campanitas: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * NUEVO: Método fallback para crear campanitas manualmente
+     */
+    private void integrarCampanitasManualmente(JMenuBar menuBar) {
+        try {
+            System.out.println("🔧 Creando campanitas manualmente...");
+
+            // Crear panel contenedor
+            JPanel campanitasPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+            campanitasPanel.setOpaque(false);
+
+            // Solo crear TicketBellComponent si es desarrollador
+            if (ticketService != null && ticketService.esDeveloper(userId)) {
+                try {
+                    ticketBellComponent = new TicketBellComponent(userId);
+                    campanitasPanel.add(ticketBellComponent);
+                    System.out.println("✅ TicketBellComponent creado manualmente");
+                } catch (Exception e) {
+                    System.err.println("❌ Error creando TicketBellComponent manual: " + e.getMessage());
+                }
+            }
+
+            // Agregar al menu bar solo si hay componentes
+            if (campanitasPanel.getComponentCount() > 0) {
+                menuBar.add(Box.createHorizontalGlue());
+                menuBar.add(campanitasPanel);
+                System.out.println("✅ Campanitas manuales agregadas");
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error en integración manual: " + e.getMessage());
+        }
+    }
+
+    /**
+     * NUEVO: Método para forzar actualización de campanitas
+     */
+    public void actualizarCampanitas() {
+        try {
+            // Actualizar campanita de notificaciones normales
+            if (notificationManager != null && notificationsEnabled) {
+                notificationManager.forceRefresh();
+            }
+
+            // Actualizar campanita de tickets
+            if (ticketBellComponent != null) {
+                ticketBellComponent.forceRefresh();
+            }
+
+            System.out.println("🔄 Campanitas actualizadas");
+
+        } catch (Exception e) {
+            System.err.println("Error actualizando campanitas: " + e.getMessage());
+        }
+    }
+
+    /**
+     * NUEVO: Obtiene la campanita de tickets
+     */
+    public TicketBellComponent getTicketBellComponent() {
+        return ticketBellComponent;
+    }
+
+    /**
+     * NUEVO: Verifica si el usuario actual es desarrollador
+     */
+    public boolean isCurrentUserDeveloper() {
+        try {
+            return ticketService != null && ticketService.esDeveloper(userId);
+        } catch (Exception e) {
+            System.err.println("Error verificando desarrollador: " + e.getMessage());
+            return false;
+        }
+    }
+
 }

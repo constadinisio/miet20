@@ -2,8 +2,7 @@ package main.java.views.users.common;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Container;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -14,48 +13,70 @@ import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.activation.FileDataSource;
+import javax.mail.Authenticator;
+import javax.mail.BodyPart;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 import javax.swing.BorderFactory;
-import javax.swing.ButtonGroup;
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
+import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import main.java.database.Conexion;
-import main.java.utils.BoletinesUtils;
 import main.java.utils.GestorBoletines;
-import main.java.utils.PlantillaBoletinUtility;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import main.java.utils.EmailBoletinUtility;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import javax.swing.JDialog;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import main.java.utils.GoogleEmailIntegration;
 
 /**
- * Panel de Gestión de Boletines MEJORADO
- *
- * Permite a preceptores y administradores: - Ver todos los boletines generados
- * - Filtrar por año lectivo, curso, división y período - Abrir boletines
- * existentes - Eliminar boletines (solo admin/preceptor) - Ver estadísticas -
- * Generar nuevos boletines - Gestionar estructura de carpetas
- *
- * @author Sistema de Gestión Escolar
- * @version 2.0
+ * Panel de Gestión de Boletines CORREGIDO Y COMPLETO Versión final sin
+ * redundancias y con identificación correcta de alumnos
  */
 public class PanelGestionBoletines extends JPanel {
 
@@ -66,7 +87,7 @@ public class PanelGestionBoletines extends JPanel {
 
     // Componentes de filtros
     private JComboBox<String> comboAnioLectivo;
-    private JComboBox<String> comboCurso;
+    private JComboBox<String> comboAnio;
     private JComboBox<String> comboDivision;
     private JComboBox<String> comboPeriodo;
     private JTextField txtBuscarAlumno;
@@ -74,23 +95,83 @@ public class PanelGestionBoletines extends JPanel {
     // Componentes de acción
     private JButton btnBuscar;
     private JButton btnAbrir;
+    private JButton btnDescargar;
+    private JButton btnEnviarEmail;
+    private JButton btnConfigEmail;
     private JButton btnEliminar;
     private JButton btnEstadisticas;
     private JButton btnActualizar;
     private JButton btnVolver;
-    private JButton btnGenerarNuevo;
-    private JButton btnConfigServidor;
-    private JButton btnEstructura;
-    private JButton btnLimpiarAntiguos;
 
     // Tabla de resultados
     private JTable tablaBoletines;
     private DefaultTableModel modeloTabla;
     private JScrollPane scrollTabla;
-    private Map<String, Integer> cursosMap = new HashMap<>();
 
-    // Datos
-    private List<GestorBoletines.InfoBoletin> boletinesActuales;
+    // Datos y configuración
+    private List<BoletinInfo> boletinesActuales;
+    private Map<String, Integer> cursosDisponibles = new HashMap<>();
+
+    // Configuración de email
+    private String emailUsuario = "";
+    private String passwordEmail = "";
+    private String servidorSMTP = "smtp.gmail.com";
+    private String puertoSMTP = "587";
+
+    /**
+     * Estructura para información de boletín PDF
+     */
+    public static class BoletinInfo {
+
+        public String alumnoNombre;
+        public String alumnoDni;
+        public String alumnoEmail;
+        public String curso;
+        public String division;
+        public String periodo;
+        public String nombreArchivo;
+        public String urlServidor;
+        public long tamanioArchivo;
+        public boolean esAccesible;
+        public int cursoId;
+
+        public BoletinInfo() {
+            this.esAccesible = false;
+            this.tamanioArchivo = 0;
+            this.cursoId = -1;
+        }
+    }
+
+    /**
+     * Información de alumno con datos completos
+     */
+    public static class InfoAlumno {
+
+        public int id;
+        public String nombreCompleto;
+        public String dni;
+        public String email;
+        public String curso;
+        public String division;
+        public int cursoId;
+
+        public InfoAlumno(int id, String nombreCompleto, String dni, String email,
+                String curso, String division, int cursoId) {
+            this.id = id;
+            this.nombreCompleto = nombreCompleto != null ? nombreCompleto : "";
+            this.dni = dni != null ? dni : "Sin DNI";
+            this.email = email != null ? email : "Sin Email";
+            this.curso = curso != null ? curso : "";
+            this.division = division != null ? division : "";
+            this.cursoId = cursoId;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("InfoAlumno{id=%d, nombre='%s', dni='%s', email='%s', curso='%s%s'}",
+                    id, nombreCompleto, dni, email, curso, division);
+        }
+    }
 
     public PanelGestionBoletines(VentanaInicio ventana, int userId, int userRol) {
         this.ventana = ventana;
@@ -104,12 +185,9 @@ public class PanelGestionBoletines extends JPanel {
         setupListeners();
         loadInitialData();
 
-        System.out.println("PanelGestionBoletines MEJORADO inicializado para usuario: " + userId + ", rol: " + userRol);
+        System.out.println("✅ PanelGestionBoletines CORREGIDO inicializado para usuario: " + userId);
     }
 
-    /**
-     * Inicializa la conexión a la base de datos.
-     */
     private void initializeConnection() {
         conect = Conexion.getInstancia().verificarConexion();
         if (conect == null) {
@@ -120,58 +198,117 @@ public class PanelGestionBoletines extends JPanel {
         }
     }
 
-    /**
-     * Inicializa todos los componentes de la interfaz.
-     */
     private void initializeComponents() {
         // Combos de filtros
         comboAnioLectivo = new JComboBox<>();
-        comboCurso = new JComboBox<>();
+        comboAnio = new JComboBox<>();
         comboDivision = new JComboBox<>();
         comboPeriodo = new JComboBox<>();
         txtBuscarAlumno = new JTextField(20);
         txtBuscarAlumno.setToolTipText("Buscar por nombre o apellido del alumno");
 
+        // Cargar opciones iniciales
+        cargarAniosDisponibles();
+        cargarDivisionesDisponibles();
+        cargarPeriodosDisponibles();
+        cargarCursosDisponibles();
+
         // Botones de acción
-        btnBuscar = createStyledButton("Buscar", new Color(33, 150, 243));
-        btnAbrir = createStyledButton("Abrir Boletín", new Color(76, 175, 80));
-        btnEliminar = createStyledButton("Eliminar", new Color(244, 67, 54));
-        btnEstadisticas = createStyledButton("Estadísticas", new Color(156, 39, 176));
-        btnActualizar = createStyledButton("Actualizar", new Color(255, 152, 0));
-        btnVolver = createStyledButton("Volver", new Color(96, 125, 139));
-        btnGenerarNuevo = createStyledButton("Generar Nuevo", new Color(0, 150, 136));
-        btnConfigServidor = createStyledButton("Config. Servidor", new Color(121, 85, 72));
-        btnEstructura = createStyledButton("Crear Estructura", new Color(63, 81, 181));
-        btnLimpiarAntiguos = createStyledButton("Limpiar Antiguos", new Color(255, 87, 34));
+        btnBuscar = createStyledButton("🔍 Buscar", new Color(33, 150, 243));
+        btnAbrir = createStyledButton("📂 Abrir PDF", new Color(76, 175, 80));
+        btnDescargar = createStyledButton("💾 Descargar", new Color(156, 39, 176));
+        btnEnviarEmail = createStyledButton("📧 Enviar Email", new Color(255, 87, 34));
+        btnConfigEmail = createStyledButton("⚙️ Config Email", new Color(121, 85, 72));
+        btnEliminar = createStyledButton("🗑️ Eliminar", new Color(244, 67, 54));
+        btnEstadisticas = createStyledButton("📊 Estadísticas", new Color(63, 81, 181));
+        btnActualizar = createStyledButton("🔄 Actualizar", new Color(255, 152, 0));
+        btnVolver = createStyledButton("← Volver", new Color(96, 125, 139));
 
         // Tabla de boletines
         String[] columnas = {
-            "Alumno", "DNI", "Curso", "Período", "Fecha Generación",
-            "Estado", "Tamaño", "Archivo Existe", "Ruta"
+            "Seleccionar", "Alumno", "DNI", "Email", "Curso", "División",
+            "Período", "Archivo PDF", "Tamaño", "Estado"
         };
 
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Tabla no editable
+                return column == 0;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 0) {
+                    return Boolean.class;
+                }
+                return String.class;
             }
         };
 
         tablaBoletines = new JTable(modeloTabla);
-        tablaBoletines.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tablaBoletines.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         tablaBoletines.setRowHeight(30);
         tablaBoletines.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
 
-        // Configurar anchos de columnas
         configurarAnchoColumnas();
-
         scrollTabla = new JScrollPane(tablaBoletines);
         scrollTabla.setPreferredSize(new Dimension(1200, 400));
     }
 
-    /**
-     * Crea un botón con estilo personalizado.
-     */
+    private void cargarCursosDisponibles() {
+        try {
+            if (conect == null || conect.isClosed()) {
+                conect = Conexion.getInstancia().verificarConexion();
+            }
+
+            String query = "SELECT id, anio, division FROM cursos WHERE estado = 'activo' ORDER BY anio, division";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+
+            cursosDisponibles.clear();
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                int anio = rs.getInt("anio");
+                int division = rs.getInt("division");
+                String nombre = anio + "°" + division;
+                cursosDisponibles.put(nombre, id);
+            }
+
+            rs.close();
+            ps.close();
+            System.out.println("✅ Cursos disponibles cargados: " + cursosDisponibles.size());
+
+        } catch (SQLException e) {
+            System.err.println("Error cargando cursos disponibles: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void cargarAniosDisponibles() {
+        comboAnio.removeAllItems();
+        comboAnio.addItem("TODOS");
+        for (int i = 1; i <= 7; i++) {
+            comboAnio.addItem(String.valueOf(i));
+        }
+    }
+
+    private void cargarDivisionesDisponibles() {
+        comboDivision.removeAllItems();
+        comboDivision.addItem("TODAS");
+        for (int i = 1; i <= 10; i++) {
+            comboDivision.addItem(String.valueOf(i));
+        }
+    }
+
+    private void cargarPeriodosDisponibles() {
+        comboPeriodo.removeAllItems();
+        comboPeriodo.addItem("TODOS");
+        String[] periodos = {"1B", "2B", "3B", "4B", "1C", "2C", "Final", "Diciembre", "Febrero"};
+        for (String periodo : periodos) {
+            comboPeriodo.addItem(periodo);
+        }
+    }
+
     private JButton createStyledButton(String text, Color backgroundColor) {
         JButton button = new JButton(text);
         button.setBackground(backgroundColor);
@@ -179,32 +316,25 @@ public class PanelGestionBoletines extends JPanel {
         button.setFont(new Font("Arial", Font.BOLD, 11));
         button.setFocusPainted(false);
         button.setBorderPainted(false);
-        button.setPreferredSize(new Dimension(120, 32));
+        button.setPreferredSize(new Dimension(130, 35));
         return button;
     }
 
-    /**
-     * Configura el ancho de las columnas de la tabla.
-     */
     private void configurarAnchoColumnas() {
-        int[] anchos = {200, 100, 60, 80, 140, 80, 70, 80, 250};
-
+        int[] anchos = {80, 200, 100, 200, 60, 80, 100, 200, 80, 100};
         for (int i = 0; i < anchos.length && i < tablaBoletines.getColumnCount(); i++) {
             TableColumn columna = tablaBoletines.getColumnModel().getColumn(i);
             columna.setPreferredWidth(anchos[i]);
         }
     }
 
-    /**
-     * Configura el layout del panel.
-     */
     private void setupLayout() {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Panel superior - Título
         JPanel panelTitulo = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        JLabel lblTitulo = new JLabel("Gestión de Boletines - Servidor");
+        JLabel lblTitulo = new JLabel("📋 Gestión de Boletines PDF - CORREGIDO");
         lblTitulo.setFont(new Font("Arial", Font.BOLD, 24));
         lblTitulo.setForeground(new Color(33, 150, 243));
         panelTitulo.add(lblTitulo);
@@ -233,12 +363,9 @@ public class PanelGestionBoletines extends JPanel {
         add(panelInfo, BorderLayout.SOUTH);
     }
 
-    /**
-     * Crea el panel de filtros.
-     */
     private JPanel createFiltrosPanel() {
         JPanel panel = new JPanel();
-        panel.setBorder(BorderFactory.createTitledBorder("Filtros de Búsqueda"));
+        panel.setBorder(BorderFactory.createTitledBorder("🔍 Filtros de Búsqueda"));
         panel.setLayout(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -253,9 +380,9 @@ public class PanelGestionBoletines extends JPanel {
         panel.add(comboAnioLectivo, gbc);
 
         gbc.gridx = 2;
-        panel.add(new JLabel("Curso:"), gbc);
+        panel.add(new JLabel("Año Curso:"), gbc);
         gbc.gridx = 3;
-        panel.add(comboCurso, gbc);
+        panel.add(comboAnio, gbc);
 
         gbc.gridx = 4;
         panel.add(new JLabel("División:"), gbc);
@@ -278,750 +405,96 @@ public class PanelGestionBoletines extends JPanel {
         return panel;
     }
 
-    /**
-     * Crea el panel de botones.
-     */
     private JPanel createBotonesPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 10));
 
         panel.add(btnBuscar);
         panel.add(btnAbrir);
+        panel.add(btnDescargar);
+        panel.add(btnEnviarEmail);
 
-        // Solo administradores y preceptores pueden eliminar
         if (userRol == 1 || userRol == 2) {
+            panel.add(btnConfigEmail);
             panel.add(btnEliminar);
         }
 
         panel.add(btnEstadisticas);
         panel.add(btnActualizar);
-        panel.add(btnGenerarNuevo);
-
-        // Solo administradores pueden configurar servidor y estructura
-        if (userRol == 1) {
-            panel.add(btnConfigServidor);
-            panel.add(btnEstructura);
-            panel.add(btnLimpiarAntiguos);
-        }
-
         panel.add(btnVolver);
 
         return panel;
     }
 
-    /**
-     * Crea el panel de información inferior.
-     */
     private JPanel createInfoPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setBorder(BorderFactory.createEtchedBorder());
 
-        JLabel lblInfo = new JLabel("Doble clic en una fila para abrir el boletín | Servidor: " + GestorBoletines.obtenerRutaServidor());
+        JLabel lblInfo = new JLabel("💡 Búsqueda optimizada | Solo archivos PDF | Servidor: "
+                + GestorBoletines.obtenerRutaServidor());
         lblInfo.setFont(new Font("Arial", Font.ITALIC, 11));
         lblInfo.setForeground(Color.GRAY);
 
         panel.add(lblInfo);
-
         return panel;
     }
 
-    /**
-     * Configura los listeners de los componentes.
-     */
     private void setupListeners() {
-        // Listeners de botones
-        btnBuscar.addActionListener(this::buscarBoletines);
-        btnAbrir.addActionListener(this::abrirBoletin);
+        btnBuscar.addActionListener(this::buscarBoletinesPDF);
+        btnAbrir.addActionListener(this::abrirBoletinPDF);
+        btnDescargar.addActionListener(this::descargarBoletines);
+        btnEnviarEmail.addActionListener(this::enviarBoletinesPorEmail);
+        btnConfigEmail.addActionListener(this::configurarEmail);
         btnEliminar.addActionListener(this::eliminarBoletin);
         btnEstadisticas.addActionListener(this::mostrarEstadisticas);
         btnActualizar.addActionListener(this::actualizarLista);
-        btnGenerarNuevo.addActionListener(this::generarNuevoBoletin);
-        btnConfigServidor.addActionListener(this::configurarServidor);
-        btnEstructura.addActionListener(this::crearEstructura);
-        btnLimpiarAntiguos.addActionListener(this::limpiarBoletinesAntiguos);
         btnVolver.addActionListener(e -> ventana.restaurarVistaPrincipal());
 
-        // Listener para cambios en combos
-        comboAnioLectivo.addActionListener(e -> actualizarCombosSecundarios());
-        comboCurso.addActionListener(e -> actualizarComboDivision());
+        // Listeners para cambios en combos
+        comboAnioLectivo.addActionListener(e -> buscarBoletinesPDF(null));
+        comboAnio.addActionListener(e -> buscarBoletinesPDF(null));
+        comboDivision.addActionListener(e -> buscarBoletinesPDF(null));
 
-        // Doble clic en tabla para abrir boletín
+        // Doble clic en tabla para abrir PDF
         tablaBoletines.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    abrirBoletin(null);
+                    abrirBoletinPDF(null);
                 }
             }
         });
 
         // Enter en campo de búsqueda
-        txtBuscarAlumno.addActionListener(this::buscarBoletines);
+        txtBuscarAlumno.addActionListener(this::buscarBoletinesPDF);
     }
 
-    /**
-     * Carga los datos iniciales.
-     */
     private void loadInitialData() {
         cargarAniosLectivos();
-        cargarCursos();
-        cargarPeriodos();
-        buscarBoletines(null); // Carga inicial
+        buscarBoletinesPDF(null);
+        verificarEstadoEmail();
     }
 
-    /**
-     * Carga los años lectivos disponibles.
-     */
     private void cargarAniosLectivos() {
         try {
             comboAnioLectivo.removeAllItems();
-
-            // Agregar años desde el actual hacia atrás
             int anioActual = LocalDate.now().getYear();
             for (int i = 0; i < 5; i++) {
                 comboAnioLectivo.addItem(String.valueOf(anioActual - i));
             }
-
-            // Seleccionar año actual por defecto
             comboAnioLectivo.setSelectedItem(String.valueOf(anioActual));
-
         } catch (Exception e) {
             System.err.println("Error cargando años lectivos: " + e.getMessage());
         }
     }
 
     /**
-     * Carga los cursos disponibles.
+     * MÉTODO PRINCIPAL CORREGIDO: Búsqueda optimizada por curso
      */
-     private void cargarCursos() {
-        try {
-            cursosMap.clear(); // CORREGIDO: Limpiar el map
-            comboCurso.removeAllItems();
-            comboCurso.addItem("TODOS");
-
-            String query = "SELECT id, anio, division FROM cursos WHERE estado = 'activo' ORDER BY anio, division";
-            PreparedStatement ps = conect.prepareStatement(query);
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                int id = rs.getInt("id");
-                int anio = rs.getInt("anio");
-                int division = rs.getInt("division");
-                
-                // CORREGIDO: Formato numérico para cursos
-                String cursoNombre = String.valueOf(anio) + String.valueOf(division); // "11", "12", "21", etc.
-                
-                cursosMap.put(cursoNombre, id);
-                comboCurso.addItem(cursoNombre);
-                
-                System.out.println("Curso cargado: " + cursoNombre + " (ID: " + id + ")");
-            }
-
-            rs.close();
-            ps.close();
-
-        } catch (SQLException e) {
-            System.err.println("Error cargando cursos: " + e.getMessage());
-            e.printStackTrace(); // CORREGIDO: Ahora debería funcionar
-        }
-    }
-
-    /**
-     * Abre el boletín seleccionado.
-     */
-    private void abrirBoletin(ActionEvent e) {
-        int filaSeleccionada = tablaBoletines.getSelectedRow();
-        if (filaSeleccionada == -1) {
-            JOptionPane.showMessageDialog(this,
-                    "Por favor, seleccione un boletín de la tabla",
-                    "Selección requerida",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        GestorBoletines.InfoBoletin boletin = boletinesActuales.get(filaSeleccionada);
-
-        try {
-            File archivo = new File(boletin.rutaArchivo);
-            if (!archivo.exists()) {
-                JOptionPane.showMessageDialog(this,
-                        "El archivo del boletín no existe en:\n" + boletin.rutaArchivo,
-                        "Archivo no encontrado",
-                        JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Abrir archivo con aplicación predeterminada
-            if (java.awt.Desktop.isDesktopSupported()) {
-                java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-                if (desktop.isSupported(java.awt.Desktop.Action.OPEN)) {
-                    desktop.open(archivo);
-                    System.out.println("✅ Boletín abierto: " + archivo.getName());
-                } else {
-                    mostrarRutaArchivo(boletin.rutaArchivo);
-                }
-            } else {
-                mostrarRutaArchivo(boletin.rutaArchivo);
-            }
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error al abrir el boletín:\n" + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    /**
-     * Muestra la ruta del archivo cuando no se puede abrir automáticamente.
-     */
-    private void mostrarRutaArchivo(String ruta) {
-        JOptionPane.showMessageDialog(this,
-                "No se pudo abrir automáticamente.\nRuta del archivo:\n" + ruta,
-                "Información del Archivo",
-                JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    /**
-     * Elimina el boletín seleccionado (solo admin/preceptor).
-     */
-    private void eliminarBoletin(ActionEvent e) {
-        if (userRol != 1 && userRol != 2) {
-            JOptionPane.showMessageDialog(this,
-                    "No tiene permisos para eliminar boletines",
-                    "Permisos insuficientes",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        int filaSeleccionada = tablaBoletines.getSelectedRow();
-        if (filaSeleccionada == -1) {
-            JOptionPane.showMessageDialog(this,
-                    "Por favor, seleccione un boletín para eliminar",
-                    "Selección requerida",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        GestorBoletines.InfoBoletin boletin = boletinesActuales.get(filaSeleccionada);
-
-        int confirmacion = JOptionPane.showConfirmDialog(this,
-                "¿Está seguro de eliminar el boletín de:\n" + boletin.alumnoNombre
-                + "\nPeríodo: " + boletin.periodo + "\n\nEsta acción no se puede deshacer.",
-                "Confirmar Eliminación",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-
-        if (confirmacion == JOptionPane.YES_OPTION) {
-            SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
-                @Override
-                protected Boolean doInBackground() throws Exception {
-                    return GestorBoletines.eliminarBoletin(boletin);
-                }
-
-                @Override
-                protected void done() {
-                    try {
-                        boolean eliminado = get();
-                        if (eliminado) {
-                            JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                    "Boletín eliminado exitosamente",
-                                    "Eliminación completada",
-                                    JOptionPane.INFORMATION_MESSAGE);
-                            buscarBoletines(null); // Actualizar lista
-                        } else {
-                            JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                    "Error al eliminar el boletín",
-                                    "Error",
-                                    JOptionPane.ERROR_MESSAGE);
-                        }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                        JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                "Error durante la eliminación: " + ex.getMessage(),
-                                "Error",
-                                JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            };
-
-            worker.execute();
-        }
-    }
-
-    /**
-     * Muestra estadísticas de boletines.
-     */
-    private void mostrarEstadisticas(ActionEvent e) {
-        String anioLectivo = (String) comboAnioLectivo.getSelectedItem();
-        if (anioLectivo == null) {
-            return;
-        }
-
-        SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
+    private void buscarBoletinesPDF(ActionEvent e) {
+        SwingWorker<List<BoletinInfo>, Void> worker = new SwingWorker<List<BoletinInfo>, Void>() {
             @Override
-            protected String doInBackground() throws Exception {
-                return GestorBoletines.obtenerEstadisticas(Integer.parseInt(anioLectivo));
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    String estadisticas = get();
-
-                    javax.swing.JTextArea textArea = new javax.swing.JTextArea(estadisticas);
-                    textArea.setEditable(false);
-                    textArea.setRows(20);
-                    textArea.setColumns(60);
-                    textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-
-                    JScrollPane scrollPane = new JScrollPane(textArea);
-
-                    JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                            scrollPane,
-                            "Estadísticas de Boletines - " + anioLectivo,
-                            JOptionPane.INFORMATION_MESSAGE);
-
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                            "Error obteniendo estadísticas: " + ex.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        };
-
-        worker.execute();
-    }
-
-    /**
-     * Actualiza la lista de boletines.
-     */
-    private void actualizarLista(ActionEvent e) {
-        buscarBoletines(null);
-    }
-
-    /**
-     * Abre el panel para generar un nuevo boletín.
-     */
-    private void generarNuevoBoletin(ActionEvent e) {
-        try {
-            // Crear diálogo para seleccionar opciones
-            JPanel panel = new JPanel(new GridBagLayout());
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.insets = new Insets(5, 5, 5, 5);
-            gbc.anchor = GridBagConstraints.WEST;
-
-            // Combo curso
-            gbc.gridx = 0; gbc.gridy = 0;
-            panel.add(new JLabel("Curso:"), gbc);
-            
-            JComboBox<String> comboCursoNuevo = new JComboBox<>();
-            for (String curso : cursosMap.keySet()) {
-                comboCursoNuevo.addItem(curso);
-            }
-            gbc.gridx = 1;
-            panel.add(comboCursoNuevo, gbc);
-
-            // Combo período
-            gbc.gridx = 0; gbc.gridy = 1;
-            panel.add(new JLabel("Período:"), gbc);
-            
-            JComboBox<String> comboPeriodoNuevo = new JComboBox<>(
-                    new String[]{"1B", "2B", "3B", "4B", "1C", "2C", "Final"});
-            comboPeriodoNuevo.setSelectedItem(BoletinesUtils.obtenerPeriodoActual());
-            gbc.gridx = 1;
-            panel.add(comboPeriodoNuevo, gbc);
-
-            // Radio buttons para tipo
-            gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
-            JRadioButton rbIndividual = new JRadioButton("Boletín Individual", true);
-            JRadioButton rbCursoCompleto = new JRadioButton("Curso Completo");
-            
-            ButtonGroup grupo = new ButtonGroup();
-            grupo.add(rbIndividual);
-            grupo.add(rbCursoCompleto);
-            
-            panel.add(rbIndividual, gbc);
-            gbc.gridy = 3;
-            panel.add(rbCursoCompleto, gbc);
-
-            int result = JOptionPane.showConfirmDialog(this, panel,
-                    "Generar Nuevo Boletín",
-                    JOptionPane.OK_CANCEL_OPTION,
-                    JOptionPane.PLAIN_MESSAGE);
-
-            if (result == JOptionPane.OK_OPTION) {
-                String cursoSeleccionado = (String) comboCursoNuevo.getSelectedItem();
-                String periodoSeleccionado = (String) comboPeriodoNuevo.getSelectedItem();
-                
-                if (cursoSeleccionado != null && periodoSeleccionado != null) {
-                    Integer cursoId = cursosMap.get(cursoSeleccionado);
-                    
-                    if (rbIndividual.isSelected()) {
-                        // Generar boletín individual
-                        JOptionPane.showMessageDialog(this,
-                                "Para boletines individuales, use el panel de Notas",
-                                "Información",
-                                JOptionPane.INFORMATION_MESSAGE);
-                    } else {
-                        // Generar boletines para todo el curso
-                        int confirmacion = JOptionPane.showConfirmDialog(this,
-                                "¿Generar boletines para todo el curso " + cursoSeleccionado + "?\n" +
-                                "Período: " + periodoSeleccionado + "\n" +
-                                "Los boletines se guardarán automáticamente en el servidor.",
-                                "Confirmar Generación Masiva",
-                                JOptionPane.YES_NO_OPTION,
-                                JOptionPane.WARNING_MESSAGE);
-                        
-                        if (confirmacion == JOptionPane.YES_OPTION) {
-                            // USAR SERVIDOR AUTOMÁTICO
-                            PlantillaBoletinUtility.generarBoletinesCursoConServidorConInterfaz(
-                                    cursoId, periodoSeleccionado, this);
-                        }
-                    }
-                }
-            }
-            
-        } catch (Exception ex) {
-            System.err.println("Error al generar nuevo boletín: " + ex.getMessage());
-            ex.printStackTrace(); // CORREGIDO: Ahora debería funcionar
-            JOptionPane.showMessageDialog(this,
-                    "Error al generar boletín: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-
-    /**
-     * Configurar el servidor de boletines (solo admin).
-     */
-    private void configurarServidor(ActionEvent e) {
-        if (userRol != 1) {
-            JOptionPane.showMessageDialog(this,
-                    "Solo los administradores pueden configurar el servidor",
-                    "Permisos insuficientes",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        mostrarDialogoConfiguracionServidor();
-    }
-
-    /**
-     * Crear estructura de carpetas (solo admin).
-     */
-    private void crearEstructura(ActionEvent e) {
-        if (userRol != 1) {
-            JOptionPane.showMessageDialog(this,
-                    "Solo los administradores pueden crear la estructura",
-                    "Permisos insuficientes",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String anioLectivo = (String) comboAnioLectivo.getSelectedItem();
-        if (anioLectivo == null) {
-            return;
-        }
-
-        int confirmacion = JOptionPane.showConfirmDialog(this,
-                "¿Desea crear la estructura de carpetas para el año " + anioLectivo + "?\n"
-                + "Esto creará todas las carpetas necesarias para cursos y períodos.",
-                "Crear Estructura",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
-
-        if (confirmacion == JOptionPane.YES_OPTION) {
-            SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
-                @Override
-                protected Boolean doInBackground() throws Exception {
-                    return GestorBoletines.generarEstructuraCompleta(Integer.parseInt(anioLectivo));
-                }
-
-                @Override
-                protected void done() {
-                    try {
-                        boolean exito = get();
-                        String mensaje = exito
-                                ? "Estructura de carpetas creada exitosamente"
-                                : "Hubo problemas al crear la estructura";
-
-                        JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                mensaje,
-                                "Estructura de Carpetas",
-                                exito ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                        JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                "Error: " + ex.getMessage(),
-                                "Error",
-                                JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            };
-
-            worker.execute();
-        }
-    }
-
-    /**
-     * Limpiar boletines antiguos (solo admin).
-     */
-    private void limpiarBoletinesAntiguos(ActionEvent e) {
-        if (userRol != 1) {
-            JOptionPane.showMessageDialog(this,
-                    "Solo los administradores pueden limpiar boletines antiguos",
-                    "Permisos insuficientes",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String[] opciones = {"2 años", "3 años", "5 años", "Cancelar"};
-        int seleccion = JOptionPane.showOptionDialog(this,
-                "¿Qué antigüedad de boletines desea eliminar?",
-                "Limpiar Boletines Antiguos",
-                JOptionPane.YES_NO_CANCEL_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                opciones,
-                opciones[0]);
-
-        if (seleccion >= 0 && seleccion < 3) {
-            int aniosAntiguedad = seleccion == 0 ? 2 : (seleccion == 1 ? 3 : 5);
-
-            int confirmacion = JOptionPane.showConfirmDialog(this,
-                    "¿Está seguro de eliminar boletines con más de " + aniosAntiguedad + " años?\n"
-                    + "Esta acción no se puede deshacer.",
-                    "Confirmar Limpieza",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-
-            if (confirmacion == JOptionPane.YES_OPTION) {
-                SwingWorker<Integer, Void> worker = new SwingWorker<Integer, Void>() {
-                    @Override
-                    protected Integer doInBackground() throws Exception {
-                        return GestorBoletines.limpiarBoletinesAntiguos(aniosAntiguedad);
-                    }
-
-                    @Override
-                    protected void done() {
-                        try {
-                            int eliminados = get();
-                            JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                    "Limpieza completada.\nBoletines eliminados: " + eliminados,
-                                    "Limpieza Finalizada",
-                                    JOptionPane.INFORMATION_MESSAGE);
-
-                            // Actualizar lista
-                            buscarBoletines(null);
-
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                            JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                    "Error durante la limpieza: " + ex.getMessage(),
-                                    "Error",
-                                    JOptionPane.ERROR_MESSAGE);
-                        }
-                    }
-                };
-
-                worker.execute();
-            }
-        }
-    }
-
-    /**
-     * Muestra el diálogo de configuración del servidor.
-     */
-    private void mostrarDialogoConfiguracionServidor() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST;
-
-        // Ruta actual
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panel.add(new JLabel("Ruta actual del servidor:"), gbc);
-
-        JTextField txtRutaActual = new JTextField(GestorBoletines.obtenerRutaServidor(), 40);
-        txtRutaActual.setEditable(false);
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 2;
-        panel.add(txtRutaActual, gbc);
-
-        // Nueva ruta
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.gridwidth = 1;
-        panel.add(new JLabel("Nueva ruta:"), gbc);
-
-        JTextField txtNuevaRuta = new JTextField(40);
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        panel.add(txtNuevaRuta, gbc);
-
-        JButton btnExaminar = new JButton("Examinar...");
-        gbc.gridx = 2;
-        gbc.gridy = 3;
-        gbc.gridwidth = 1;
-        panel.add(btnExaminar, gbc);
-
-        // Listener para examinar
-        btnExaminar.addActionListener(evt -> {
-            javax.swing.JFileChooser fileChooser = new javax.swing.JFileChooser();
-            fileChooser.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
-            fileChooser.setDialogTitle("Seleccionar carpeta del servidor de boletines");
-
-            if (fileChooser.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
-                txtNuevaRuta.setText(fileChooser.getSelectedFile().getAbsolutePath());
-            }
-        });
-
-        // Mostrar diálogo
-        int result = JOptionPane.showConfirmDialog(this, panel,
-                "Configuración del Servidor de Boletines",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-
-        if (result == JOptionPane.OK_OPTION) {
-            String nuevaRuta = txtNuevaRuta.getText().trim();
-            if (!nuevaRuta.isEmpty()) {
-                GestorBoletines.configurarRutaServidor(nuevaRuta);
-
-                // Preguntar si generar estructura
-                int confirmacion = JOptionPane.showConfirmDialog(this,
-                        "¿Desea generar la estructura de carpetas para el año actual?",
-                        "Generar Estructura",
-                        JOptionPane.YES_NO_OPTION);
-
-                if (confirmacion == JOptionPane.YES_OPTION) {
-                    SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
-                        @Override
-                        protected Boolean doInBackground() throws Exception {
-                            return GestorBoletines.generarEstructuraCompleta(LocalDate.now().getYear());
-                        }
-
-                        @Override
-                        protected void done() {
-                            try {
-                                boolean exito = get();
-                                String mensaje = exito
-                                        ? "Configuración actualizada y estructura generada exitosamente"
-                                        : "Configuración actualizada, pero hubo problemas generando la estructura";
-
-                                JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                        mensaje,
-                                        "Configuración Completada",
-                                        exito ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE);
-
-                                // Actualizar panel de información
-                                actualizarInfoPanel();
-
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                                JOptionPane.showMessageDialog(PanelGestionBoletines.this,
-                                        "Error: " + ex.getMessage(),
-                                        "Error",
-                                        JOptionPane.ERROR_MESSAGE);
-                            }
-                        }
-                    };
-
-                    worker.execute();
-                } else {
-                    // Solo actualizar la información del panel
-                    actualizarInfoPanel();
-                }
-            }
-        }
-    }
-
-    /**
-     * Actualiza los combos secundarios cuando cambia el año lectivo.
-     */
-    private void actualizarCombosSecundarios() {
-        String anioSeleccionado = (String) comboAnioLectivo.getSelectedItem();
-        if (anioSeleccionado != null) {
-            cargarCursos();
-            cargarPeriodos();
-        }
-    }
-
-    /**
-     * Actualiza el combo de división cuando cambia el curso.
-     */
-    private void actualizarComboDivision() {
-        try {
-            comboDivision.removeAllItems();
-            comboDivision.addItem("TODAS");
-
-            String cursoSeleccionado = (String) comboCurso.getSelectedItem();
-            if (cursoSeleccionado != null && !cursoSeleccionado.equals("TODOS")) {
-                String query = "SELECT DISTINCT division FROM cursos WHERE anio = ? AND estado = 'activo' ORDER BY division";
-                PreparedStatement ps = conect.prepareStatement(query);
-                ps.setInt(1, Integer.parseInt(cursoSeleccionado));
-                ResultSet rs = ps.executeQuery();
-
-                while (rs.next()) {
-                    comboDivision.addItem(String.valueOf(rs.getInt("division")));
-                }
-
-                rs.close();
-                ps.close();
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error cargando divisiones: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Carga los períodos disponibles.
-     */
-    private void cargarPeriodos() {
-        try {
-            comboPeriodo.removeAllItems();
-            comboPeriodo.addItem("TODOS");
-
-            for (String periodo : GestorBoletines.PERIODOS_VALIDOS) {
-                comboPeriodo.addItem(periodo);
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error cargando períodos: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Busca boletines según los filtros seleccionados.
-     */
-    private void buscarBoletines(ActionEvent e) {
-        javax.swing.SwingWorker<List<GestorBoletines.InfoBoletin>, Void> worker
-                = new javax.swing.SwingWorker<List<GestorBoletines.InfoBoletin>, Void>() {
-
-            @Override
-            protected List<GestorBoletines.InfoBoletin> doInBackground() throws Exception {
-                String anioLectivo = (String) comboAnioLectivo.getSelectedItem();
-                String curso = (String) comboCurso.getSelectedItem();
-                String division = (String) comboDivision.getSelectedItem();
-                String periodo = (String) comboPeriodo.getSelectedItem();
-
-                if (anioLectivo == null) {
-                    return new ArrayList<>();
-                }
-
-                return GestorBoletines.obtenerBoletinesDisponibles(
-                        Integer.parseInt(anioLectivo),
-                        curso,
-                        division,
-                        periodo
-                );
+            protected List<BoletinInfo> doInBackground() throws Exception {
+                return buscarBoletinesEnServidorOptimizado();
             }
 
             @Override
@@ -1030,7 +503,7 @@ public class PanelGestionBoletines extends JPanel {
                     boletinesActuales = get();
                     actualizarTablaBoletines();
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    System.err.println("Error buscando boletines: " + ex.getMessage());
                     JOptionPane.showMessageDialog(PanelGestionBoletines.this,
                             "Error al buscar boletines: " + ex.getMessage(),
                             "Error", JOptionPane.ERROR_MESSAGE);
@@ -1042,32 +515,573 @@ public class PanelGestionBoletines extends JPanel {
     }
 
     /**
-     * Actualiza la tabla con los boletines encontrados.
+     * MÉTODO CORREGIDO: Búsqueda optimizada por curso con DNI y Email
+     */
+    private List<BoletinInfo> buscarBoletinesEnServidorOptimizado() {
+        List<BoletinInfo> boletines = new ArrayList<>();
+
+        try {
+            System.out.println("=== BÚSQUEDA OPTIMIZADA DE BOLETINES PDF ===");
+
+            String anioLectivo = (String) comboAnioLectivo.getSelectedItem();
+            String anioSeleccionado = (String) comboAnio.getSelectedItem();
+            String divisionSeleccionada = (String) comboDivision.getSelectedItem();
+            String periodoSeleccionado = (String) comboPeriodo.getSelectedItem();
+
+            if (anioLectivo == null) {
+                return boletines;
+            }
+
+            // PASO 1: Obtener alumnos del curso con DNI y Email
+            Map<String, InfoAlumno> alumnosDelCurso = obtenerAlumnosDelCursoSeleccionado(
+                    anioSeleccionado, divisionSeleccionada);
+
+            if (alumnosDelCurso.isEmpty()) {
+                System.out.println("⚠️ No se encontraron alumnos para el curso seleccionado");
+                return boletines;
+            }
+
+            System.out.println("✅ Alumnos del curso cargados: " + alumnosDelCurso.size());
+
+            // PASO 2: Construir rutas de búsqueda específicas
+            List<String> rutasBusqueda = construirRutasBusquedaOptimizada(
+                    anioLectivo, anioSeleccionado, divisionSeleccionada, periodoSeleccionado);
+
+            System.out.println("📁 Rutas de búsqueda: " + rutasBusqueda.size());
+
+            // PASO 3: Buscar archivos solo para alumnos del curso
+            for (String rutaBusqueda : rutasBusqueda) {
+                List<BoletinInfo> boletinesEnRuta = buscarPDFsEnRutaOptimizada(
+                        rutaBusqueda, alumnosDelCurso);
+                boletines.addAll(boletinesEnRuta);
+            }
+
+            // PASO 4: Filtrar por nombre de alumno si se especificó
+            String filtroAlumno = txtBuscarAlumno.getText().toLowerCase().trim();
+            if (!filtroAlumno.isEmpty()) {
+                boletines = boletines.stream()
+                        .filter(b -> b.alumnoNombre.toLowerCase().contains(filtroAlumno))
+                        .collect(java.util.stream.Collectors.toList());
+            }
+
+            System.out.println("✅ Búsqueda optimizada completada: " + boletines.size() + " boletines encontrados");
+
+        } catch (Exception e) {
+            System.err.println("Error en búsqueda optimizada: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return boletines;
+    }
+
+    /**
+     * MÉTODO CORREGIDO: Obtener alumnos con DNI y Email completos
+     */
+    private Map<String, InfoAlumno> obtenerAlumnosDelCursoSeleccionado(String anioSeleccionado, String divisionSeleccionada) {
+        Map<String, InfoAlumno> alumnos = new HashMap<>();
+
+        try {
+            if (conect == null || conect.isClosed()) {
+                conect = Conexion.getInstancia().verificarConexion();
+            }
+
+            System.out.println("🔍 Obteniendo alumnos del curso específico: " + anioSeleccionado + "°" + divisionSeleccionada);
+
+            // CONSULTA CORREGIDA CON MANEJO DE NULOS
+            StringBuilder queryBuilder = new StringBuilder();
+            queryBuilder.append("""
+                SELECT u.id, u.nombre, u.apellido, 
+                       COALESCE(u.dni, 'Sin DNI') as dni,
+                       COALESCE(u.mail, 'Sin Email') as mail,
+                       c.id as curso_id, c.anio, c.division
+                FROM usuarios u 
+                INNER JOIN alumno_curso ac ON u.id = ac.alumno_id AND ac.estado = 'activo'
+                INNER JOIN cursos c ON ac.curso_id = c.id
+                WHERE u.rol = '4' AND u.status = 1
+                """);
+
+            List<Object> parametros = new ArrayList<>();
+
+            // Filtrar por año si no es "TODOS"
+            if (!"TODOS".equals(anioSeleccionado)) {
+                queryBuilder.append(" AND c.anio = ?");
+                parametros.add(Integer.parseInt(anioSeleccionado));
+            }
+
+            // Filtrar por división si no es "TODAS"
+            if (!"TODAS".equals(divisionSeleccionada)) {
+                queryBuilder.append(" AND c.division = ?");
+                parametros.add(Integer.parseInt(divisionSeleccionada));
+            }
+
+            queryBuilder.append(" ORDER BY u.apellido, u.nombre");
+
+            PreparedStatement ps = conect.prepareStatement(queryBuilder.toString());
+            for (int i = 0; i < parametros.size(); i++) {
+                ps.setObject(i + 1, parametros.get(i));
+            }
+
+            System.out.println("📋 Consulta corregida: " + queryBuilder.toString());
+            System.out.println("📋 Parámetros: " + parametros);
+
+            ResultSet rs = ps.executeQuery();
+
+            int count = 0;
+            while (rs.next()) {
+                String apellido = rs.getString("apellido");
+                String nombre = rs.getString("nombre");
+                String nombreCompleto = apellido + ", " + nombre;
+
+                // OBTENER DNI Y EMAIL CON VALORES POR DEFECTO
+                String dni = rs.getString("dni");
+                String email = rs.getString("mail");
+
+                // Verificar que no sean nulos
+                if (dni == null || dni.trim().isEmpty()) {
+                    dni = "Sin DNI";
+                }
+                if (email == null || email.trim().isEmpty()) {
+                    email = "Sin Email";
+                }
+
+                String curso = rs.getString("anio");
+                String division = rs.getString("division");
+                int cursoId = rs.getInt("curso_id");
+
+                InfoAlumno info = new InfoAlumno(
+                        rs.getInt("id"),
+                        nombreCompleto,
+                        dni,
+                        email,
+                        curso != null ? curso : "",
+                        division != null ? division : "",
+                        cursoId
+                );
+
+                // DEBUG: Mostrar datos del alumno
+                if (count < 3) {
+                    System.out.println("DEBUG Alumno " + (count + 1) + ":");
+                    System.out.println("  Nombre completo: " + nombreCompleto);
+                    System.out.println("  DNI: " + dni);
+                    System.out.println("  Email: " + email);
+                    System.out.println("  Curso: " + curso + "°" + division);
+                }
+
+                // Crear múltiples claves de búsqueda para el mismo alumno
+                String claveNormal = normalizarNombre(nombreCompleto);
+                alumnos.put(claveNormal, info);
+
+                // Clave adicional: Solo apellido
+                if (apellido != null) {
+                    String claveApellido = normalizarNombre(apellido);
+                    alumnos.put(claveApellido, info);
+
+                    // Clave adicional: Apellido + inicial del nombre
+                    if (nombre != null && nombre.length() > 0) {
+                        String inicial = String.valueOf(nombre.charAt(0)).toUpperCase();
+                        String claveApellidoInicial = normalizarNombre(apellido + " " + inicial);
+                        alumnos.put(claveApellidoInicial, info);
+
+                        // Clave adicional: Formato con guión bajo
+                        String claveConGuion = normalizarNombre(apellido + "_" + inicial);
+                        alumnos.put(claveConGuion, info);
+                    }
+                }
+
+                count++;
+            }
+
+            rs.close();
+            ps.close();
+
+            System.out.println("✅ Alumnos del curso específico cargados: " + count);
+            System.out.println("✅ Total claves de búsqueda generadas: " + alumnos.size());
+
+        } catch (Exception e) {
+            System.err.println("❌ Error obteniendo alumnos del curso específico: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return alumnos;
+    }
+
+    /**
+     * Construir rutas de búsqueda optimizadas
+     */
+    private List<String> construirRutasBusquedaOptimizada(String anioLectivo, String anio,
+            String division, String periodo) {
+        List<String> rutas = new ArrayList<>();
+        String servidorBase = GestorBoletines.obtenerRutaServidor();
+
+        // Determinar años a buscar
+        List<String> aniosBuscar = new ArrayList<>();
+        if ("TODOS".equals(anio)) {
+            for (int i = 1; i <= 7; i++) {
+                aniosBuscar.add(String.valueOf(i));
+            }
+        } else {
+            aniosBuscar.add(anio);
+        }
+
+        // Determinar divisiones a buscar
+        List<String> divisionesBuscar = new ArrayList<>();
+        if ("TODAS".equals(division)) {
+            for (int i = 1; i <= 10; i++) {
+                divisionesBuscar.add(String.valueOf(i));
+            }
+        } else {
+            divisionesBuscar.add(division);
+        }
+
+        // Determinar períodos a buscar
+        List<String> periodosBuscar = new ArrayList<>();
+        if ("TODOS".equals(periodo)) {
+            periodosBuscar.add("1B");
+            periodosBuscar.add("2B");
+            periodosBuscar.add("3B");
+            periodosBuscar.add("4B");
+            periodosBuscar.add("1C");
+            periodosBuscar.add("2C");
+            periodosBuscar.add("Final");
+            periodosBuscar.add("Diciembre");
+            periodosBuscar.add("Febrero");
+        } else {
+            periodosBuscar.add(periodo);
+        }
+
+        // Construir rutas
+        for (String a : aniosBuscar) {
+            for (String d : divisionesBuscar) {
+                for (String p : periodosBuscar) {
+                    String curso = a + d; // Formato: "11", "12", "21", etc.
+                    String ruta = servidorBase + anioLectivo + "/" + curso + "/" + p + "/";
+                    rutas.add(ruta);
+                }
+            }
+        }
+
+        return rutas;
+    }
+
+    /**
+     * Buscar PDFs en ruta optimizada para curso específico
+     */
+    private List<BoletinInfo> buscarPDFsEnRutaOptimizada(String rutaBase, Map<String, InfoAlumno> alumnosDelCurso) {
+        List<BoletinInfo> boletines = new ArrayList<>();
+
+        try {
+            System.out.println("📁 Buscando en: " + rutaBase);
+            System.out.println("👥 Alumnos del curso: " + alumnosDelCurso.size());
+
+            // Método 1: Intentar listar directorio
+            List<String> archivosEncontrados = listarArchivosEnDirectorio(rutaBase);
+
+            if (!archivosEncontrados.isEmpty()) {
+                System.out.println("✅ Listado exitoso: " + archivosEncontrados.size() + " archivos");
+
+                for (String archivo : archivosEncontrados) {
+                    if (archivo.toLowerCase().endsWith(".pdf")) {
+                        BoletinInfo boletin = procesarArchivoPDFOptimizado(rutaBase + archivo, archivo, alumnosDelCurso);
+                        if (boletin != null) {
+                            boletines.add(boletin);
+                        }
+                    }
+                }
+            } else {
+                System.out.println("⚠️ Listado no disponible, buscando por nombres específicos...");
+
+                // Método 2: Búsqueda específica para cada alumno del curso
+                for (InfoAlumno alumno : alumnosDelCurso.values()) {
+                    if (alumno.nombreCompleto.contains(",")) {
+                        List<String> nombresProbables = generarNombresProbablesPDF(alumno, rutaBase);
+
+                        for (String nombreArchivo : nombresProbables) {
+                            String urlCompleta = rutaBase + nombreArchivo;
+
+                            if (verificarArchivoExiste(urlCompleta)) {
+                                BoletinInfo boletin = procesarArchivoPDFOptimizado(urlCompleta, nombreArchivo, alumnosDelCurso);
+                                if (boletin != null) {
+                                    boletines.add(boletin);
+                                    break; // Solo uno por alumno
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error buscando PDFs en ruta " + rutaBase + ": " + e.getMessage());
+        }
+
+        return boletines;
+    }
+
+    /**
+     * MÉTODO CORREGIDO: Procesar archivo PDF con datos completos
+     */
+    private BoletinInfo procesarArchivoPDFOptimizado(String urlCompleta, String nombreArchivo,
+            Map<String, InfoAlumno> alumnosDelCurso) {
+        try {
+            BoletinInfo boletin = new BoletinInfo();
+            boletin.nombreArchivo = nombreArchivo;
+            boletin.urlServidor = urlCompleta;
+            boletin.periodo = extraerPeriodoDeLaRuta(urlCompleta);
+
+            // Extraer curso y división de la ruta
+            String curso = extraerCursoDeLaRuta(urlCompleta);
+            if (curso.length() >= 2) {
+                boletin.curso = String.valueOf(curso.charAt(0));
+                boletin.division = String.valueOf(curso.charAt(1));
+            }
+
+            // IDENTIFICACIÓN MEJORADA DEL ALUMNO
+            InfoAlumno alumno = identificarAlumnoPorNombreOptimizado(nombreArchivo, alumnosDelCurso);
+
+            if (alumno != null) {
+                // ASEGURAR QUE LOS DATOS SE COPIEN CORRECTAMENTE
+                boletin.alumnoNombre = alumno.nombreCompleto;
+                boletin.alumnoDni = alumno.dni != null ? alumno.dni : "Sin DNI";
+                boletin.alumnoEmail = alumno.email != null ? alumno.email : "Sin Email";
+                boletin.cursoId = alumno.cursoId;
+
+                System.out.println("✅ Alumno identificado exitosamente:");
+                System.out.println("  Nombre: " + boletin.alumnoNombre);
+                System.out.println("  DNI: " + boletin.alumnoDni);
+                System.out.println("  Email: " + boletin.alumnoEmail);
+                System.out.println("  Curso: " + boletin.curso + boletin.division);
+            } else {
+                // MANEJO CUANDO NO SE IDENTIFICA - CON BÚSQUEDA ALTERNATIVA
+                String apellidoExtraido = extraerApellidoDelArchivo(nombreArchivo);
+
+                if (!apellidoExtraido.isEmpty()) {
+                    InfoAlumno alumnoEncontrado = buscarAlumnoPorApellido(apellidoExtraido, alumnosDelCurso);
+
+                    if (alumnoEncontrado != null) {
+                        boletin.alumnoNombre = alumnoEncontrado.nombreCompleto;
+                        boletin.alumnoDni = alumnoEncontrado.dni != null ? alumnoEncontrado.dni : "Sin DNI";
+                        boletin.alumnoEmail = alumnoEncontrado.email != null ? alumnoEncontrado.email : "Sin Email";
+                        boletin.cursoId = alumnoEncontrado.cursoId;
+                        System.out.println("🔍 RECUPERADO por apellido: " + alumnoEncontrado.nombreCompleto);
+                        System.out.println("  DNI: " + boletin.alumnoDni);
+                        System.out.println("  Email: " + boletin.alumnoEmail);
+                    } else {
+                        // Como último recurso, usar datos extraídos del archivo
+                        boletin.alumnoNombre = extraerNombreDelArchivo(nombreArchivo);
+                        boletin.alumnoDni = "No encontrado";
+                        boletin.alumnoEmail = "No encontrado";
+                        boletin.cursoId = -1;
+                        System.out.println("⚠️ Usando datos del archivo sin identificar alumno");
+                    }
+                } else {
+                    boletin.alumnoNombre = extraerNombreDelArchivo(nombreArchivo);
+                    boletin.alumnoDni = "No encontrado";
+                    boletin.alumnoEmail = "No encontrado";
+                    boletin.cursoId = -1;
+                    System.out.println("❌ No se pudo extraer apellido del archivo: " + nombreArchivo);
+                }
+            }
+
+            // Obtener información del archivo
+            boletin.tamanioArchivo = obtenerTamanioArchivo(urlCompleta);
+            boletin.esAccesible = boletin.tamanioArchivo > 0;
+
+            return boletin;
+
+        } catch (Exception e) {
+            System.err.println("Error procesando PDF " + nombreArchivo + ": " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * MÉTODO CORREGIDO: Identificar alumno por nombre mejorado
+     */
+    private InfoAlumno identificarAlumnoPorNombreOptimizado(String nombreArchivo, Map<String, InfoAlumno> alumnosDelCurso) {
+        try {
+            System.out.println("🔍 Identificando alumno para archivo: " + nombreArchivo);
+
+            // PASO 1: Limpiar nombre del archivo
+            String nombreLimpio = nombreArchivo
+                    .replaceAll("\\.pdf$", "")
+                    .replaceAll("Boletin_", "")
+                    .replaceAll("boletin_", "")
+                    .replaceAll("BOLETIN_", "")
+                    .replaceAll("_\\d{4}-\\d{2}-\\d{2}$", "") // Remover fecha al final
+                    .replaceAll("_\\d+[BC]$", "") // Remover período al final
+                    .replaceAll("_\\d{2}$", ""); // Remover curso/división al final
+
+            System.out.println("🧹 Nombre limpio: " + nombreLimpio);
+
+            // PASO 2: Extraer apellido del archivo (primera parte antes del guión bajo)
+            String[] partes = nombreLimpio.split("_");
+            if (partes.length > 0) {
+                String apellidoDelArchivo = partes[0];
+                System.out.println("👤 Apellido extraído del archivo: " + apellidoDelArchivo);
+
+                // PASO 3: Buscar por apellido en los alumnos del curso
+                String apellidoNormalizado = normalizarNombre(apellidoDelArchivo);
+
+                // Búsqueda exacta por apellido
+                for (InfoAlumno infoAlumno : alumnosDelCurso.values()) {
+                    if (infoAlumno.nombreCompleto.contains(",")) {
+                        String apellidoAlumno = infoAlumno.nombreCompleto.split(",")[0].trim();
+                        String apellidoAlumnoNormalizado = normalizarNombre(apellidoAlumno);
+
+                        if (apellidoNormalizado.equals(apellidoAlumnoNormalizado)) {
+                            System.out.println("🎯 COINCIDENCIA EXACTA POR APELLIDO: " + infoAlumno.nombreCompleto);
+                            System.out.println("  DNI encontrado: " + infoAlumno.dni);
+                            System.out.println("  Email encontrado: " + infoAlumno.email);
+                            return infoAlumno;
+                        }
+                    }
+                }
+
+                // Búsqueda parcial por apellido
+                for (InfoAlumno infoAlumno : alumnosDelCurso.values()) {
+                    if (infoAlumno.nombreCompleto.contains(",")) {
+                        String apellidoAlumno = infoAlumno.nombreCompleto.split(",")[0].trim();
+                        String apellidoAlumnoNormalizado = normalizarNombre(apellidoAlumno);
+
+                        if (apellidoAlumnoNormalizado.contains(apellidoNormalizado)
+                                || apellidoNormalizado.contains(apellidoAlumnoNormalizado)) {
+                            System.out.println("🔍 COINCIDENCIA PARCIAL: " + infoAlumno.nombreCompleto);
+                            System.out.println("  DNI encontrado: " + infoAlumno.dni);
+                            System.out.println("  Email encontrado: " + infoAlumno.email);
+                            return infoAlumno;
+                        }
+                    }
+                }
+            }
+
+            System.out.println("❌ No se identificó alumno para: " + nombreArchivo);
+
+            // Debug: Mostrar algunos apellidos disponibles
+            System.out.println("📋 Algunos apellidos disponibles en el curso:");
+            int count = 0;
+            for (InfoAlumno alumno : alumnosDelCurso.values()) {
+                if (count < 5 && alumno.nombreCompleto.contains(",")) {
+                    String apellido = alumno.nombreCompleto.split(",")[0].trim();
+                    System.out.println("  - " + apellido + " (normalizado: " + normalizarNombre(apellido) + ")");
+                    count++;
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error identificando alumno: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    /**
+     * Extraer apellido del archivo
+     */
+    private String extraerApellidoDelArchivo(String nombreArchivo) {
+        try {
+            String nombreLimpio = nombreArchivo
+                    .replaceAll("\\.pdf$", "")
+                    .replaceAll("Boletin_", "")
+                    .replaceAll("boletin_", "")
+                    .replaceAll("BOLETIN_", "");
+
+            // Extraer primera parte (debería ser el apellido)
+            String[] partes = nombreLimpio.split("_");
+            if (partes.length > 0) {
+                return partes[0];
+            }
+
+            return "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * Buscar alumno por apellido solamente
+     */
+    private InfoAlumno buscarAlumnoPorApellido(String apellido, Map<String, InfoAlumno> alumnosDelCurso) {
+        try {
+            String apellidoNormalizado = normalizarNombre(apellido);
+
+            for (InfoAlumno alumno : alumnosDelCurso.values()) {
+                if (alumno.nombreCompleto.contains(",")) {
+                    String apellidoAlumno = alumno.nombreCompleto.split(",")[0].trim();
+                    String apellidoAlumnoNormalizado = normalizarNombre(apellidoAlumno);
+
+                    if (apellidoNormalizado.equals(apellidoAlumnoNormalizado)) {
+                        return alumno;
+                    }
+                }
+            }
+
+            // Búsqueda más flexible
+            for (InfoAlumno alumno : alumnosDelCurso.values()) {
+                if (alumno.nombreCompleto.contains(",")) {
+                    String apellidoAlumno = alumno.nombreCompleto.split(",")[0].trim();
+                    String apellidoAlumnoNormalizado = normalizarNombre(apellidoAlumno);
+
+                    if (apellidoAlumnoNormalizado.contains(apellidoNormalizado)
+                            || apellidoNormalizado.contains(apellidoAlumnoNormalizado)) {
+                        return alumno;
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error buscando por apellido: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalizar nombre para búsqueda
+     */
+    private String normalizarNombre(String nombre) {
+        if (nombre == null) {
+            return "";
+        }
+
+        return nombre.toLowerCase()
+                .replaceAll("á", "a").replaceAll("é", "e").replaceAll("í", "i")
+                .replaceAll("ó", "o").replaceAll("ú", "u").replaceAll("ñ", "n")
+                .replaceAll("Á", "a").replaceAll("É", "e").replaceAll("Í", "i")
+                .replaceAll("Ó", "o").replaceAll("Ú", "u").replaceAll("Ñ", "n")
+                .replaceAll("[^a-zA-Z0-9\\s]", "") // Remover caracteres especiales
+                .replaceAll("\\s+", " ") // Múltiples espacios a uno solo
+                .trim();
+    }
+
+    /**
+     * Actualizar tabla con información completa
      */
     private void actualizarTablaBoletines() {
         modeloTabla.setRowCount(0);
 
-        String filtroAlumno = txtBuscarAlumno.getText().toLowerCase().trim();
+        System.out.println("📊 Actualizando tabla con " + boletinesActuales.size() + " boletines");
 
-        for (GestorBoletines.InfoBoletin boletin : boletinesActuales) {
-            // Filtrar por nombre de alumno si se especificó
-            if (!filtroAlumno.isEmpty()
-                    && !boletin.alumnoNombre.toLowerCase().contains(filtroAlumno)) {
-                continue;
-            }
+        for (BoletinInfo boletin : boletinesActuales) {
+            // VERIFICAR QUE LOS DATOS ESTÉN CORRECTOS ANTES DE MOSTRAR
+            String nombreMostrar = boletin.alumnoNombre != null ? boletin.alumnoNombre : "Sin nombre";
+            String dniMostrar = (boletin.alumnoDni != null && !boletin.alumnoDni.isEmpty()) ? boletin.alumnoDni : "Sin DNI";
+            String emailMostrar = (boletin.alumnoEmail != null && !boletin.alumnoEmail.isEmpty()) ? boletin.alumnoEmail : "Sin Email";
+
+            System.out.println("Agregando a tabla: " + nombreMostrar + " | DNI: " + dniMostrar + " | Email: " + emailMostrar);
 
             Object[] fila = {
-                boletin.alumnoNombre,
-                boletin.alumnoDni,
-                boletin.curso + boletin.division,
+                false, // Checkbox
+                nombreMostrar,
+                dniMostrar,
+                emailMostrar,
+                boletin.curso,
+                boletin.division,
                 boletin.periodo,
-                boletin.fechaGeneracion != null
-                ? boletin.fechaGeneracion.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-                : "Sin fecha",
-                boletin.estadoBoletin,
+                boletin.nombreArchivo,
                 formatearTamanio(boletin.tamanioArchivo),
-                boletin.archivoExiste ? "✅ Sí" : "❌ No",
-                boletin.rutaArchivo
+                boletin.esAccesible ? "✅ Disponible" : "❌ No accesible"
             };
 
             modeloTabla.addRow(fila);
@@ -1075,255 +1089,485 @@ public class PanelGestionBoletines extends JPanel {
 
         if (modeloTabla.getRowCount() == 0) {
             modeloTabla.addRow(new Object[]{
-                "Sin resultados", "", "", "", "", "", "", "", ""
+                false, "No se encontraron boletines PDF para el curso seleccionado",
+                "", "", "", "", "", "", "", ""
             });
         }
 
-        // Actualizar información
-        actualizarInfoPanel();
+        // Estadísticas mejoradas
+        int total = boletinesActuales.size();
+        int conEmail = (int) boletinesActuales.stream()
+                .filter(b -> b.alumnoEmail != null && !b.alumnoEmail.isEmpty() && !"Sin Email".equals(b.alumnoEmail))
+                .count();
+        int conDni = (int) boletinesActuales.stream()
+                .filter(b -> b.alumnoDni != null && !b.alumnoDni.isEmpty() && !"Sin DNI".equals(b.alumnoDni))
+                .count();
+
+        System.out.println(String.format("📊 Panel actualizado: %d boletines, %d con email, %d con DNI",
+                total, conEmail, conDni));
     }
 
+    // ========================================
+    // MÉTODOS DE UTILIDAD DEL SERVIDOR
+    // ========================================
     /**
-     * Actualiza el panel de información inferior.
+     * Listar archivos en directorio del servidor
      */
-    /**
-     * Actualiza el panel de información inferior con estadísticas actuales.
-     */
-    private void actualizarInfoPanel() {
+    private List<String> listarArchivosEnDirectorio(String url) {
+        List<String> archivos = new ArrayList<>();
+
         try {
-            // Calcular estadísticas de los boletines mostrados actualmente
-            int totalBoletines = boletinesActuales.size();
-            int boletinesExistentes = 0;
-            int boletinesFaltantes = 0;
-            long espacioTotal = 0;
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(20000);
 
-            // Contar por período
-            Map<String, Integer> boletinesPorPeriodo = new HashMap<>();
+            int responseCode = connection.getResponseCode();
 
-            // Contar por estado
-            Map<String, Integer> boletinesPorEstado = new HashMap<>();
+            if (responseCode == 200) {
+                String contentType = connection.getContentType();
 
-            for (GestorBoletines.InfoBoletin boletin : boletinesActuales) {
-                // Contar archivos existentes vs faltantes
-                if (boletin.archivoExiste) {
-                    boletinesExistentes++;
-                    espacioTotal += boletin.tamanioArchivo;
-                } else {
-                    boletinesFaltantes++;
-                }
+                if (contentType != null && contentType.contains("text/html")) {
+                    try (BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(connection.getInputStream()))) {
 
-                // Contar por período
-                boletinesPorPeriodo.put(boletin.periodo,
-                        boletinesPorPeriodo.getOrDefault(boletin.periodo, 0) + 1);
+                        String linea;
+                        StringBuilder contenidoHTML = new StringBuilder();
 
-                // Contar por estado
-                boletinesPorEstado.put(boletin.estadoBoletin,
-                        boletinesPorEstado.getOrDefault(boletin.estadoBoletin, 0) + 1);
-            }
-
-            // Construir texto informativo
-            StringBuilder infoText = new StringBuilder();
-
-            // Información básica
-            infoText.append("📊 Total: ").append(totalBoletines);
-            infoText.append(" | ✅ Existentes: ").append(boletinesExistentes);
-            infoText.append(" | ❌ Faltantes: ").append(boletinesFaltantes);
-
-            if (espacioTotal > 0) {
-                infoText.append(" | 💾 Espacio: ").append(formatearTamanio(espacioTotal));
-            }
-
-            // Información por período (solo si hay variedad)
-            if (boletinesPorPeriodo.size() > 1) {
-                infoText.append(" | 📅 Períodos: ");
-                boolean primero = true;
-                for (Map.Entry<String, Integer> entry : boletinesPorPeriodo.entrySet()) {
-                    if (!primero) {
-                        infoText.append(", ");
-                    }
-                    infoText.append(entry.getKey()).append("(").append(entry.getValue()).append(")");
-                    primero = false;
-                }
-            }
-
-            infoText.append(" | 📁 Servidor: ").append(GestorBoletines.obtenerRutaServidor());
-
-            // Buscar el panel de información existente y actualizarlo
-            Container parent = this.getParent();
-            if (parent != null) {
-                Component[] components = this.getComponents();
-                for (Component comp : components) {
-                    if (comp instanceof JPanel) {
-                        JPanel panel = (JPanel) comp;
-                        // Buscar el panel que tiene el borde etched (panel de información)
-                        if (panel.getBorder() instanceof javax.swing.border.EtchedBorder) {
-                            // Encontramos el panel de información
-                            panel.removeAll();
-
-                            // Crear label principal con la información
-                            JLabel lblInfo = new JLabel(infoText.toString());
-                            lblInfo.setFont(new Font("Arial", Font.PLAIN, 11));
-                            lblInfo.setForeground(Color.DARK_GRAY);
-
-                            // Agregar información adicional si es útil
-                            String filtroAlumno = txtBuscarAlumno.getText().trim();
-                            if (!filtroAlumno.isEmpty()) {
-                                JLabel lblFiltro = new JLabel(" | 🔍 Filtro: \"" + filtroAlumno + "\"");
-                                lblFiltro.setFont(new Font("Arial", Font.ITALIC, 10));
-                                lblFiltro.setForeground(Color.BLUE);
-
-                                JPanel panelCompleto = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-                                panelCompleto.add(lblInfo);
-                                panelCompleto.add(lblFiltro);
-                                panel.add(panelCompleto);
-                            } else {
-                                panel.add(lblInfo);
-                            }
-
-                            // Agregar información de ayuda
-                            if (totalBoletines > 0) {
-                                JLabel lblAyuda = new JLabel(" | 💡 Doble clic para abrir boletín");
-                                lblAyuda.setFont(new Font("Arial", Font.ITALIC, 10));
-                                lblAyuda.setForeground(Color.GRAY);
-                                panel.add(lblAyuda);
-                            }
-
-                            panel.revalidate();
-                            panel.repaint();
-                            break;
+                        while ((linea = reader.readLine()) != null) {
+                            contenidoHTML.append(linea).append("\n");
                         }
+
+                        archivos = extraerArchivosDeHTML(contenidoHTML.toString());
                     }
                 }
             }
 
-            // Actualizar título de la ventana si es necesario
-            String titulo = "Gestión de Boletines";
-            if (totalBoletines > 0) {
-                titulo += " (" + totalBoletines + " boletines)";
-            }
-
-            // Buscar el título y actualizarlo
-            Component[] allComponents = this.getComponents();
-            for (Component comp : allComponents) {
-                if (comp instanceof JPanel) {
-                    JPanel panel = (JPanel) comp;
-                    Component[] panelComponents = panel.getComponents();
-                    for (Component subComp : panelComponents) {
-                        if (subComp instanceof JLabel) {
-                            JLabel label = (JLabel) subComp;
-                            if (label.getText().contains("Gestión de Boletines")) {
-                                // Actualizar solo si cambió
-                                if (!label.getText().equals(titulo)) {
-                                    label.setText(titulo);
-                                    label.revalidate();
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            System.out.println("Panel de información actualizado: " + infoText.toString());
+            connection.disconnect();
 
         } catch (Exception e) {
-            System.err.println("Error al actualizar panel de información: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("⚠️ No se puede listar directorio: " + e.getMessage());
+        }
 
-            // En caso de error, mostrar información básica
-            try {
-                // Buscar y actualizar con información mínima
-                Component[] components = this.getComponents();
-                for (Component comp : components) {
-                    if (comp instanceof JPanel) {
-                        JPanel panel = (JPanel) comp;
-                        if (panel.getBorder() instanceof javax.swing.border.EtchedBorder) {
-                            panel.removeAll();
-                            JLabel lblError = new JLabel("Error al actualizar información | Servidor: "
-                                    + GestorBoletines.obtenerRutaServidor());
-                            lblError.setFont(new Font("Arial", Font.ITALIC, 11));
-                            lblError.setForeground(Color.RED);
-                            panel.add(lblError);
-                            panel.revalidate();
-                            panel.repaint();
-                            break;
-                        }
-                    }
-                }
-            } catch (Exception ex) {
-                System.err.println("Error crítico al actualizar información: " + ex.getMessage());
+        return archivos;
+    }
+
+    private String obtenerEmailAlumno(int alumnoId) {
+        try {
+            if (conect == null || conect.isClosed()) {
+                conect = Conexion.getInstancia().verificarConexion();
             }
+
+            String query = "SELECT mail FROM usuarios WHERE id = ? AND rol = '4'";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setInt(1, alumnoId);
+            ResultSet rs = ps.executeQuery();
+
+            String email = null;
+            if (rs.next()) {
+                email = rs.getString("mail");
+            }
+
+            rs.close();
+            ps.close();
+            return email;
+
+        } catch (Exception e) {
+            System.err.println("Error obteniendo email del alumno " + alumnoId + ": " + e.getMessage());
+            return null;
         }
     }
 
     /**
-     * Método auxiliar para crear información detallada por períodos.
+     * Extraer archivos de HTML
      */
-    private String crearInformacionDetallada() {
+    private List<String> extraerArchivosDeHTML(String html) {
+        List<String> archivos = new ArrayList<>();
+
         try {
-            if (boletinesActuales.isEmpty()) {
-                return "No hay boletines para mostrar con los filtros actuales";
-            }
+            Pattern[] patrones = {
+                Pattern.compile("href=[\"']([^\"']+\\.pdf)[\"']", Pattern.CASE_INSENSITIVE),
+                Pattern.compile(">([^<]+\\.pdf)<", Pattern.CASE_INSENSITIVE),
+                Pattern.compile("\"([^\"]+\\.pdf)\"", Pattern.CASE_INSENSITIVE)
+            };
 
-            // Agrupar información más detallada
-            Map<String, Map<String, Integer>> estadisticasDetalladas = new HashMap<>();
+            for (Pattern patron : patrones) {
+                Matcher matcher = patron.matcher(html);
+                while (matcher.find()) {
+                    String archivo = matcher.group(1);
 
-            for (GestorBoletines.InfoBoletin boletin : boletinesActuales) {
-                String curso = boletin.curso + boletin.division;
+                    if (archivo != null && archivo.toLowerCase().endsWith(".pdf")
+                            && !archivo.contains("/") && !archivo.contains("..")
+                            && archivo.length() > 4) {
 
-                estadisticasDetalladas.computeIfAbsent(curso, k -> new HashMap<>())
-                        .put(boletin.periodo,
-                                estadisticasDetalladas.get(curso).getOrDefault(boletin.periodo, 0) + 1);
-            }
+                        try {
+                            archivo = java.net.URLDecoder.decode(archivo, "UTF-8");
+                        } catch (Exception e) {
+                            // Usar tal como está
+                        }
 
-            StringBuilder detalle = new StringBuilder();
-            detalle.append("Detalle por curso: ");
-
-            boolean primero = true;
-            for (Map.Entry<String, Map<String, Integer>> cursoEntry : estadisticasDetalladas.entrySet()) {
-                if (!primero) {
-                    detalle.append(" | ");
+                        if (!archivos.contains(archivo)) {
+                            archivos.add(archivo);
+                        }
+                    }
                 }
-                detalle.append(cursoEntry.getKey()).append(":");
-
-                int totalCurso = cursoEntry.getValue().values().stream().mapToInt(Integer::intValue).sum();
-                detalle.append(totalCurso);
-
-                primero = false;
             }
-
-            return detalle.toString();
 
         } catch (Exception e) {
-            return "Error al generar información detallada";
+            System.err.println("Error extrayendo archivos de HTML: " + e.getMessage());
+        }
+
+        return archivos;
+    }
+
+    /**
+     * Generar nombres probables de PDF
+     */
+    private List<String> generarNombresProbablesPDF(InfoAlumno alumno, String rutaBase) {
+        List<String> nombres = new ArrayList<>();
+
+        try {
+            String periodo = extraerPeriodoDeLaRuta(rutaBase);
+            String curso = extraerCursoDeLaRuta(rutaBase);
+            String fechaActual = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+            String nombreLimpio = alumno.nombreCompleto
+                    .replaceAll("[^a-zA-Z0-9\\s,]", "")
+                    .replaceAll("\\s+", "_")
+                    .replaceAll(",", "_");
+
+            // Patrones más específicos para el curso
+            nombres.add("Boletin_" + nombreLimpio + "_" + curso + "_" + periodo + "_" + fechaActual + ".pdf");
+            nombres.add("Boletin_" + nombreLimpio + "_" + curso + "_" + periodo + ".pdf");
+            nombres.add("Boletin_" + nombreLimpio + ".pdf");
+
+            // Apellido + inicial
+            String[] partes = alumno.nombreCompleto.split(",");
+            if (partes.length >= 2) {
+                String apellido = partes[0].trim().replaceAll("[^a-zA-Z0-9]", "_");
+                String nombre = partes[1].trim();
+                String inicial = nombre.length() > 0 ? String.valueOf(nombre.charAt(0)) : "";
+
+                nombres.add("Boletin_" + apellido + "_" + inicial + "_" + curso + "_" + periodo + ".pdf");
+                nombres.add("Boletin_" + apellido + "_" + inicial + ".pdf");
+            }
+
+            // Variaciones con fechas recientes
+            for (int i = 0; i < 15; i++) {
+                String fecha = LocalDate.now().minusDays(i).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                nombres.add("Boletin_" + nombreLimpio + "_" + curso + "_" + periodo + "_" + fecha + ".pdf");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error generando nombres probables: " + e.getMessage());
+        }
+
+        return nombres;
+    }
+
+    /**
+     * Verificar si archivo existe
+     */
+    private boolean verificarArchivoExiste(String url) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setRequestMethod("HEAD");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(8000);
+
+            int responseCode = connection.getResponseCode();
+            connection.disconnect();
+
+            return responseCode == 200;
+
+        } catch (Exception e) {
+            return false;
         }
     }
 
     /**
-     * Actualiza estadísticas en tiempo real cuando cambian los filtros.
+     * Extraer período de la ruta
      */
-    private void actualizarEstadisticasRapidas() {
-        if (boletinesActuales == null) {
+    private String extraerPeriodoDeLaRuta(String ruta) {
+        try {
+            String[] partes = ruta.split("/");
+            for (int i = partes.length - 1; i >= 0; i--) {
+                String parte = partes[i];
+                if (parte.matches("\\d+[BC]|Final|Diciembre|Febrero")) {
+                    return parte;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error extrayendo período: " + e.getMessage());
+        }
+        return "Desconocido";
+    }
+
+    /**
+     * Extraer curso de la ruta
+     */
+    private String extraerCursoDeLaRuta(String ruta) {
+        try {
+            String[] partes = ruta.split("/");
+            for (String parte : partes) {
+                if (parte.matches("\\d{2,3}")) {
+                    return parte;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error extrayendo curso: " + e.getMessage());
+        }
+        return "";
+    }
+
+    /**
+     * Extraer nombre del archivo
+     */
+    private String extraerNombreDelArchivo(String nombreArchivo) {
+        try {
+            String nombre = nombreArchivo
+                    .replaceAll("\\.pdf$", "")
+                    .replaceAll("Boletin_", "")
+                    .replaceAll("_Boletin", "")
+                    .replaceAll("_\\d+[BC]", "")
+                    .replaceAll("_\\d{4}-\\d{2}-\\d{2}", "")
+                    .replaceAll("_", " ");
+
+            return nombre.trim();
+
+        } catch (Exception e) {
+            return nombreArchivo;
+        }
+    }
+
+    /**
+     * Obtener tamaño de archivo
+     */
+    private long obtenerTamanioArchivo(String url) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setRequestMethod("HEAD");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == 200) {
+                long tamanio = connection.getContentLengthLong();
+                connection.disconnect();
+                return tamanio > 0 ? tamanio : 1024;
+            }
+
+            connection.disconnect();
+            return 0;
+
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    // ========================================
+    // MÉTODOS DE ACCIONES DEL USUARIO
+    // ========================================
+    /**
+     * Abrir boletín PDF
+     */
+    private void abrirBoletinPDF(ActionEvent e) {
+        int filaSeleccionada = tablaBoletines.getSelectedRow();
+        if (filaSeleccionada == -1) {
+            JOptionPane.showMessageDialog(this,
+                    "Por favor, seleccione un boletín de la tabla",
+                    "Selección requerida",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Esta es una versión más liviana para actualizaciones frecuentes
-        int total = boletinesActuales.size();
-        int existentes = (int) boletinesActuales.stream().filter(b -> b.archivoExiste).count();
+        if (filaSeleccionada >= boletinesActuales.size()) {
+            JOptionPane.showMessageDialog(this,
+                    "Selección inválida",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-        // Buscar un componente donde mostrar estadísticas rápidas
-        // (esto podría ser un JLabel específico para estadísticas rápidas)
-        System.out.println("Estadísticas rápidas: " + existentes + "/" + total + " boletines disponibles");
+        BoletinInfo boletin = boletinesActuales.get(filaSeleccionada);
+
+        SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                return abrirPDFDesdeServidor(boletin.urlServidor);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    boolean exito = get();
+                    if (!exito) {
+                        JOptionPane.showMessageDialog(PanelGestionBoletines.this,
+                                "No se pudo abrir el PDF: " + boletin.nombreArchivo,
+                                "Error al abrir PDF",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(PanelGestionBoletines.this,
+                            "Error al abrir PDF: " + ex.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+
+        worker.execute();
     }
 
     /**
-     * Formatea el tamaño del archivo en formato legible.
+     * Abrir PDF desde servidor
+     */
+    private boolean abrirPDFDesdeServidor(String url) {
+        try {
+            File tempFile = File.createTempFile("boletin_", ".pdf");
+            tempFile.deleteOnExit();
+
+            if (descargarArchivoDesdeServidor(url, tempFile.getAbsolutePath())) {
+                if (Desktop.isDesktopSupported()) {
+                    Desktop.getDesktop().open(tempFile);
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            System.err.println("Error abriendo PDF: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Descargar archivo desde servidor
+     */
+    private boolean descargarArchivoDesdeServidor(String url, String rutaDestino) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(30000);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == 200) {
+                try (InputStream inputStream = connection.getInputStream(); FileOutputStream outputStream = new FileOutputStream(rutaDestino)) {
+
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                    }
+                    return true;
+                }
+            }
+            connection.disconnect();
+            return false;
+        } catch (Exception e) {
+            System.err.println("Error descargando archivo: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Descargar boletines seleccionados
+     */
+    private void descargarBoletines(ActionEvent e) {
+        List<Integer> filasSeleccionadas = obtenerFilasSeleccionadas();
+
+        if (filasSeleccionadas.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Por favor, seleccione al menos un boletín para descargar",
+                    "Selección requerida",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        fileChooser.setDialogTitle("Seleccionar carpeta para guardar boletines");
+
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            File carpetaDestino = fileChooser.getSelectedFile();
+
+            SwingWorker<Integer, String> worker = new SwingWorker<Integer, String>() {
+                @Override
+                protected Integer doInBackground() throws Exception {
+                    int descargados = 0;
+                    for (int fila : filasSeleccionadas) {
+                        BoletinInfo boletin = boletinesActuales.get(fila);
+                        publish("Descargando: " + boletin.alumnoNombre + "...");
+
+                        String rutaDestino = carpetaDestino.getAbsolutePath()
+                                + File.separator + boletin.nombreArchivo;
+
+                        if (descargarArchivoDesdeServidor(boletin.urlServidor, rutaDestino)) {
+                            descargados++;
+                            publish("✅ Descargado: " + boletin.nombreArchivo);
+                        } else {
+                            publish("❌ Error: " + boletin.nombreArchivo);
+                        }
+                    }
+                    return descargados;
+                }
+
+                @Override
+                protected void process(List<String> chunks) {
+                    for (String mensaje : chunks) {
+                        System.out.println(mensaje);
+                    }
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        int descargados = get();
+                        JOptionPane.showMessageDialog(PanelGestionBoletines.this,
+                                String.format("Descarga completada.\n\nArchivos descargados: %d de %d\nUbicación: %s",
+                                        descargados, filasSeleccionadas.size(), carpetaDestino.getAbsolutePath()),
+                                "Descarga Completada",
+                                JOptionPane.INFORMATION_MESSAGE);
+
+                        if (Desktop.isDesktopSupported()) {
+                            Desktop.getDesktop().open(carpetaDestino);
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(PanelGestionBoletines.this,
+                                "Error durante la descarga: " + ex.getMessage(),
+                                "Error",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            };
+            worker.execute();
+        }
+    }
+
+    /**
+     * Obtener filas seleccionadas
+     */
+    private List<Integer> obtenerFilasSeleccionadas() {
+        List<Integer> seleccionadas = new ArrayList<>();
+        for (int i = 0; i < modeloTabla.getRowCount(); i++) {
+            Boolean seleccionado = (Boolean) modeloTabla.getValueAt(i, 0);
+            if (seleccionado != null && seleccionado) {
+                seleccionadas.add(i);
+            }
+        }
+        return seleccionadas;
+    }
+
+    /**
+     * Formatear tamaño de archivo
      */
     private String formatearTamanio(long bytes) {
         if (bytes <= 0) {
             return "0 B";
         }
-
         if (bytes < 1024) {
             return bytes + " B";
         }
@@ -1334,5 +1578,350 @@ public class PanelGestionBoletines extends JPanel {
             return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
         }
         return String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+    }
+
+    /**
+     * Enviar boletines por email
+     */
+    private void enviarBoletinesPorEmail(ActionEvent e) {
+        // VERIFICAR LIBRERÍAS PRIMERO
+        if (!EmailBoletinUtility.verificarLibreriasEmail()) {
+            JOptionPane.showMessageDialog(this,
+                    "❌ Error: Librerías de email no disponibles\n\n"
+                    + "Faltan librerías requeridas para el envío de emails:\n"
+                    + "• javax.mail-1.6.2.jar\n"
+                    + "• activation-1.1.1.jar\n\n"
+                    + "Contacte al administrador del sistema.",
+                    "Librerías Faltantes",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        List<Integer> filasSeleccionadas = obtenerFilasSeleccionadas();
+
+        if (filasSeleccionadas.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Por favor, seleccione al menos un boletín para enviar por email.",
+                    "Selección requerida",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // VERIFICAR CONFIGURACIÓN SOLO CUANDO SEA NECESARIO
+        EmailBoletinUtility.ConfiguracionEmail config = EmailBoletinUtility.obtenerConfiguracion();
+
+        if (!config.isCompleta()) {
+            System.out.println("⚠️ Email no configurado, mostrando opciones...");
+
+            // Mostrar opciones de configuración
+            EmailBoletinUtility.mostrarOpcionesConfiguracion(this, userId);
+
+            // Verificar nuevamente después de la configuración
+            config = EmailBoletinUtility.obtenerConfiguracion();
+            if (!config.isCompleta()) {
+                JOptionPane.showMessageDialog(this,
+                        "❌ Email no configurado\n\n"
+                        + "Para enviar boletines por email necesita configurar:\n"
+                        + "• Servidor de email (SMTP)\n"
+                        + "• Credenciales de acceso\n\n"
+                        + "Use el botón 'Config Email' para configurar.",
+                        "Configuración Requerida",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+    }
+
+    private String obtenerPeriodoActual() {
+        java.time.LocalDate hoy = java.time.LocalDate.now();
+        int mes = hoy.getMonthValue();
+
+        if (mes >= 3 && mes <= 4) {
+            return "1er Bimestre";
+        }
+        if (mes >= 5 && mes <= 7) {
+            return "2do Bimestre";
+        }
+        if (mes >= 8 && mes <= 9) {
+            return "3er Bimestre";
+        }
+        if (mes >= 10 && mes <= 11) {
+            return "4to Bimestre";
+        }
+
+        return "1er Bimestre";
+    }
+
+    private void configurarEmail(ActionEvent e) {
+        // Usar el nuevo sistema de opciones
+        EmailBoletinUtility.mostrarOpcionesConfiguracion(this, userId);
+    }
+
+    private void verificarEstadoEmail() {
+        EmailBoletinUtility.ConfiguracionEmail config = EmailBoletinUtility.obtenerConfiguracion();
+
+        if (config.isCompleta()) {
+            String metodo = config.useOAuth2 ? "OAuth2" : "SMTP";
+            System.out.println("✅ Email configurado (" + metodo + "): " + config.emailRemitente);
+
+            // Actualizar tooltip del botón de email
+            btnEnviarEmail.setToolTipText("Enviar por email - Configurado: " + config.emailRemitente);
+            btnEnviarEmail.setEnabled(true);
+        } else {
+            System.out.println("⚠️ Email no configurado");
+            btnEnviarEmail.setToolTipText("Enviar por email - Requiere configuración");
+            btnEnviarEmail.setEnabled(true); // Mantener habilitado para mostrar opciones
+        }
+    }
+
+    private void abrirConfiguracionEmail() {
+        try {
+            ConfiguracionEmailPanel panelConfig = new ConfiguracionEmailPanel(ventana, userId, userRol);
+
+            // Crear ventana modal
+            JDialog dialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
+                    "Configuración de Email", true);
+            dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+            dialog.setLayout(new BorderLayout());
+            dialog.add(panelConfig, BorderLayout.CENTER);
+            dialog.setSize(700, 600);
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
+
+        } catch (Exception ex) {
+            System.err.println("Error abriendo configuración de email: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir la configuración de email: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void mostrarDialogoEnvioEmail(List<GestorBoletines.InfoBoletin> boletines) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        // Información de configuración actual
+        EmailBoletinUtility.ConfiguracionEmail config = EmailBoletinUtility.obtenerConfiguracion();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        JLabel lblConfigInfo = new JLabel(String.format(
+                "<html><b>📧 Configuración de Email</b><br>"
+                + "Método: %s<br>"
+                + "Remitente: %s<br>"
+                + "Nombre: %s</html>",
+                config.useOAuth2 ? "OAuth2 (Google) ✅" : "SMTP tradicional ⚙️",
+                config.emailRemitente,
+                config.nombreRemitente));
+        lblConfigInfo.setForeground(new Color(33, 150, 243));
+        panel.add(lblConfigInfo, gbc);
+
+        // Asunto personalizado
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        panel.add(new JLabel("Asunto:"), gbc);
+
+        JTextField txtAsunto = new JTextField(40);
+        txtAsunto.setText("Boletín de Calificaciones - " + obtenerPeriodoActual() + " - Escuela Técnica N° 20");
+        gbc.gridx = 1;
+        panel.add(txtAsunto, gbc);
+
+        // Mensaje personalizado
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        panel.add(new JLabel("Mensaje adicional:"), gbc);
+
+        JTextArea txtMensaje = new JTextArea(4, 40);
+        txtMensaje.setText("Estimado/a estudiante,\n\n"
+                + "Adjuntamos su boletín de calificaciones del período actual.\n\n"
+                + "Por favor, revise la información y en caso de consultas comuníquese con la secretaría.\n\n"
+                + "Saludos cordiales,\nEscuela Técnica N° 20");
+        txtMensaje.setWrapStyleWord(true);
+        txtMensaje.setLineWrap(true);
+        gbc.gridx = 1;
+        panel.add(new JScrollPane(txtMensaje), gbc);
+
+        // Información de envío
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+
+        // Contar alumnos con email válido
+        int alumnosConEmail = 0;
+        int alumnosSinEmail = 0;
+        for (GestorBoletines.InfoBoletin boletin : boletines) {
+            // Obtener email del alumno
+            String email = obtenerEmailAlumno(boletin.alumnoId);
+            if (email != null && !email.isEmpty() && email.contains("@")) {
+                alumnosConEmail++;
+            } else {
+                alumnosSinEmail++;
+            }
+        }
+
+        JLabel lblInfo = new JLabel(String.format(
+                "<html><b>📊 Resumen de Envío</b><br>"
+                + "Total seleccionados: %d boletines<br>"
+                + "Con email válido: %d (se enviarán) ✅<br>"
+                + "Sin email válido: %d (se omitirán) ⚠️<br><br>"
+                + "<i>Solo se enviarán emails a estudiantes con direcciones válidas.</i></html>",
+                boletines.size(), alumnosConEmail, alumnosSinEmail));
+
+        if (alumnosSinEmail > 0) {
+            lblInfo.setForeground(new Color(255, 152, 0)); // Naranja para advertencia
+        } else {
+            lblInfo.setForeground(new Color(76, 175, 80)); // Verde para todo OK
+        }
+        panel.add(lblInfo, gbc);
+
+        // Mostrar diálogo
+        int resultado = JOptionPane.showConfirmDialog(this, panel,
+                "📧 Enviar Boletines por Email",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (resultado == JOptionPane.OK_OPTION) {
+            String asuntoPersonalizado = txtAsunto.getText().trim();
+            String mensajePersonalizado = txtMensaje.getText().trim();
+
+            // Confirmación final si hay alumnos sin email
+            if (alumnosSinEmail > 0) {
+                int confirmacion = JOptionPane.showConfirmDialog(this,
+                        String.format("⚠️ ADVERTENCIA\n\n"
+                                + "%d estudiantes no tienen email válido y no recibirán el boletín.\n\n"
+                                + "¿Desea continuar con el envío para los %d estudiantes con email válido?",
+                                alumnosSinEmail, alumnosConEmail),
+                        "Confirmar Envío",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+
+                if (confirmacion != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
+
+            // Enviar emails usando EmailBoletinUtility
+            EmailBoletinUtility.enviarBoletinesMasivosConInterfaz(
+                    boletines, asuntoPersonalizado, mensajePersonalizado, this);
+        }
+    }
+
+    private int obtenerAlumnoIdPorNombre(String nombreCompleto) {
+        try {
+            if (conect == null || conect.isClosed()) {
+                conect = Conexion.getInstancia().verificarConexion();
+            }
+
+            String query = "SELECT id FROM usuarios WHERE CONCAT(apellido, ', ', nombre) = ? AND rol = '4' LIMIT 1";
+            PreparedStatement ps = conect.prepareStatement(query);
+            ps.setString(1, nombreCompleto);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int id = rs.getInt("id");
+                rs.close();
+                ps.close();
+                return id;
+            }
+
+            rs.close();
+            ps.close();
+
+            // Si no encuentra, buscar de forma más flexible
+            String[] partes = nombreCompleto.split(",");
+            if (partes.length >= 2) {
+                String apellido = partes[0].trim();
+                String nombre = partes[1].trim();
+
+                String queryFlex = "SELECT id FROM usuarios WHERE apellido LIKE ? AND nombre LIKE ? AND rol = '4' LIMIT 1";
+                PreparedStatement psFlex = conect.prepareStatement(queryFlex);
+                psFlex.setString(1, "%" + apellido + "%");
+                psFlex.setString(2, "%" + nombre + "%");
+                ResultSet rsFlex = psFlex.executeQuery();
+
+                if (rsFlex.next()) {
+                    int id = rsFlex.getInt("id");
+                    rsFlex.close();
+                    psFlex.close();
+                    return id;
+                }
+
+                rsFlex.close();
+                psFlex.close();
+            }
+
+            System.err.println("⚠️ No se encontró ID para el alumno: " + nombreCompleto);
+            return -1;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error obteniendo ID del alumno " + nombreCompleto + ": " + e.getMessage());
+            return -1;
+        }
+    }
+
+    /**
+     * Eliminar boletín
+     */
+    private void eliminarBoletin(ActionEvent e) {
+        JOptionPane.showMessageDialog(this,
+                "Funcionalidad de eliminación en desarrollo",
+                "Info",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Mostrar estadísticas
+     */
+    private void mostrarEstadisticas(ActionEvent e) {
+        StringBuilder stats = new StringBuilder();
+        stats.append("=== ESTADÍSTICAS DE BOLETINES PDF ===\n\n");
+        stats.append("Total boletines encontrados: ").append(boletinesActuales.size()).append("\n");
+
+        Map<String, Integer> porPeriodo = new HashMap<>();
+        long espacioTotal = 0;
+        int conEmail = 0;
+        int conDni = 0;
+
+        for (BoletinInfo b : boletinesActuales) {
+            porPeriodo.put(b.periodo, porPeriodo.getOrDefault(b.periodo, 0) + 1);
+            espacioTotal += b.tamanioArchivo;
+            if (b.alumnoEmail != null && !b.alumnoEmail.isEmpty() && !"Sin Email".equals(b.alumnoEmail)) {
+                conEmail++;
+            }
+            if (b.alumnoDni != null && !b.alumnoDni.isEmpty() && !"Sin DNI".equals(b.alumnoDni)) {
+                conDni++;
+            }
+        }
+
+        stats.append("Espacio total: ").append(formatearTamanio(espacioTotal)).append("\n");
+        stats.append("Alumnos con email: ").append(conEmail).append("\n");
+        stats.append("Alumnos con DNI: ").append(conDni).append("\n\n");
+
+        stats.append("Por período:\n");
+        for (Map.Entry<String, Integer> entry : porPeriodo.entrySet()) {
+            stats.append("  ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+        }
+
+        JTextArea textArea = new JTextArea(stats.toString());
+        textArea.setEditable(false);
+        textArea.setRows(15);
+        textArea.setColumns(50);
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+
+        JOptionPane.showMessageDialog(this,
+                new JScrollPane(textArea),
+                "Estadísticas de Boletines PDF",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Actualizar lista
+     */
+    private void actualizarLista(ActionEvent e) {
+        buscarBoletinesPDF(null);
     }
 }

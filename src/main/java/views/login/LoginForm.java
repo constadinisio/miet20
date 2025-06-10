@@ -10,7 +10,9 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import main.java.database.Conexion;
+import main.java.utils.GoogleEmailIntegration;
 import main.java.utils.ResourceManager;
 import main.java.utils.ResponsiveBannerPanel;
 import main.java.utils.uiUtils;
@@ -74,7 +76,6 @@ public class LoginForm extends javax.swing.JFrame {
 
         uiUtils.configurarVentana(this);
     }
-    
 
     /**
      * Aplica un diseño responsivo y centrado a todo el formulario de login
@@ -415,7 +416,17 @@ public class LoginForm extends javax.swing.JFrame {
                 int rol = rs.getInt("rol");
                 String fotoUrl = rs.getString("foto_url");
 
-                // Crear sesión de usuario con ID
+                // VERIFICAR SI EL USUARIO TIENE UN ROL ASIGNADO
+                if (rol == 0) {
+                    JOptionPane.showMessageDialog(this,
+                            "Tu cuenta está pendiente de asignación de rol.\n"
+                            + "Por favor contacta al administrador para que te asigne un rol.",
+                            "Cuenta Pendiente",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    return; // Salir del método sin continuar
+                }
+
+                // Crear sesión de usuario con ID solo si tiene rol válido
                 UserSession session = new UserSession(userId, nombre, apellido, mail, rol, fotoUrl);
 
                 // Verificar datos complementarios
@@ -439,6 +450,16 @@ public class LoginForm extends javax.swing.JFrame {
                     String apellido = rs.getString("apellido");
                     int rol = rs.getInt("rol");
                     String fotoUrl = rs.getString("foto_url");
+
+                    // VERIFICAR SI EL USUARIO TIENE UN ROL ASIGNADO
+                    if (rol == 0) {
+                        JOptionPane.showMessageDialog(this,
+                                "Tu cuenta está pendiente de asignación de rol.\n"
+                                + "Por favor contacta al administrador para que te asigne un rol.",
+                                "Cuenta Pendiente",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        return; // Salir del método sin continuar
+                    }
 
                     // Actualizar la contraseña a la versión hasheada
                     String updateQuery = "UPDATE usuarios SET contrasena = ? WHERE id = ?";
@@ -516,6 +537,17 @@ public class LoginForm extends javax.swing.JFrame {
      * @param session Sesión del usuario autenticado
      */
     private void verificarDatosComplementarios(UserSession session) {
+        // PRIMERA VERIFICACIÓN: Comprobar si el usuario tiene un rol válido
+        if (session.getRol() == 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Tu cuenta está pendiente de asignación de rol.\n"
+                    + "Por favor contacta al administrador para que te asigne un rol.",
+                    "Cuenta Pendiente",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return; // SALIR INMEDIATAMENTE sin continuar el proceso
+        }
+
+        // SEGUNDA VERIFICACIÓN: Proceder con datos complementarios solo si el rol es válido
         // Crear gestor de datos complementarios
         DatosComplementariosManager datosManager = new DatosComplementariosManager(this, session);
 
@@ -556,35 +588,64 @@ public class LoginForm extends javax.swing.JFrame {
      */
     private void manejarLoginUsuario(UserSession session) {
         try {
-            // Crear la ventana unificada con el ID y rol del usuario
+            // Verificar si el usuario tiene un rol asignado
+            if (session.getRol() == 0) {
+                JOptionPane.showMessageDialog(this,
+                        "Tu cuenta está pendiente de asignación de rol.\n"
+                        + "Por favor contacta al administrador para que te asigne un rol.",
+                        "Cuenta Pendiente",
+                        JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            System.out.println("✅ Creando VentanaInicio para usuario " + session.getUserId() + " con rol " + session.getRol());
+
+            // Crear la ventana unificada
             VentanaInicio ventana = new VentanaInicio(session.getUserId(), session.getRol());
 
-            // Actualizar la información del usuario según su rol
-            if (session.getRol() == 4) { // Alumno
-                // Para alumnos, obtenemos también el curso/división
-                String cursoDiv = obtenerCursoDivisionAlumno(session.getUserId());
-                ventana.updateAlumnoLabels(session.getNombre() + " " + session.getApellido(),
-                        obtenerTextoRol(session.getRol()),
-                        cursoDiv);
-            } else {
-                // Para otros roles, actualizar información básica
-                ventana.updateLabels(session.getNombre() + " " + session.getApellido(),
-                        obtenerTextoRol(session.getRol()));
-            }
+            // ESPERAR a que la ventana se inicialice completamente
+            SwingUtilities.invokeLater(() -> {
+                // Configurar el panel de botones primero
+                ventana.configurePanelBotones();
 
-            // Actualizar la foto de perfil si existe
-            if (session.getFotoUrl() != null && !session.getFotoUrl().isEmpty()) {
-                ventana.updateFotoPerfil(session.getFotoUrl());
-            }
+                // LUEGO actualizar la información del usuario
+                SwingUtilities.invokeLater(() -> {
+                    if (session.getRol() == 4) { // Alumno
+                        String cursoDiv = obtenerCursoDivisionAlumno(session.getUserId());
+                        ventana.updateAlumnoLabels(
+                                session.getNombre() + " " + session.getApellido(),
+                                obtenerTextoRol(session.getRol()),
+                                cursoDiv
+                        );
+                    } else {
+                        ventana.updateLabels(
+                                session.getNombre() + " " + session.getApellido(),
+                                obtenerTextoRol(session.getRol())
+                        );
+                    }
+
+                    // Actualizar foto de perfil al final
+                    if (session.getFotoUrl() != null && !session.getFotoUrl().isEmpty()) {
+                        ventana.updateFotoPerfil(session.getFotoUrl());
+                    }
+
+                    System.out.println("✅ Datos del usuario configurados completamente");
+                });
+            });
 
             ventana.setVisible(true);
             this.dispose();
+
+            // NOTA: Se removió la configuración automática de email del login
+            // Ahora solo se configura cuando el usuario intenta enviar emails
         } catch (Exception ex) {
+            System.err.println("❌ Error al cargar la interfaz: " + ex.getMessage());
+            ex.printStackTrace();
+
             JOptionPane.showMessageDialog(null,
                     "Error al cargar la interfaz: " + ex.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
         }
     }
 
@@ -670,8 +731,8 @@ public class LoginForm extends javax.swing.JFrame {
             // Si hay error en el hashing, retornar la contraseña sin hashear (no ideal)
             return password;
         }
-    
-   
+
+
     }//GEN-LAST:event_botonGoogleActionPerformed
 
     public static void main(String args[]) {
