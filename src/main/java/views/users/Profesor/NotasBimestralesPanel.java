@@ -50,6 +50,18 @@ public class NotasBimestralesPanel extends javax.swing.JPanel {
         JComboBox<String> comboPeriodo = new JComboBox<>(periodos);
         headerPanel.add(lblPeriodo);
         headerPanel.add(comboPeriodo);
+        
+        // Separador visual
+        headerPanel.add(new JLabel("   |   "));
+        
+        // Controles para asignar calificación a todos
+        JLabel lblAsignarTodos = new JLabel("Asignar a todos:");
+        JComboBox<String> comboAsignarTodos = new JComboBox<>(new String[]{"Seleccionar..."});
+        JButton btnAsignarTodos = new JButton("Aplicar");
+        
+        headerPanel.add(lblAsignarTodos);
+        headerPanel.add(comboAsignarTodos);
+        headerPanel.add(btnAsignarTodos);
 
         // Tabla con columnas más descriptivas
         tableModel = new DefaultTableModel(
@@ -135,18 +147,65 @@ public class NotasBimestralesPanel extends javax.swing.JPanel {
         add(buttonPanel, BorderLayout.SOUTH);
 
         // Event Listeners
-        // Event Listeners
         comboPeriodo.addActionListener(e -> {
             String periodoSeleccionado = (String) comboPeriodo.getSelectedItem();
+            
+            // Configurar el editor según el período seleccionado
+            configurarEditorCalificaciones(periodoSeleccionado);
+            
+            // Actualizar opciones del combo "Asignar a todos"
+            actualizarComboAsignarTodos(comboAsignarTodos, periodoSeleccionado);
+            
             if (periodoSeleccionado.contains("Cuatrimestre")) {
                 cargarPromedioCuatrimestral(periodoSeleccionado);
             } else {
                 cargarNotasPeriodo(periodoSeleccionado);
             }
         });
+        
+        btnAsignarTodos.addActionListener(e -> {
+            String calificacionSeleccionada = (String) comboAsignarTodos.getSelectedItem();
+            if (calificacionSeleccionada != null && !calificacionSeleccionada.equals("Seleccionar...")) {
+                asignarCalificacionATodos(calificacionSeleccionada);
+            }
+        });
+        
         btnGuardar.addActionListener(e -> guardarNotas((String) comboPeriodo.getSelectedItem()));
 
         cargarAlumnos();
+        
+        // Configurar el editor inicial con el primer período
+        configurarEditorCalificaciones("1er Bimestre");
+        
+        // Configurar combo "Asignar a todos" inicial
+        actualizarComboAsignarTodos(comboAsignarTodos, "1er Bimestre");
+    }
+    
+    /**
+     * Configura el editor de la columna de calificaciones según el período seleccionado.
+     * Para 1° y 3° bimestre usa valoraciones conceptuales, para el resto usa números.
+     */
+    private void configurarEditorCalificaciones(String periodo) {
+        JComboBox<String> comboCalificaciones;
+        
+        if (ConvertidorNotas.esPeridodoConceptual(periodo)) {
+            // Para períodos conceptuales (1° y 3° bimestre)
+            String[] valoraciones = new String[ConvertidorNotas.getValoracionesConceptuales().length + 2];
+            valoraciones[0] = "";  // Opción vacía
+            System.arraycopy(ConvertidorNotas.getValoracionesConceptuales(), 0, valoraciones, 1, ConvertidorNotas.getValoracionesConceptuales().length);
+            valoraciones[valoraciones.length - 1] = "Ausente";
+            
+            comboCalificaciones = new JComboBox<>(valoraciones);
+        } else {
+            // Para períodos numéricos (cuatrimestres y otros bimestres)
+            comboCalificaciones = new JComboBox<>(
+                new String[]{"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Ausente"}
+            );
+        }
+        
+        tablaNotas.getColumnModel().getColumn(3).setCellEditor(
+            new DefaultCellEditor(comboCalificaciones)
+        );
     }
 
     private void cargarAlumnos() {
@@ -200,9 +259,17 @@ public class NotasBimestralesPanel extends javax.swing.JPanel {
 
     private void cargarNotasPeriodo(String periodo) {
         try {
-            // Forzar la misma colación en la consulta
-            String query = "SELECT alumno_id, nota, estado FROM notas_bimestrales "
-                    + "WHERE materia_id = ? AND periodo COLLATE utf8mb4_general_ci = ?";
+            // Consulta diferente según el tipo de período
+            String query;
+            if (ConvertidorNotas.esPeridodoConceptual(periodo)) {
+                // Para períodos conceptuales, cargar la nota_conceptual
+                query = "SELECT alumno_id, nota_conceptual, estado FROM notas_bimestrales "
+                        + "WHERE materia_id = ? AND periodo COLLATE utf8mb4_general_ci = ?";
+            } else {
+                // Para períodos numéricos, cargar la nota numérica
+                query = "SELECT alumno_id, nota, estado FROM notas_bimestrales "
+                        + "WHERE materia_id = ? AND periodo COLLATE utf8mb4_general_ci = ?";
+            }
 
             PreparedStatement ps = conect.prepareStatement(query);
             ps.setInt(1, materiaId);
@@ -213,10 +280,20 @@ public class NotasBimestralesPanel extends javax.swing.JPanel {
 
             while (rs.next()) {
                 String estado = rs.getString("estado");
+                String dni = rs.getString("alumno_id");
+                
                 if (estado != null && estado.equals("Ausente")) {
-                    notasPorAlumno.put(rs.getString("alumno_id"), "Ausente");
+                    notasPorAlumno.put(dni, "Ausente");
                 } else {
-                    notasPorAlumno.put(rs.getString("alumno_id"), rs.getDouble("nota"));
+                    if (ConvertidorNotas.esPeridodoConceptual(periodo)) {
+                        // Cargar valoración conceptual directamente
+                        String notaConceptual = rs.getString("nota_conceptual");
+                        notasPorAlumno.put(dni, notaConceptual != null ? notaConceptual : "");
+                    } else {
+                        // Cargar nota numérica
+                        double notaNumerica = rs.getDouble("nota");
+                        notasPorAlumno.put(dni, notaNumerica);
+                    }
                 }
             }
 
@@ -248,10 +325,10 @@ public class NotasBimestralesPanel extends javax.swing.JPanel {
             deletePs.setString(2, periodo);
             deletePs.executeUpdate();
 
-            // Insertar nuevas notas
+            // Insertar nuevas notas - usar siempre la misma estructura
             String insertQuery = "INSERT INTO notas_bimestrales "
-                    + "(alumno_id, materia_id, periodo, nota, promedio_actividades, estado) "
-                    + "VALUES (?, ?, ?, ?, ?, ?)";
+                    + "(alumno_id, materia_id, periodo, nota, promedio_actividades, estado, nota_conceptual) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
             PreparedStatement insertPs = conect.prepareStatement(insertQuery);
 
@@ -266,19 +343,30 @@ public class NotasBimestralesPanel extends javax.swing.JPanel {
 
                 String notaStr = notaObj.toString();
 
-                insertPs.setString(1, dni);
-                insertPs.setInt(2, materiaId);
-                insertPs.setString(3, periodo);
+                insertPs.setString(1, dni);        // alumno_id
+                insertPs.setInt(2, materiaId);     // materia_id
+                insertPs.setString(3, periodo);    // periodo
 
                 if (notaStr.equals("Ausente")) {
-                    insertPs.setDouble(4, 0.0); // Valor numérico para ausente
-                    insertPs.setDouble(5, promedioAct);
-                    insertPs.setString(6, "Ausente");
+                    insertPs.setDouble(4, 0.0);           // nota (siempre 0 para ausentes)
+                    insertPs.setDouble(5, promedioAct);   // promedio_actividades
+                    insertPs.setString(6, "Ausente");     // estado
+                    insertPs.setString(7, "Ausente");     // nota_conceptual
                 } else {
-                    double nota = Double.parseDouble(notaStr);
-                    insertPs.setDouble(4, nota);
-                    insertPs.setDouble(5, promedioAct);
-                    insertPs.setString(6, "Normal");
+                    if (ConvertidorNotas.esPeridodoConceptual(periodo)) {
+                        // Período conceptual: nota=0, nota_conceptual=valoración textual
+                        insertPs.setDouble(4, 0.0);           // nota (0 para conceptuales)
+                        insertPs.setDouble(5, promedioAct);   // promedio_actividades
+                        insertPs.setString(6, "Normal");      // estado
+                        insertPs.setString(7, notaStr);       // nota_conceptual (Avanzado/Suficiente/En Proceso)
+                    } else {
+                        // Período numérico: nota=valor, nota_conceptual=NULL
+                        double nota = Double.parseDouble(notaStr);
+                        insertPs.setDouble(4, nota);          // nota (valor numérico)
+                        insertPs.setDouble(5, promedioAct);   // promedio_actividades
+                        insertPs.setString(6, "Normal");      // estado
+                        insertPs.setNull(7, java.sql.Types.VARCHAR); // nota_conceptual (NULL para numéricos)
+                    }
                 }
 
                 insertPs.executeUpdate();
@@ -408,6 +496,49 @@ public class NotasBimestralesPanel extends javax.swing.JPanel {
             ex.printStackTrace();
         }
     }
+
+    /**
+     * Actualiza las opciones del combo "Asignar a todos" según el período seleccionado.
+     */
+    private void actualizarComboAsignarTodos(JComboBox<String> comboAsignarTodos, String periodo) {
+        comboAsignarTodos.removeAllItems();
+        comboAsignarTodos.addItem("Seleccionar...");
+        
+        if (ConvertidorNotas.esPeridodoConceptual(periodo)) {
+            // Para períodos conceptuales
+            String[] valoraciones = ConvertidorNotas.getValoracionesConceptuales();
+            for (String valoracion : valoraciones) {
+                comboAsignarTodos.addItem(valoracion);
+            }
+            comboAsignarTodos.addItem("Ausente");
+        } else {
+            // Para períodos numéricos
+            String[] notas = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Ausente"};
+            for (String nota : notas) {
+                comboAsignarTodos.addItem(nota);
+            }
+        }
+    }
+    
+    /**
+     * Asigna la misma calificación a todos los alumnos en la tabla.
+     */
+    private void asignarCalificacionATodos(String calificacion) {
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            tableModel.setValueAt(calificacion, i, 3); // Columna de calificación
+        }
+        
+        // Refrescar la tabla para mostrar los cambios
+        tablaNotas.repaint();
+        
+        // Mostrar mensaje informativo
+        JOptionPane.showMessageDialog(this, 
+            "Se asignó '" + calificacion + "' a todos los alumnos.\n" +
+            "Puede modificar individualmente antes de guardar.",
+            "Calificación Asignada", 
+            JOptionPane.INFORMATION_MESSAGE);
+    }
+
 
     /**
      * This method is called from within the constructor to initialize the form.
