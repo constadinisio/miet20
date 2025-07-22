@@ -757,6 +757,15 @@ public class NotificationCore {
         }
 
         private void showError(String message) {
+            // No mostrar errores de permisos de notificaciones a usuarios que no deberían usar esta funcionalidad
+            if (message.contains("permisos para enviar notificaciones") && 
+                !SENDER_ROLES.contains(currentUserRole)) {
+                // Silenciar el error para usuarios que no tienen rol de envío
+                // Solo registrar en consola sin mostrar popup molesto
+                System.out.println("ℹ️ Usuario rol " + currentUserRole + " no tiene permisos de notificaciones (esperado)");
+                return;
+            }
+            
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(null, message, "Error", JOptionPane.ERROR_MESSAGE);
             });

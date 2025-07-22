@@ -8,6 +8,7 @@ import java.sql.*;
 import javax.swing.*;
 import main.java.database.Conexion;
 import main.java.views.login.LoginForm;
+import main.java.views.login.GoogleAuthenticator;
 import main.java.updater.ActualizadorApp;
 import main.java.views.users.common.RolPanelManagerFactory;
 import main.java.views.users.common.VentanaInicio;
@@ -942,6 +943,17 @@ public class MenuBarManager {
             }
 
             currentFrame.dispose();
+            
+            // IMPORTANTE: Limpiar credenciales de Google al cerrar sesión
+            try {
+                GoogleAuthenticator googleAuth = new GoogleAuthenticator();
+                googleAuth.logout();
+                System.out.println("✅ Credenciales de Google limpiadas");
+            } catch (Exception ex) {
+                System.err.println("⚠️ Error limpiando credenciales de Google: " + ex.getMessage());
+                // No es crítico, continuar con el logout
+            }
+            
             LoginForm loginForm = new LoginForm();
             loginForm.setVisible(true);
 

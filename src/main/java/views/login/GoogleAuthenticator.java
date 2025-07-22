@@ -16,20 +16,16 @@ import java.io.*;
 import java.security.GeneralSecurityException;
 import java.sql.*;
 import java.util.Arrays;
-import javax.swing.JOptionPane;
 
 public class GoogleAuthenticator {
 
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
     private static final String CLIENT_SECRETS_JSON = "{\"installed\":{\"client_id\":\"523285040044-env81ob4crprhpc29oi1gran241paoku.apps.googleusercontent.com\",\"project_id\":\"rare-ethos-441901-a6\",\"auth_uri\":\"https://accounts.google.com/o/oauth2/auth\",\"token_uri\":\"https://oauth2.googleapis.com/token\",\"auth_provider_x509_cert_url\":\"https://www.googleapis.com/oauth2/v1/certs\",\"client_secret\":\"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\",\"redirect_uris\":[\"http://localhost\"]}}";
-    private static final String USER_ROLE_QUERY = "SELECT rol FROM usuarios WHERE mail = ?";
     private static final String TOKENS_DIRECTORY_PATH = System.getProperty("user.home") + File.separator + "et20_app_tokens";
     private final HttpTransport httpTransport;
-    private final Connection conn;
 
     public GoogleAuthenticator() throws GeneralSecurityException, IOException {
         this.httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-        this.conn = Conexion.getInstancia().verificarConexion();
     }
 
     public UserSession authenticateUser() throws IOException {
@@ -119,70 +115,23 @@ public class GoogleAuthenticator {
 
     private UserSession getUserSessionOrCreateUser(String nombre, String apellido, String email, String fotoUrl)
             throws SQLException {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-
-        try {
-            conn = Conexion.getInstancia().verificarConexion();
-            if (conn == null) {
-                throw new SQLException("No se pudo establecer conexión con la base de datos");
-            }
-
-            // Verificar si el usuario existe
-            String checkUserQuery = "SELECT rol FROM usuarios WHERE mail = ?";
-            stmt = conn.prepareStatement(checkUserQuery);
-            stmt.setString(1, email);
-            rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                // Usuario existe - obtener rol y actualizar nombre/apellido/foto
-                int rol = rs.getInt("rol");
-
-                String updateQuery = "UPDATE usuarios SET nombre = ?, apellido = ?, foto_url = ? WHERE mail = ?";
-                try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
-                    updateStmt.setString(1, nombre);
-                    updateStmt.setString(2, apellido);
-                    updateStmt.setString(3, fotoUrl);
-                    updateStmt.setString(4, email);
-                    updateStmt.executeUpdate();
-                }
-
-                if (rol == 0) {
-                    JOptionPane.showMessageDialog(null,
-                            "Tu cuenta está pendiente de asignación de rol.",
-                            "Cuenta Pendiente",
-                            JOptionPane.INFORMATION_MESSAGE);
-                }
-
-                return new UserSession(nombre, apellido, email, rol, fotoUrl);
-            } else {
-                // Usuario nuevo - insertar
-                String insertQuery = "INSERT INTO usuarios (nombre, apellido, mail, rol, status, contrasena, foto_url) "
-                        + "VALUES (?, ?, ?, 0, 1, 'default_password', ?)";
-                try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
-                    insertStmt.setString(1, nombre);
-                    insertStmt.setString(2, apellido);
-                    insertStmt.setString(3, email);
-                    insertStmt.setString(4, fotoUrl);
-                    insertStmt.executeUpdate();
-                }
-
-                JOptionPane.showMessageDialog(null,
-                        "Te has registrado exitosamente. Por favor, espera a que el administrador te asigne un rol.",
-                        "Registro Exitoso",
-                        JOptionPane.INFORMATION_MESSAGE);
-
-                return new UserSession(nombre, apellido, email, 0, fotoUrl);
-            }
-        } finally {
-            if (rs != null) {
-                rs.close();
-            }
-            if (stmt != null) {
-                stmt.close();
-            }
-        }
+        // NUEVO COMPORTAMIENTO: No crear ni modificar usuarios automáticamente
+        // Solo retornar una sesión parcial con los datos de Google
+        // El PrimerIngresoManager se encargará de toda la lógica de usuarios
+        
+        System.out.println("✅ Autenticación con Google exitosa - retornando sesión parcial");
+        System.out.println("📧 Email: " + email);
+        System.out.println("👤 Nombre: " + nombre + " " + apellido);
+        
+        // Retornar sesión parcial sin ID de usuario (será manejado por PrimerIngresoManager)
+        return new UserSession(
+            -1,        // ID temporal (-1 indica que es sesión parcial)
+            nombre,    // Nombre de Google
+            apellido,  // Apellido de Google  
+            email,     // Email de Google
+            -1,        // Rol temporal (-1 indica que será determinado después)
+            fotoUrl    // Foto de Google
+        );
     }
 
     public void logout() throws IOException {
@@ -200,10 +149,24 @@ public class GoogleAuthenticator {
     private void deleteTokenDirectory() {
         java.io.File tokenDirectory = new java.io.File(TOKENS_DIRECTORY_PATH);
         if (tokenDirectory.exists()) {
-            for (java.io.File file : tokenDirectory.listFiles()) {
-                file.delete();
+            System.out.println("🧹 Limpiando directorio de tokens: " + TOKENS_DIRECTORY_PATH);
+            java.io.File[] files = tokenDirectory.listFiles();
+            if (files != null) {
+                for (java.io.File file : files) {
+                    if (file.delete()) {
+                        System.out.println("✅ Token eliminado: " + file.getName());
+                    } else {
+                        System.err.println("⚠️ No se pudo eliminar: " + file.getName());
+                    }
+                }
             }
-            tokenDirectory.delete();
+            if (tokenDirectory.delete()) {
+                System.out.println("✅ Directorio de tokens eliminado completamente");
+            } else {
+                System.err.println("⚠️ No se pudo eliminar el directorio de tokens");
+            }
+        } else {
+            System.out.println("ℹ️ No hay directorio de tokens para limpiar");
         }
     }
 }

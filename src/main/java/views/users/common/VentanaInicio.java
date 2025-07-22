@@ -35,6 +35,7 @@ import main.java.utils.MenuBarManager;
 import main.java.utils.ResourceManager;
 import main.java.utils.uiUtils;
 import main.java.views.login.LoginForm;
+import main.java.views.login.GoogleAuthenticator;
 import main.java.services.NotificationCore.NotificationManager;
 import main.java.services.NotificationCore.NotificationIntegrationUtil;
 import javax.swing.BorderFactory;
@@ -1632,6 +1633,16 @@ public class VentanaInicio extends javax.swing.JFrame {
 
             // NUEVO: Limpiar recursos de notificaciones
             cleanupNotifications();
+
+            // IMPORTANTE: Limpiar credenciales de Google al cerrar sesión
+            try {
+                GoogleAuthenticator googleAuth = new GoogleAuthenticator();
+                googleAuth.logout();
+                System.out.println("✅ Credenciales de Google limpiadas desde VentanaInicio");
+            } catch (Exception ex) {
+                System.err.println("⚠️ Error limpiando credenciales de Google: " + ex.getMessage());
+                // No es crítico, continuar con el logout
+            }
 
             dispose();
             new LoginForm().setVisible(true);

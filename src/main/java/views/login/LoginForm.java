@@ -498,28 +498,16 @@ public class LoginForm extends javax.swing.JFrame {
                 return;
             }
 
-            // Obtener ID del usuario
-            int userId = obtenerUsuarioId(partialSession.getEmail());
-            if (userId == -1) {
-                JOptionPane.showMessageDialog(this,
-                        "No se encontró una cuenta asociada con este correo.",
-                        "Error de Autenticación",
-                        JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Crear sesión completa con ID
-            UserSession session = new UserSession(
-                    userId,
-                    partialSession.getNombre(),
-                    partialSession.getApellido(),
-                    partialSession.getEmail(),
-                    partialSession.getRol(),
-                    partialSession.getFotoUrl()
-            );
-
-            // Verificar datos complementarios
-            verificarDatosComplementarios(session);
+            // NUEVO FLUJO: Siempre iniciar con verificación de DNI
+            // Esto evita duplicados y permite vincular cuentas existentes
+            System.out.println("Iniciando proceso de verificación de DNI para login con Google...");
+            
+            PrimerIngresoManager primerIngresoManager = new PrimerIngresoManager(this, partialSession);
+            primerIngresoManager.setOnSessionCompleteCallback((session) -> {
+                System.out.println("✅ Proceso de login con Google completado exitosamente");
+                manejarLoginUsuario(session);
+            });
+            primerIngresoManager.iniciarProceso();
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
@@ -586,7 +574,7 @@ public class LoginForm extends javax.swing.JFrame {
      *
      * @param session Sesión de usuario autenticado
      */
-    private void manejarLoginUsuario(UserSession session) {
+    public void manejarLoginUsuario(UserSession session) {
         try {
             // Verificar si el usuario tiene un rol asignado
             if (session.getRol() == 0) {
