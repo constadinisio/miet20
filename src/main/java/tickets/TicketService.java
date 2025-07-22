@@ -4,15 +4,13 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Window;
 import java.sql.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import main.java.database.Conexion;
-import main.java.utils.NotificationManager;
+import main.java.services.NotificationCore.NotificationManager;
 import javax.swing.Timer;
 
 /**
@@ -457,18 +455,15 @@ public class TicketService {
             // ✅ USAR: Obtener NotificationManager de forma segura
             NotificationManager notifManager = getNotificationManager();
             if (notifManager != null) {
-                notifManager.enviarNotificacionConDetalles(
-                        titulo, contenido, "ALTA", "#ff6b35", "🎫", developerId
-                ).thenAccept(exito -> {
-                    if (exito) {
-                        // También crear registro en notificaciones con relación al ticket
-                        try {
-                            insertarNotificacionConTicket(ticketId, titulo, contenido, developerId, usuarioReportaId);
-                        } catch (Exception e) {
-                            System.err.println("Error vinculando notificación con ticket: " + e.getMessage());
-                        }
-                    }
-                });
+                // Usar método simplificado del nuevo sistema
+                notifManager.enviarNotificacionRapida(titulo, contenido, developerId);
+                
+                // También crear registro en notificaciones con relación al ticket
+                try {
+                    insertarNotificacionConTicket(ticketId, titulo, contenido, developerId, usuarioReportaId);
+                } catch (Exception e) {
+                    System.err.println("Error vinculando notificación con ticket: " + e.getMessage());
+                }
             } else {
                 System.err.println("⚠️ NotificationManager no disponible, creando notificación directamente");
                 // Fallback: crear notificación directamente en BD
@@ -519,18 +514,15 @@ public class TicketService {
             // ✅ USAR: Obtener NotificationManager de forma segura
             NotificationManager notifManager = getNotificationManager();
             if (notifManager != null) {
-                notifManager.enviarNotificacionConDetalles(
-                        titulo, contenido, "NORMAL", color, "🔄", ticket.getUsuarioReportaId()
-                ).thenAccept(exito -> {
-                    if (exito) {
-                        try {
-                            insertarNotificacionConTicket(ticket.getId(), titulo, contenido,
-                                    ticket.getUsuarioReportaId(), obtenerDeveloperUserId());
-                        } catch (Exception e) {
-                            System.err.println("Error vinculando notificación de actualización: " + e.getMessage());
-                        }
-                    }
-                });
+                // Usar método simplificado del nuevo sistema
+                notifManager.enviarNotificacionRapida(titulo, contenido, ticket.getUsuarioReportaId());
+                
+                try {
+                    insertarNotificacionConTicket(ticket.getId(), titulo, contenido,
+                            ticket.getUsuarioReportaId(), obtenerDeveloperUserId());
+                } catch (Exception e) {
+                    System.err.println("Error vinculando notificación de actualización: " + e.getMessage());
+                }
             } else {
                 System.err.println("⚠️ NotificationManager no disponible, creando notificación directamente");
                 // Fallback: crear notificación directamente en BD
@@ -737,24 +729,15 @@ public class TicketService {
                     System.out.println("📤 Usando NotificationManager para envío inmediato...");
 
                     // Enviar con prioridad URGENTE para que llegue inmediatamente
-                    notifManager.enviarNotificacionConDetalles(
-                            titulo, contenido, "URGENTE", "#ff4444", "🚨", developerId
-                    ).thenAccept(exito -> {
-                        if (exito) {
-                            System.out.println("✅ Notificación inmediata enviada via NotificationManager");
-                            // Crear registro adicional en BD
-                            try {
-                                insertarNotificacionConTicket(ticketId, titulo, contenido, developerId, usuarioReportaId);
-                            } catch (Exception e) {
-                                System.err.println("Error creando registro BD: " + e.getMessage());
-                            }
-                        } else {
-                            System.err.println("❌ Falló envío via NotificationManager");
-                        }
-                    }).exceptionally(throwable -> {
-                        System.err.println("❌ Excepción en NotificationManager: " + throwable.getMessage());
-                        return null;
-                    });
+                    notifManager.enviarNotificacionUrgente(titulo, contenido, developerId);
+                    
+                    System.out.println("✅ Notificación inmediata enviada via NotificationManager");
+                    // Crear registro adicional en BD
+                    try {
+                        insertarNotificacionConTicket(ticketId, titulo, contenido, developerId, usuarioReportaId);
+                    } catch (Exception e) {
+                        System.err.println("Error creando registro BD: " + e.getMessage());
+                    }
 
                 } else {
                     System.err.println("⚠️ NotificationManager no disponible, usando método directo");

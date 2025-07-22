@@ -13,13 +13,11 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.BorderFactory;
 import javax.swing.SwingUtilities;
-import main.java.views.users.common.NotasVisualizationPanel;
-import main.java.views.users.common.PanelBoletinesAlumno;
-import main.java.utils.NotificationIntegrationUtil;
+import main.java.services.NotificationCore.NotificationIntegrationUtil;
+import main.java.views.notifications.NotificationUI.NotificationsWindow;
 
 /**
  * Gestor de paneles específico para el rol de ALUMNO.
@@ -298,8 +296,7 @@ public class AlumnoPanelManager implements RolPanelManager {
 
             // Abrir ventana de notificaciones
             if (ventana.isNotificationSystemActive()) {
-                main.java.views.notifications.NotificationsWindow notifWindow = 
-                    new main.java.views.notifications.NotificationsWindow(alumnoId);
+                NotificationsWindow notifWindow = new NotificationsWindow(alumnoId);
                 notifWindow.setVisible(true);
                 
                 // Actualizar contador después de abrir

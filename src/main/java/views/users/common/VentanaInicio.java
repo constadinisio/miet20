@@ -35,19 +35,17 @@ import main.java.utils.MenuBarManager;
 import main.java.utils.ResourceManager;
 import main.java.utils.uiUtils;
 import main.java.views.login.LoginForm;
-import main.java.utils.NotificationManager;
-import main.java.utils.NotificationIntegrationUtil;
+import main.java.services.NotificationCore.NotificationManager;
+import main.java.services.NotificationCore.NotificationIntegrationUtil;
 import javax.swing.BorderFactory;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import javax.swing.SwingConstants;
-import javax.swing.Timer;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.JDialog;
-import main.java.components.NotificationStartupBanner;
-import main.java.views.notifications.NotificationsWindow;
+import main.java.views.notifications.NotificationUI.NotificationsWindow;
 import main.java.tickets.TicketService;
 import javax.swing.Timer;
 
@@ -880,7 +878,7 @@ public class VentanaInicio extends javax.swing.JFrame {
             return;
         }
 
-        notificationManagerInstance.enviarNotificacionRapida(titulo, contenido, destinatarios)
+        notificationManagerInstance.enviarNotificacionRapidaAsync(titulo, contenido, destinatarios)
                 .thenAccept(exito -> {
                     if (exito) {
                         System.out.println("✅ Notificación enviada exitosamente. ID: "
@@ -1528,7 +1526,9 @@ public class VentanaInicio extends javax.swing.JFrame {
      */
     private ImageIcon loadImageDirectly(String imageUrl) {
         try {
-            URL url = new URL(imageUrl);
+            // Usar URI en lugar de URL deprecated
+            java.net.URI uri = new java.net.URI(imageUrl);
+            URL url = uri.toURL();
             Image img = ImageIO.read(url);
 
             if (img != null) {
@@ -1898,8 +1898,8 @@ public class VentanaInicio extends javax.swing.JFrame {
                     Timer delayTimer = new Timer(2000, evt -> {
                         verificarYMostrarCartelInicial();
 
-                        // NUEVO: Mostrar banner de notificaciones para TODOS los roles
-                        NotificationStartupBanner.showIfNeeded(userId, userRol);
+                        // NUEVO: Mostrar banner de notificaciones usando sistema consolidado
+                        mostrarBannerNotificacionesInicio();
 
                         ((Timer) evt.getSource()).stop();
                     });
@@ -2515,6 +2515,42 @@ public class VentanaInicio extends javax.swing.JFrame {
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
+    }
+
+    /**
+     * Muestra banner de notificaciones al inicio de sesión usando sistema consolidado
+     */
+    private void mostrarBannerNotificacionesInicio() {
+        try {
+            if (notificationManagerInstance != null && notificationManagerInstance.isInitialized()) {
+                int unreadCount = notificationManagerInstance.getUnreadCount();
+                
+                if (unreadCount > 0) {
+                    // Crear un banner simple usando JOptionPane personalizado
+                    SwingUtilities.invokeLater(() -> {
+                        String mensaje = String.format(
+                            "¡Bienvenido! Tienes %d notificación(es) pendiente(s).\n\n" +
+                            "¿Deseas revisar tus notificaciones ahora?",
+                            unreadCount
+                        );
+                        
+                        int opcion = JOptionPane.showConfirmDialog(
+                            this,
+                            mensaje,
+                            "🔔 Notificaciones Pendientes",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.INFORMATION_MESSAGE
+                        );
+                        
+                        if (opcion == JOptionPane.YES_OPTION) {
+                            abrirVentanaNotificaciones();
+                        }
+                    });
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error mostrando banner de notificaciones de inicio: " + e.getMessage());
+        }
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

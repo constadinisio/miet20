@@ -1,8 +1,6 @@
 package main.java.views.users.Preceptor;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,8 +16,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import main.java.database.Conexion;
-import main.java.utils.NotificationIntegrationUtil;
-import main.java.views.notifications.NotificationsWindow;
+import main.java.services.NotificationCore.NotificationIntegrationUtil;
 
 /**
  * Panel avanzado de gestión de notificaciones específico para preceptores.
@@ -926,15 +923,32 @@ public class PreceptorAdvancedNotificationsPanel extends JPanel {
                 protected Boolean doInBackground() throws Exception {
                     try {
                         if ("Todos los cursos".equals(curso)) {
-                            // Enviar a todos los alumnos
-                            notificationUtil.enviarNotificacionARol(titulo, contenido, 4); // Rol 4 = Alumnos
+                            // Enviar a todos los alumnos según prioridad
+                            if ("URGENTE".equals(prioridad)) {
+                                // Para notificaciones urgentes a todos los alumnos, usar el método de rol
+                                // pero podríamos mejorarlo para obtener IDs específicos si fuera necesario
+                                notificationUtil.enviarNotificacionARol(titulo, contenido, 4); // Rol 4 = Alumnos
+                            } else {
+                                notificationUtil.enviarNotificacionARol(titulo, contenido, 4); // Rol 4 = Alumnos
+                            }
                         } else {
                             // Enviar a curso específico
                             Integer cursoId = cursosMap.get(curso);
                             if (cursoId != null) {
                                 List<Integer> alumnos = obtenerAlumnosDeCurso(cursoId);
-                                for (Integer alumnoId : alumnos) {
-                                    notificationUtil.enviarNotificacionBasica(titulo, contenido, alumnoId);
+                                if ("URGENTE".equals(prioridad)) {
+                                    // Usar método urgente para curso específico
+                                    Integer[] alumnosArray = alumnos.toArray(new Integer[0]);
+                                    int[] alumnosPrimitivos = new int[alumnosArray.length];
+                                    for (int i = 0; i < alumnosArray.length; i++) {
+                                        alumnosPrimitivos[i] = alumnosArray[i];
+                                    }
+                                    notificationUtil.enviarNotificacionUrgente(titulo, contenido, alumnosPrimitivos);
+                                } else {
+                                    // Usar método básico para otras prioridades
+                                    for (Integer alumnoId : alumnos) {
+                                        notificationUtil.enviarNotificacionBasica(titulo, contenido, alumnoId);
+                                    }
                                 }
                             }
                         }
@@ -1378,7 +1392,20 @@ public class PreceptorAdvancedNotificationsPanel extends JPanel {
             reporte.append("──────────────────────\n");
             reporte.append("Sistema de notificaciones: ").append(notificationUtil.puedeEnviarNotificaciones() ? "ACTIVO" : "INACTIVO").append("\n");
             reporte.append("Permisos de envío: ").append(notificationUtil.puedeEnviarNotificaciones() ? "HABILITADO" : "DESHABILITADO").append("\n");
-            reporte.append("Notificaciones pendientes: ").append(notificationUtil.getNotificacionesNoLeidas()).append("\n\n");
+            reporte.append("Notificaciones pendientes: ").append(notificationUtil.getNotificacionesNoLeidas()).append("\n");
+            
+            // Agregar estadísticas completas del sistema consolidado
+            try {
+                String estadisticasCompletas = notificationUtil.getEstadisticasNotificaciones();
+                if (estadisticasCompletas != null && !estadisticasCompletas.equals("Estadísticas no disponibles")) {
+                    reporte.append("\n📊 ESTADÍSTICAS DETALLADAS:\n");
+                    reporte.append("────────────────────────────\n");
+                    reporte.append(estadisticasCompletas).append("\n");
+                }
+            } catch (Exception e) {
+                reporte.append("🔧 Estadísticas detalladas: No disponibles en este momento\n");
+            }
+            reporte.append("\n");
         }
 
         // Recomendaciones

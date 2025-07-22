@@ -39,9 +39,9 @@ import main.java.views.users.Profesor.NotasBimestralesPanel;
 import main.java.views.users.Profesor.NotasProfesorPanel;
 import main.java.views.users.Profesor.libroTema;
 import main.java.views.users.common.VentanaInicio;
-import main.java.utils.NotificationIntegrationUtil;
-import main.java.views.notifications.NotificationsWindow;
-import main.java.views.notifications.NotificationSenderWindow;
+import main.java.services.NotificationCore.NotificationIntegrationUtil;
+import main.java.views.notifications.NotificationUI.NotificationsWindow;
+import main.java.views.notifications.NotificationUI.NotificationSenderWindow;
 
 /**
  * Gestor de paneles específico para el rol de Profesor con integración completa
@@ -298,7 +298,8 @@ public class ProfesorPanelManager implements RolPanelManager {
         JButton btnActualizar = new JButton("🔄 Actualizar");
         btnActualizar.setFont(new Font("Arial", Font.PLAIN, 11));
         btnActualizar.addActionListener(e -> {
-            notificationUtil.actualizarNotificaciones();
+            // La actualización de notificaciones ahora es automática en el nuevo sistema
+            // notificationUtil.actualizarNotificaciones(); // Método obsoleto
             SwingUtilities.invokeLater(() -> {
                 try {
                     mostrarPanelEnviarAviso();
@@ -390,7 +391,7 @@ public class ProfesorPanelManager implements RolPanelManager {
                     }
 
                     // Usar el sistema de notificaciones integrado
-                    notificationUtil.notificarNotaPublicada(alumnoId, info.materiaNombre, tipoTrabajo, nota, profesorId);
+                    notificationUtil.notificarNuevaNota(alumnoId, info.materiaNombre, tipoTrabajo, nota, profesorId);
 
                     JOptionPane.showMessageDialog(ventana,
                             "✅ Notificación de nueva nota enviada al alumno ID: " + alumnoId,
@@ -576,7 +577,10 @@ public class ProfesorPanelManager implements RolPanelManager {
                     // registrarAsistenciaEnBD(alumnoId, info.cursoId, info.materiaId, fecha, estado);
                     // Notificar al alumno sobre el registro
                     if (!"PRESENTE".equals(estado)) {
-                        notificationUtil.notificarAsistenciaRegistrada(alumnoId, fecha, info.materiaNombre, estado, profesorId);
+                        // Usar método básico ya que el método específico para asistencia no está disponible
+                        String mensaje = String.format("Asistencia registrada para %s el %s en %s: %s", 
+                            "alumno", fecha, info.materiaNombre, estado);
+                        notificationUtil.enviarNotificacionBasica("Asistencia Registrada", mensaje, alumnoId);
                     }
 
                     JOptionPane.showMessageDialog(ventana,
@@ -939,7 +943,7 @@ public class ProfesorPanelManager implements RolPanelManager {
             System.out.println("Abriendo ventana completa de envío de notificaciones...");
 
             SwingUtilities.invokeLater(() -> {
-                NotificationSenderWindow senderWindow = new NotificationSenderWindow(profesorId, 3); // Rol 3 = Profesor
+                NotificationSenderWindow senderWindow = new NotificationSenderWindow(profesorId); // Constructor simplificado
                 senderWindow.setVisible(true);
             });
 
@@ -1110,7 +1114,9 @@ public class ProfesorPanelManager implements RolPanelManager {
 
                         if (cantidad > 0) {
                             // Recordar al profesor sobre trabajos pendientes
-                            notificationUtil.recordarTrabajosPendientes(profesorId, materia, cantidad);
+                            // Usar método básico ya que el método específico para recordatorios no está disponible
+                            String mensaje = String.format("Tiene %d trabajos pendientes de revisión en %s", cantidad, materia);
+                            notificationUtil.enviarNotificacionBasica("Trabajos Pendientes", mensaje, profesorId);
                         }
                     }
 

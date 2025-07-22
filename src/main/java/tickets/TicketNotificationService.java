@@ -5,7 +5,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.swing.SwingUtilities;
-import main.java.utils.NotificationManager;
+import main.java.services.NotificationCore.NotificationManager;
 
 /**
  * Servicio especializado para manejar notificaciones de tickets en tiempo real

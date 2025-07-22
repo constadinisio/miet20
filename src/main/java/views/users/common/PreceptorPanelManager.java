@@ -2,7 +2,6 @@ package main.java.views.users.common;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -19,8 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -32,14 +29,12 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
-import javax.swing.border.EmptyBorder;
 import main.java.database.Conexion;
 import main.java.views.users.Preceptor.AsistenciaPreceptorPanel;
 import main.java.utils.ExcelExportUtility;
-import main.java.views.users.common.NotasVisualizationPanel;
-import main.java.utils.NotificationIntegrationUtil;
-import main.java.views.notifications.NotificationsWindow;
-import main.java.views.notifications.NotificationSenderWindow;
+import main.java.services.NotificationCore.NotificationIntegrationUtil;
+import main.java.views.notifications.NotificationUI.NotificationsWindow;
+import main.java.views.notifications.NotificationUI.NotificationSenderWindow;
 
 /**
  * Gestor de paneles específico para el rol de Preceptor con integración
@@ -728,7 +723,7 @@ public class PreceptorPanelManager implements RolPanelManager {
             System.out.println("Abriendo ventana completa de envío de notificaciones...");
 
             SwingUtilities.invokeLater(() -> {
-                NotificationSenderWindow senderWindow = new NotificationSenderWindow(preceptorId, 2); // Rol 2 = Preceptor
+                NotificationSenderWindow senderWindow = new NotificationSenderWindow(preceptorId);
                 senderWindow.setVisible(true);
             });
 

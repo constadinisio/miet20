@@ -1,7 +1,6 @@
 package main.java.utils;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,14 +11,15 @@ import main.java.views.login.LoginForm;
 import main.java.updater.ActualizadorApp;
 import main.java.views.users.common.RolPanelManagerFactory;
 import main.java.views.users.common.VentanaInicio;
-import main.java.views.notifications.NotificationSenderWindow;
-import main.java.views.notifications.NotificationsWindow;
-import main.java.controllers.NotificationGroupManager;
+import main.java.views.notifications.NotificationUI.NotificationSenderWindow;
+import main.java.views.notifications.NotificationUI.NotificationsWindow;
+import main.java.views.notifications.NotificationUI.NotificationBellComponent;
 import java.util.Arrays;
 import java.util.List;
-import main.java.views.notifications.NotificationGroupWindow;
+import main.java.views.notifications.NotificationUI.NotificationGroupWindow;
 import main.java.tickets.TicketService;
 import main.java.tickets.TicketBellComponent;
+import main.java.services.NotificationCore;
 
 /**
  * MenuBarManager COMPLETAMENTE REDISEÑADO v3.0 Sistema de notificaciones
@@ -35,8 +35,9 @@ public class MenuBarManager {
     private String rolColumnName = "rol_id";
     private int rolActual;
 
-    // SISTEMA DE NOTIFICACIONES
-    private NotificationManager notificationManager;
+    // SISTEMA DE NOTIFICACIONES CONSOLIDADO
+    private NotificationCore.NotificationManager notificationManager;
+    private NotificationCore.NotificationIntegrationUtil notificationUtil;
     private boolean notificationsEnabled = false;
 
     private TicketService ticketService;
@@ -67,21 +68,18 @@ public class MenuBarManager {
         try {
             System.out.println("--- Inicializando Sistema de Notificaciones ---");
 
-            notificationManager = NotificationManager.getInstance();
+            // Inicializar el sistema consolidado
+            NotificationCore.initializeSystem(userId, rolActual, currentFrame.getJMenuBar());
+            notificationManager = NotificationCore.NotificationManager.getInstance();
+            notificationUtil = NotificationCore.NotificationIntegrationUtil.getInstance();
 
-            if (!notificationManager.isInitialized()) {
-                notificationManager.initialize(userId, rolActual);
-            } else {
-                notificationManager.updateUser(userId, rolActual);
-            }
-
-            if (notificationManager.getNotificationService() != null) {
-                System.out.println("✅ NotificationService conectado");
+            if (notificationManager != null && notificationManager.isInitialized()) {
+                System.out.println("✅ NotificationManager conectado");
                 int unreadCount = notificationManager.getUnreadCount();
                 System.out.println("📧 Notificaciones no leídas: " + unreadCount);
                 notificationsEnabled = true;
             } else {
-                System.err.println("⚠️ NotificationService no está disponible");
+                System.err.println("⚠️ NotificationManager no está disponible");
                 notificationsEnabled = false;
             }
 
@@ -154,16 +152,19 @@ public class MenuBarManager {
         // ACTUALIZAR SISTEMA DE NOTIFICACIONES CON NUEVO ROL
         if (notificationManager != null && notificationsEnabled) {
             try {
-                notificationManager.updateUser(userId, nuevoRol);
+                // Reinicializar el sistema con el nuevo rol
+                NotificationCore.initializeSystem(userId, nuevoRol, currentFrame.getJMenuBar());
                 System.out.println("✅ Sistema de notificaciones actualizado para nuevo rol");
 
-                if (notificationManager.canSendNotifications(nuevoRol)) {
+                if (notificationManager.canSendNotifications()) {
                     SwingUtilities.invokeLater(() -> {
-                        notificationManager.enviarNotificacionRapida(
-                                "Cambio de Rol",
-                                "Has cambiado tu rol a: " + obtenerTextoRol(nuevoRol),
-                                userId
-                        );
+                        if (notificationUtil != null) {
+                            notificationUtil.enviarNotificacionBasica(
+                                    "Cambio de Rol",
+                                    "Has cambiado tu rol a: " + obtenerTextoRol(nuevoRol),
+                                    userId
+                            );
+                        }
                     });
                 }
 
@@ -344,7 +345,7 @@ public class MenuBarManager {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                NotificationSenderWindow senderWindow = new NotificationSenderWindow(userId, rolActual);
+                NotificationSenderWindow senderWindow = new NotificationSenderWindow(userId);
                 senderWindow.setVisible(true);
             } catch (Exception e) {
                 System.err.println("Error abriendo ventana de envío: " + e.getMessage());
@@ -369,7 +370,7 @@ public class MenuBarManager {
         SwingUtilities.invokeLater(() -> {
             try {
                 // ✅ CORRECCIÓN: Usar NotificationGroupWindow en lugar de NotificationGroupManager
-                NotificationGroupWindow groupWindow = new NotificationGroupWindow(userId, rolActual);
+                NotificationGroupWindow groupWindow = new NotificationGroupWindow(userId);
                 groupWindow.setVisible(true);
             } catch (Exception e) {
                 System.err.println("Error abriendo gestor de grupos: " + e.getMessage());
@@ -463,11 +464,14 @@ public class MenuBarManager {
         if (result == JOptionPane.OK_OPTION) {
             String title = titleField.getText().trim();
             String content = contentArea.getText().trim();
-            String eventType = (String) eventTypeCombo.getSelectedItem();
 
             if (!title.isEmpty() && !content.isEmpty()) {
-                String tipoEvento = eventType.toLowerCase().replace(" ", "_");
-                notificationManager.notificarEventoGeneral(title, content, tipoEvento);
+                // Enviar notificación a todos los roles usando el sistema consolidado
+                if (notificationUtil != null) {
+                    for (int rol = 1; rol <= 5; rol++) {
+                        notificationUtil.enviarNotificacionARol(title, content, rol);
+                    }
+                }
 
                 JOptionPane.showMessageDialog(currentFrame,
                         "Notificación enviada a todos los usuarios del sistema.",
@@ -622,13 +626,19 @@ public class MenuBarManager {
         helpMenu.add(reportarTicketItem);
 
         // Opción de prueba de notificaciones (para desarrollo)
-        if (notificationManager != null && notificationManager.canSendNotifications(rolActual)) {
+        if (notificationManager != null && notificationManager.canSendNotifications()) {
             helpMenu.addSeparator();
             JMenuItem testNotifItem = new JMenuItem("🧪 Probar Notificaciones");
             testNotifItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    notificationManager.enviarNotificacionPrueba();
+                    if (notificationUtil != null) {
+                        notificationUtil.enviarNotificacionBasica(
+                            "Prueba del Sistema",
+                            "Esta es una notificación de prueba para verificar que el sistema funciona correctamente.",
+                            userId
+                        );
+                    }
                 }
             });
             helpMenu.add(testNotifItem);
@@ -911,7 +921,8 @@ public class MenuBarManager {
                         Thread.sleep(500);
                     }
 
-                    notificationManager.dispose();
+                    // El sistema consolidado maneja su propia limpieza
+                    NotificationCore.shutdownSystem();
                     System.out.println("✅ Recursos de notificaciones liberados");
 
                 } catch (Exception e) {
@@ -930,7 +941,7 @@ public class MenuBarManager {
     // ========================================
     // MÉTODOS PÚBLICOS PARA USO EXTERNO
     // ========================================
-    public NotificationManager getNotificationManager() {
+    public NotificationCore.NotificationManager getNotificationManager() {
         return notificationManager;
     }
 
@@ -975,7 +986,7 @@ public class MenuBarManager {
 
     public boolean puedeEnviarNotificaciones() {
         if (notificationManager != null && notificationsEnabled) {
-            return notificationManager.canSendNotifications(rolActual);
+            return notificationManager.canSendNotifications();
         }
         return false;
     }
@@ -1000,7 +1011,8 @@ public class MenuBarManager {
 
     public void actualizarNotificaciones() {
         if (notificationManager != null && notificationsEnabled) {
-            notificationManager.forceRefresh();
+            // El sistema consolidado actualiza automáticamente
+            System.out.println("🔄 Sistema de notificaciones actualizado");
         }
     }
 
@@ -1031,7 +1043,8 @@ public class MenuBarManager {
             }
 
             if (notificationManager != null) {
-                notificationManager.dispose();
+                // El sistema consolidado maneja su propia limpieza
+                NotificationCore.shutdownSystem();
                 System.out.println("✅ NotificationManager limpiado");
             }
 
@@ -1044,15 +1057,6 @@ public class MenuBarManager {
         } catch (Exception e) {
             System.err.println("⚠️ Error durante limpieza: " + e.getMessage());
             e.printStackTrace();
-        }
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        try {
-            dispose();
-        } finally {
-            super.finalize();
         }
     }
 
@@ -1117,14 +1121,15 @@ public class MenuBarManager {
         try {
             System.out.println("🔔 Integrando campanitas de notificaciones...");
 
-            // MÉTODO SIMPLE: Dejar que NotificationManager maneje TODO
+            // MÉTODO ACTUALIZADO: Asegurarse de que NotificationManager tenga el menuBar
             if (notificationsEnabled && notificationManager != null) {
                 try {
                     System.out.println("📬 Integrando campanitas via NotificationManager...");
 
-                    // NotificationManager ya incluye TicketBellComponent para desarrolladores
-                    notificationManager.integrateWithMenuBar(menuBar);
-
+                    // CRUCIAL: Re-inicializar el NotificationManager con el menuBar
+                    notificationManager.initialize(userId, rolActual, menuBar);
+                    
+                    System.out.println("✅ NotificationManager re-inicializado con menuBar");
                     System.out.println("✅ Campanitas integradas via NotificationManager");
 
                 } catch (Exception e) {
@@ -1156,6 +1161,17 @@ public class MenuBarManager {
             JPanel campanitasPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
             campanitasPanel.setOpaque(false);
 
+            // Crear campanita de notificaciones normales
+            if (notificationManager != null) {
+                try {
+                    NotificationBellComponent bellComponent = new NotificationBellComponent(userId);
+                    campanitasPanel.add(bellComponent);
+                    System.out.println("✅ NotificationBellComponent creado manualmente");
+                } catch (Exception e) {
+                    System.err.println("❌ Error creando NotificationBellComponent manual: " + e.getMessage());
+                }
+            }
+
             // Solo crear TicketBellComponent si es desarrollador
             if (ticketService != null && ticketService.esDeveloper(userId)) {
                 try {
@@ -1186,7 +1202,8 @@ public class MenuBarManager {
         try {
             // Actualizar campanita de notificaciones normales
             if (notificationManager != null && notificationsEnabled) {
-                notificationManager.forceRefresh();
+                // El sistema consolidado actualiza automáticamente
+                System.out.println("🔔 Sistema de notificaciones actualizado");
             }
 
             // Actualizar campanita de tickets

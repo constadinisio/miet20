@@ -18,7 +18,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import main.java.database.Conexion;
-import main.java.utils.NotificationIntegrationUtil;
+import main.java.services.NotificationCore.NotificationIntegrationUtil;
 
 /**
  * Panel académico avanzado de notificaciones específico para profesores.
@@ -799,7 +799,7 @@ public class ProfesorAcademicNotificationsPanel extends JPanel {
                 notificationUtil.notificarNotaBimestral(alumnoId, info.materiaNombre, bimestre, nota, profesorId);
             } else {
                 // Es una nota de trabajo/actividad
-                notificationUtil.notificarNotaPublicada(alumnoId, info.materiaNombre, tipoTrabajo, nota, profesorId);
+                notificationUtil.notificarNuevaNota(alumnoId, info.materiaNombre, tipoTrabajo, nota, profesorId);
             }
 
             return true;
@@ -1210,7 +1210,10 @@ public class ProfesorAcademicNotificationsPanel extends JPanel {
             int cantidad = (int) modeloTrabajosPendientes.getValueAt(selectedRow, 3);
 
             // Usar el sistema de notificaciones para recordar
-            notificationUtil.recordarTrabajosPendientes(profesorId, materia, cantidad);
+            // Enviar recordatorio usando método genérico
+            String titulo = "📚 Recordatorio: Trabajos pendientes";
+            String contenido = String.format("Tienes %d trabajo(s) pendiente(s) de evaluar en %s", cantidad, materia);
+            notificationUtil.enviarNotificacionBasica(titulo, contenido, profesorId);
 
             JOptionPane.showMessageDialog(this,
                     "✅ Recordatorio enviado sobre " + cantidad + " trabajos pendientes en " + materia,

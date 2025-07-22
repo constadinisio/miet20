@@ -10,7 +10,7 @@ import main.java.views.users.Attp.menu.NetbookRegistrationPanel;
 import main.java.views.users.Attp.menu.PrestamosPanel;
 import main.java.views.users.Attp.menu.RegistrosPanel;
 import main.java.views.users.Attp.menu.StockPanel;
-import main.java.utils.NotificationIntegrationUtil;
+import main.java.services.NotificationCore.NotificationIntegrationUtil;
 
 /**
  * Gestor de paneles específico para el rol de ATTP (Auxiliar Técnico en Tecnologías de la Producción).

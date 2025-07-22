@@ -22,7 +22,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import main.java.database.Conexion;
 import main.java.utils.GestorBoletines;
-import main.java.utils.NotificationIntegrationUtil; // NUEVO
+import main.java.services.NotificationCore.NotificationIntegrationUtil; // NUEVO
 import main.java.views.users.Admin.GestionCursosPanel;
 import main.java.views.users.Admin.GestionUsuariosPanel;
 import main.java.views.users.Admin.UsuariosPendientesPanel;
