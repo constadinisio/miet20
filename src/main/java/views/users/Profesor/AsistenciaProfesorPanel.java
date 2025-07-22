@@ -2,7 +2,7 @@ package main.java.views.users.Profesor;
 
 import com.toedter.calendar.JDateChooser;
 import main.java.views.users.common.AsistenciaPanel;
-import users.common.EstadoAsistenciaEditor;
+import main.java.views.users.common.EstadoAsistenciaEditor;
 import javax.swing.*;
 import java.sql.*;
 import java.time.LocalDate;

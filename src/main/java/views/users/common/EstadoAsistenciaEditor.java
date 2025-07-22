@@ -1,4 +1,4 @@
-package users.common;
+package main.java.views.users.common;
 
 import javax.swing.*;
 import java.awt.*;

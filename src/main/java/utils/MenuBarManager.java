@@ -543,6 +543,17 @@ public class MenuBarManager {
             ex.printStackTrace();
         }
 
+        // === CONFIGURACIÓN DE USUARIO ===
+        JMenuItem configItem = new JMenuItem("⚙️ Configuración");
+        configItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                abrirConfiguracionUsuario();
+            }
+        });
+        userMenu.add(configItem);
+        userMenu.addSeparator();
+
         // Opción de cerrar sesión
         JMenuItem logoutItem = new JMenuItem("🚪 Cerrar Sesión");
         logoutItem.addActionListener(new ActionListener() {
@@ -1234,6 +1245,42 @@ public class MenuBarManager {
         } catch (Exception e) {
             System.err.println("Error verificando desarrollador: " + e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * NUEVO: Abre el panel de configuración del usuario
+     */
+    private void abrirConfiguracionUsuario() {
+        try {
+            System.out.println("Abriendo configuración de usuario para ID: " + userId);
+            
+            // Obtener la ventana principal desde el frame actual
+            if (currentFrame instanceof VentanaInicio) {
+                VentanaInicio ventanaInicio = (VentanaInicio) currentFrame;
+                
+                // Crear el panel de configuración
+                main.java.views.users.common.ConfiguracionUsuarioPanel configPanel = 
+                    new main.java.views.users.common.ConfiguracionUsuarioPanel(userId, ventanaInicio);
+                
+                // Mostrar el panel en la ventana principal
+                ventanaInicio.mostrarPanelResponsive(configPanel, "Configuración de Usuario");
+                
+                System.out.println("✅ Panel de configuración mostrado exitosamente");
+            } else {
+                System.err.println("Error: No se puede abrir configuración - frame no es VentanaInicio");
+                JOptionPane.showMessageDialog(currentFrame,
+                    "No se puede abrir la configuración en esta ventana.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception ex) {
+            System.err.println("Error al abrir configuración de usuario: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(currentFrame,
+                "Error al abrir la configuración: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
         }
     }
 
