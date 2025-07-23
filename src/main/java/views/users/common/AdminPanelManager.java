@@ -28,6 +28,8 @@ import main.java.views.users.Admin.GestionUsuariosPanel;
 import main.java.views.users.Admin.UsuariosPendientesPanel;
 import main.java.views.users.common.NotasVisualizationPanel;
 import main.java.views.users.common.LibroTemasSelector;
+import main.java.views.users.common.ProgresionAnualPanel;
+import main.java.views.users.common.ProgresionSelectivaPanel;
 
 /**
  * Gestor de paneles específico para el rol de Administrador.
@@ -77,6 +79,11 @@ public class AdminPanelManager implements RolPanelManager {
         JButton btnNotificaciones = createStyledButton("SISTEMA NOTIFICACIONES", "sistemaNotificaciones");
         btnNotificaciones.setBackground(new Color(220, 53, 69)); // Color distintivo
         btnNotificaciones.setToolTipText("Gestionar el Sistema de Notificaciones");
+        
+        // NUEVO: Botón para progresión anual de alumnos
+        JButton btnProgresionAnual = createStyledButton("PROGRESIÓN ANUAL", "progresionAnual");
+        btnProgresionAnual.setBackground(new Color(102, 16, 242)); // Color púrpura distintivo
+        btnProgresionAnual.setToolTipText("Gestionar la progresión anual de alumnos");
 
         return new JComponent[]{
             btnUsuariosPendientes,
@@ -86,7 +93,8 @@ public class AdminPanelManager implements RolPanelManager {
             btnLibroTemas,
             btnGestionBoletines,
             btnEstructuraBoletines,
-            btnNotificaciones // NUEVO
+            btnNotificaciones, // NUEVO
+            btnProgresionAnual // NUEVO
         };
     }
 
@@ -141,6 +149,11 @@ public class AdminPanelManager implements RolPanelManager {
                 // NUEVO: Gestión del sistema de notificaciones
                 case "sistemaNotificaciones":
                     mostrarGestionNotificaciones();
+                    break;
+                    
+                // NUEVO: Progresión anual de alumnos
+                case "progresionAnual":
+                    mostrarProgresionAnual();
                     break;
 
                 default:
@@ -1146,6 +1159,35 @@ public class AdminPanelManager implements RolPanelManager {
         } catch (Exception e) {
             System.err.println("❌ Error verificando sistema: " + e.getMessage());
             return false;
+        }
+    }
+    
+    // ========================================
+    // MÉTODO DE PROGRESIÓN ANUAL
+    // ========================================
+    
+    /**
+     * NUEVO: Muestra el panel de progresión anual de alumnos
+     */
+    private void mostrarProgresionAnual() {
+        try {
+            System.out.println("=== CREANDO PANEL DE PROGRESIÓN SELECTIVA ===");
+            
+            ProgresionSelectivaPanel panel = new ProgresionSelectivaPanel();
+            ventana.mostrarPanelResponsive(panel, "Progresión Escolar - Selectores por Curso");
+            
+            System.out.println("✅ Panel de progresión selectiva mostrado exitosamente");
+            
+        } catch (Exception ex) {
+            System.err.println("❌ Error al mostrar panel de progresión selectiva: " + ex.getMessage());
+            ex.printStackTrace();
+            
+            JOptionPane.showMessageDialog(ventana,
+                "Error al cargar el panel de progresión escolar: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+            
+            ventana.restaurarVistaPrincipal();
         }
     }
 
