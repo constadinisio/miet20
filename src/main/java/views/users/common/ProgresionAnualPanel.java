@@ -47,10 +47,15 @@ public class ProgresionAnualPanel extends JPanel {
         JButton btnCargarVista = new JButton("🔄 Cargar Vista Previa");
         btnCargarVista.addActionListener(e -> cargarVistaPrevia());
         
+        JButton btnHistorial = new JButton("📚 Ver Historial Académico");
+        btnHistorial.addActionListener(e -> mostrarHistorialAlumno());
+        
         lblEstado = new JLabel("Iniciando sistema...");
         lblEstado.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         
         panelSuperior.add(btnCargarVista);
+        panelSuperior.add(Box.createHorizontalStrut(10));
+        panelSuperior.add(btnHistorial);
         panelSuperior.add(Box.createHorizontalStrut(20));
         panelSuperior.add(lblEstado);
         
@@ -420,5 +425,151 @@ public class ProgresionAnualPanel extends JPanel {
         
         worker.execute();
         dialogProgreso.setVisible(true);
+    }
+    
+    /**
+     * Muestra el historial académico del alumno seleccionado
+     */
+    private void mostrarHistorialAlumno() {
+        int filaSeleccionada = tablaAlumnos.getSelectedRow();
+        
+        if (filaSeleccionada == -1) {
+            JOptionPane.showMessageDialog(this, 
+                "Por favor, seleccione un alumno de la tabla para ver su historial académico",
+                "Selección Requerida", 
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Obtener ID del alumno seleccionado
+        int alumnoId = (Integer) modeloTabla.getValueAt(filaSeleccionada, 0);
+        String nombreAlumno = (String) modeloTabla.getValueAt(filaSeleccionada, 1);
+        
+        // Crear y mostrar ventana de historial
+        mostrarVentanaHistorial(alumnoId, nombreAlumno);
+    }
+    
+    /**
+     * Crea y muestra la ventana con el historial académico completo
+     */
+    private void mostrarVentanaHistorial(int alumnoId, String nombreAlumno) {
+        JDialog dialogHistorial = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
+            "Historial Académico - " + nombreAlumno, true);
+        
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        // Título
+        JLabel lblTitulo = new JLabel("📚 Historial Académico Completo", SwingConstants.CENTER);
+        lblTitulo.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        lblTitulo.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        
+        // Información del alumno
+        JLabel lblAlumno = new JLabel("👨‍🎓 Alumno: " + nombreAlumno + " (ID: " + alumnoId + ")", SwingConstants.CENTER);
+        lblAlumno.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        
+        JPanel panelTitulo = new JPanel(new BorderLayout());
+        panelTitulo.add(lblTitulo, BorderLayout.NORTH);
+        panelTitulo.add(lblAlumno, BorderLayout.SOUTH);
+        
+        // Tabla de historial
+        String[] columnasHistorial = {
+            "Ciclo Lectivo", "Curso", "Estado Inicial", "Estado Final", 
+            "Promedio", "Faltas", "Mat. Aprob.", "Mat. Desaprob.", 
+            "Observaciones", "Fecha Proceso", "Procesado Por"
+        };
+        
+        DefaultTableModel modeloHistorial = new DefaultTableModel(columnasHistorial, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        
+        JTable tablaHistorial = new JTable(modeloHistorial);
+        tablaHistorial.setAutoCreateRowSorter(true);
+        
+        // Configurar anchos de columna
+        tablaHistorial.getColumnModel().getColumn(0).setPreferredWidth(80);
+        tablaHistorial.getColumnModel().getColumn(1).setPreferredWidth(150);
+        tablaHistorial.getColumnModel().getColumn(2).setPreferredWidth(100);
+        tablaHistorial.getColumnModel().getColumn(3).setPreferredWidth(100);
+        tablaHistorial.getColumnModel().getColumn(4).setPreferredWidth(70);
+        tablaHistorial.getColumnModel().getColumn(5).setPreferredWidth(60);
+        tablaHistorial.getColumnModel().getColumn(6).setPreferredWidth(80);
+        tablaHistorial.getColumnModel().getColumn(7).setPreferredWidth(80);
+        tablaHistorial.getColumnModel().getColumn(8).setPreferredWidth(200);
+        tablaHistorial.getColumnModel().getColumn(9).setPreferredWidth(120);
+        tablaHistorial.getColumnModel().getColumn(10).setPreferredWidth(150);
+        
+        JScrollPane scrollHistorial = new JScrollPane(tablaHistorial);
+        scrollHistorial.setPreferredSize(new Dimension(1000, 300));
+        
+        // Cargar datos del historial
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                List<Map<String, Object>> historial = progresionService.obtenerHistorialAcademico(alumnoId);
+                
+                SwingUtilities.invokeLater(() -> {
+                    for (Map<String, Object> registro : historial) {
+                        Object[] fila = {
+                            registro.get("ciclo_lectivo"),
+                            registro.get("curso"),
+                            registro.get("estado_inicial"),
+                            registro.get("estado_final"),
+                            String.format("%.2f", (Double) registro.get("promedio_general")),
+                            registro.get("total_faltas"),
+                            registro.get("materias_aprobadas"),
+                            registro.get("materias_desaprobadas"),
+                            registro.get("observaciones"),
+                            registro.get("fecha_procesamiento"),
+                            registro.get("procesado_por")
+                        };
+                        modeloHistorial.addRow(fila);
+                    }
+                    
+                    if (historial.isEmpty()) {
+                        Object[] fila = {
+                            "Sin datos", "-", "-", "-", "-", "-", "-", "-", 
+                            "No se encontró historial académico para este alumno", "-", "-"
+                        };
+                        modeloHistorial.addRow(fila);
+                    }
+                });
+                
+                return null;
+            }
+        };
+        
+        worker.execute();
+        
+        // Panel de botones
+        JPanel panelBotones = new JPanel(new FlowLayout());
+        
+        JButton btnExportar = new JButton("📄 Exportar PDF");
+        btnExportar.addActionListener(e -> {
+            JOptionPane.showMessageDialog(dialogHistorial, 
+                "Funcionalidad de exportación PDF en desarrollo", 
+                "En Desarrollo", 
+                JOptionPane.INFORMATION_MESSAGE);
+        });
+        
+        JButton btnCerrar = new JButton("❌ Cerrar");
+        btnCerrar.addActionListener(e -> dialogHistorial.dispose());
+        
+        panelBotones.add(btnExportar);
+        panelBotones.add(Box.createHorizontalStrut(10));
+        panelBotones.add(btnCerrar);
+        
+        // Agregar componentes
+        panel.add(panelTitulo, BorderLayout.NORTH);
+        panel.add(scrollHistorial, BorderLayout.CENTER);
+        panel.add(panelBotones, BorderLayout.SOUTH);
+        
+        dialogHistorial.add(panel);
+        dialogHistorial.setSize(1050, 450);
+        dialogHistorial.setLocationRelativeTo(this);
+        dialogHistorial.setVisible(true);
     }
 }

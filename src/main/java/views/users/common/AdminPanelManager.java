@@ -30,6 +30,7 @@ import main.java.views.users.common.NotasVisualizationPanel;
 import main.java.views.users.common.LibroTemasSelector;
 import main.java.views.users.common.ProgresionAnualPanel;
 import main.java.views.users.common.ProgresionSelectivaPanel;
+import main.java.views.users.common.HistorialAcademicoPorCursoPanel;
 
 /**
  * Gestor de paneles específico para el rol de Administrador.
@@ -84,6 +85,11 @@ public class AdminPanelManager implements RolPanelManager {
         JButton btnProgresionAnual = createStyledButton("PROGRESIÓN ANUAL", "progresionAnual");
         btnProgresionAnual.setBackground(new Color(102, 16, 242)); // Color púrpura distintivo
         btnProgresionAnual.setToolTipText("Gestionar la progresión anual de alumnos");
+        
+        // NUEVO: Botón para consultar historial académico por curso
+        JButton btnHistorialAcademico = createStyledButton("HISTORIAL ACADÉMICO", "historialAcademico");
+        btnHistorialAcademico.setBackground(new Color(25, 135, 84)); // Color verde distintivo
+        btnHistorialAcademico.setToolTipText("Consultar historial académico de alumnos por curso");
 
         return new JComponent[]{
             btnUsuariosPendientes,
@@ -94,7 +100,8 @@ public class AdminPanelManager implements RolPanelManager {
             btnGestionBoletines,
             btnEstructuraBoletines,
             btnNotificaciones, // NUEVO
-            btnProgresionAnual // NUEVO
+            btnProgresionAnual, // NUEVO
+            btnHistorialAcademico // NUEVO
         };
     }
 
@@ -154,6 +161,11 @@ public class AdminPanelManager implements RolPanelManager {
                 // NUEVO: Progresión anual de alumnos
                 case "progresionAnual":
                     mostrarProgresionAnual();
+                    break;
+                    
+                // NUEVO: Historial académico por curso
+                case "historialAcademico":
+                    mostrarHistorialAcademico();
                     break;
 
                 default:
@@ -1184,6 +1196,42 @@ public class AdminPanelManager implements RolPanelManager {
             
             JOptionPane.showMessageDialog(ventana,
                 "Error al cargar el panel de progresión escolar: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+            
+            ventana.restaurarVistaPrincipal();
+        }
+    }
+
+    /**
+     * NUEVO: Muestra el panel de consulta de historial académico por curso
+     */
+    private void mostrarHistorialAcademico() {
+        try {
+            System.out.println("=== CREANDO PANEL DE HISTORIAL ACADÉMICO ===");
+            
+            HistorialAcademicoPorCursoPanel panel = new HistorialAcademicoPorCursoPanel(userId);
+            ventana.mostrarPanelResponsive(panel, "📚 Consulta de Historial Académico por Curso");
+            
+            System.out.println("✅ Panel de historial académico mostrado exitosamente");
+            
+            // Enviar notificación de uso del sistema (solo si está habilitado)
+            if (notificationUtil != null && notificationUtil.puedeEnviarNotificaciones()) {
+                SwingUtilities.invokeLater(() -> {
+                    notificationUtil.enviarNotificacionBasica(
+                        "Sistema de Historial Académico",
+                        "Acceso al historial académico por curso iniciado",
+                        userId
+                    );
+                });
+            }
+            
+        } catch (Exception ex) {
+            System.err.println("❌ Error al mostrar panel de historial académico: " + ex.getMessage());
+            ex.printStackTrace();
+            
+            JOptionPane.showMessageDialog(ventana,
+                "Error al cargar el panel de historial académico: " + ex.getMessage(),
                 "Error",
                 JOptionPane.ERROR_MESSAGE);
             

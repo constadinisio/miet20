@@ -32,6 +32,7 @@ import javax.swing.SwingWorker;
 import main.java.database.Conexion;
 import main.java.views.users.Preceptor.AsistenciaPreceptorPanel;
 import main.java.views.users.common.LibroTemasSelector;
+import main.java.views.users.common.HistorialAcademicoPorCursoPanel;
 import main.java.utils.ExcelExportUtility;
 import main.java.services.NotificationCore.NotificationIntegrationUtil;
 import main.java.views.notifications.NotificationUI.NotificationsWindow;
@@ -70,8 +71,9 @@ public class PreceptorPanelManager implements RolPanelManager {
         JButton btnBoletines = createStyledButton("BOLETINES", "boletines");
         JButton btnNotificaciones = createStyledButton("NOTIFICACIONES", "notificaciones");
         JButton btnEnviarAviso = createStyledButton("ENVIAR AVISO", "enviar_aviso");
+        JButton btnHistorialAcademico = createStyledButton("HISTORIAL ACADÉMICO", "historialAcademico");
 
-        return new JComponent[]{btnNotas, btnAsistencias, btnLibroTemas, btnExportar, btnBoletines, btnNotificaciones, btnEnviarAviso};
+        return new JComponent[]{btnNotas, btnAsistencias, btnLibroTemas, btnExportar, btnBoletines, btnNotificaciones, btnEnviarAviso, btnHistorialAcademico};
     }
 
     private JButton createStyledButton(String text, String actionCommand) {
@@ -84,6 +86,8 @@ public class PreceptorPanelManager implements RolPanelManager {
             button.setBackground(new Color(40, 167, 69)); // Verde
         } else if ("libro_temas".equals(actionCommand)) {
             button.setBackground(new Color(138, 43, 226)); // Violeta para libro de temas
+        } else if ("historialAcademico".equals(actionCommand)) {
+            button.setBackground(new Color(25, 135, 84)); // Verde distintivo para historial académico
         } else {
             button.setBackground(new Color(51, 153, 255)); // Azul estándar
         }
@@ -125,6 +129,9 @@ public class PreceptorPanelManager implements RolPanelManager {
                     break;
                 case "enviar_aviso":
                     mostrarPanelEnviarAviso();
+                    break;
+                case "historialAcademico":
+                    mostrarHistorialAcademico();
                     break;
                 default:
                     ventana.restaurarVistaPrincipal();
@@ -1713,6 +1720,42 @@ public class PreceptorPanelManager implements RolPanelManager {
                 "Error",
                 JOptionPane.ERROR_MESSAGE
             );
+        }
+    }
+
+    /**
+     * NUEVO: Muestra el panel de consulta de historial académico por curso
+     */
+    private void mostrarHistorialAcademico() {
+        try {
+            System.out.println("=== CREANDO PANEL DE HISTORIAL ACADÉMICO (PRECEPTOR) ===");
+            
+            HistorialAcademicoPorCursoPanel panel = new HistorialAcademicoPorCursoPanel(preceptorId);
+            ventana.mostrarPanelResponsive(panel, "📚 Consulta de Historial Académico por Curso");
+            
+            System.out.println("✅ Panel de historial académico mostrado exitosamente para preceptor");
+            
+            // Enviar notificación de uso del sistema (solo si está habilitado)
+            if (notificationUtil != null && notificationUtil.puedeEnviarNotificaciones()) {
+                SwingUtilities.invokeLater(() -> {
+                    notificationUtil.enviarNotificacionBasica(
+                        "Sistema de Historial Académico",
+                        "Preceptor accedió al historial académico por curso",
+                        preceptorId
+                    );
+                });
+            }
+            
+        } catch (Exception ex) {
+            System.err.println("❌ Error al mostrar panel de historial académico (preceptor): " + ex.getMessage());
+            ex.printStackTrace();
+            
+            JOptionPane.showMessageDialog(ventana,
+                "Error al cargar el panel de historial académico: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+            
+            ventana.restaurarVistaPrincipal();
         }
     }
 
