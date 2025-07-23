@@ -281,6 +281,7 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
         }
     }
 
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -300,12 +301,7 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
         btnAsignarRoles = new javax.swing.JButton();
         btnGestionarHorarios = new javax.swing.JButton();
 
-        setMinimumSize(new java.awt.Dimension(758, 713));
-        setPreferredSize(new java.awt.Dimension(758, 713));
-        setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
         lblTitulo.setText("Gestion de Usuarios");
-        add(lblTitulo, new org.netbeans.lib.awtextra.AbsoluteConstraints(152, 45, 145, -1));
 
         tablaUsuarios.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -320,13 +316,9 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
         ));
         jScrollPane1.setViewportView(tablaUsuarios);
 
-        add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(18, 190, 375, 275));
-
         comboFiltroRol.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-        add(comboFiltroRol, new org.netbeans.lib.awtextra.AbsoluteConstraints(410, 210, -1, -1));
 
         lblFiltro.setText("Filtro Rol");
-        add(lblFiltro, new org.netbeans.lib.awtextra.AbsoluteConstraints(411, 184, 70, -1));
 
         btnEditar.setText("Editar");
         btnEditar.addActionListener(new java.awt.event.ActionListener() {
@@ -334,7 +326,6 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
                 btnEditarActionPerformed(evt);
             }
         });
-        add(btnEditar, new org.netbeans.lib.awtextra.AbsoluteConstraints(403, 333, -1, -1));
 
         btnCambiarEstado.setText("Cambiar estado");
         btnCambiarEstado.addActionListener(new java.awt.event.ActionListener() {
@@ -342,7 +333,6 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
                 btnCambiarEstadoActionPerformed(evt);
             }
         });
-        add(btnCambiarEstado, new org.netbeans.lib.awtextra.AbsoluteConstraints(483, 333, -1, -1));
 
         btnAsignarRoles.setText("Asignar Roles");
         btnAsignarRoles.addActionListener(new java.awt.event.ActionListener() {
@@ -350,7 +340,6 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
                 btnAsignarRolesActionPerformed(evt);
             }
         });
-        add(btnAsignarRoles, new org.netbeans.lib.awtextra.AbsoluteConstraints(410, 410, -1, -1));
 
         btnGestionarHorarios.setText("Gestionar Horarios");
         btnGestionarHorarios.addActionListener(new java.awt.event.ActionListener() {
@@ -358,7 +347,66 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
                 btnGestionarHorariosActionPerformed(evt);
             }
         });
-        add(btnGestionarHorarios, new org.netbeans.lib.awtextra.AbsoluteConstraints(530, 410, -1, -1));
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
+        this.setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 641, Short.MAX_VALUE)
+            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createSequentialGroup()
+                    .addGap(0, 0, Short.MAX_VALUE)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                            .addGap(134, 134, 134)
+                            .addComponent(lblTitulo, javax.swing.GroupLayout.PREFERRED_SIZE, 145, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(layout.createSequentialGroup()
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 375, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGap(10, 10, 10)
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addGroup(layout.createSequentialGroup()
+                                    .addGap(8, 8, 8)
+                                    .addComponent(lblFiltro, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(layout.createSequentialGroup()
+                                    .addGap(7, 7, 7)
+                                    .addComponent(comboFiltroRol, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(layout.createSequentialGroup()
+                                    .addComponent(btnEditar)
+                                    .addGap(8, 8, 8)
+                                    .addComponent(btnCambiarEstado, javax.swing.GroupLayout.PREFERRED_SIZE, 114, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(layout.createSequentialGroup()
+                                    .addGap(7, 7, 7)
+                                    .addComponent(btnAsignarRoles, javax.swing.GroupLayout.PREFERRED_SIZE, 102, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGap(18, 18, 18)
+                                    .addComponent(btnGestionarHorarios, javax.swing.GroupLayout.PREFERRED_SIZE, 129, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                    .addGap(0, 0, Short.MAX_VALUE)))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 420, Short.MAX_VALUE)
+            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createSequentialGroup()
+                    .addGap(0, 0, Short.MAX_VALUE)
+                    .addComponent(lblTitulo)
+                    .addGap(123, 123, 123)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                            .addGap(6, 6, 6)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 275, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(layout.createSequentialGroup()
+                            .addComponent(lblFiltro)
+                            .addGap(10, 10, 10)
+                            .addComponent(comboFiltroRol, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGap(101, 101, 101)
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(btnEditar)
+                                .addComponent(btnCambiarEstado))
+                            .addGap(54, 54, 54)
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(btnAsignarRoles)
+                                .addComponent(btnGestionarHorarios))))
+                    .addGap(0, 0, Short.MAX_VALUE)))
+        );
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnEditarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditarActionPerformed
@@ -378,7 +426,7 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
 
         int idUsuario = (int) tablaUsuarios.getValueAt(filaSeleccionada, 0);
         String nombreUsuario = tablaUsuarios.getValueAt(filaSeleccionada, 1) + " "
-                + tablaUsuarios.getValueAt(filaSeleccionada, 2);
+        + tablaUsuarios.getValueAt(filaSeleccionada, 2);
 
         // Crear y mostrar el diálogo de asignación de roles
         Frame parentFrame = (Frame) javax.swing.SwingUtilities.getWindowAncestor(this);
@@ -400,21 +448,21 @@ public class GestionUsuariosPanel extends javax.swing.JPanel {
 
         int idUsuario = (int) tablaUsuarios.getValueAt(filaSeleccionada, 0);
         String nombreUsuario = tablaUsuarios.getValueAt(filaSeleccionada, 1) + " "
-                + tablaUsuarios.getValueAt(filaSeleccionada, 2);
+        + tablaUsuarios.getValueAt(filaSeleccionada, 2);
         String rol = (String) tablaUsuarios.getValueAt(filaSeleccionada, 4);
 
         // Solo permitir gestionar horarios para roles específicos
         if (rol.equals("Alumno")) {
             JOptionPane.showMessageDialog(this,
-                    "La gestión de materias y horarios no aplica para alumnos.\n"
-                    + "Por favor, use el panel de gestión de cursos para asignar alumnos.");
+                "La gestión de materias y horarios no aplica para alumnos.\n"
+                + "Por favor, use el panel de gestión de cursos para asignar alumnos.");
             return;
         }
 
         // Crear y mostrar el diálogo de gestión de horarios
         Frame parentFrame = (Frame) javax.swing.SwingUtilities.getWindowAncestor(this);
         GestionMateriasHorariosDialog dialog = new GestionMateriasHorariosDialog(
-                parentFrame, true, idUsuario, nombreUsuario, rol);
+            parentFrame, true, idUsuario, nombreUsuario, rol);
         dialog.setVisible(true);
     }//GEN-LAST:event_btnGestionarHorariosActionPerformed
 

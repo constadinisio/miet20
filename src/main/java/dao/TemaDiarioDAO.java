@@ -13,6 +13,7 @@ import java.time.format.TextStyle;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import main.java.services.NotificationCore.NotificationService;
 
 /**
  * DAO para el manejo de temas diarios del libro de temas.
@@ -945,6 +946,42 @@ public class TemaDiarioDAO {
         System.out.println("   - Observaciones: '" + observaciones + "'");
         System.out.println("   - Validado por: " + validadoPor);
         
+        // Primero obtenemos los datos del tema para la notificación
+        String queryDatos = """
+            SELECT td.profesor_id, td.fecha_clase, c.anio, c.division, m.nombre as materia_nombre,
+                   u.nombre as profesor_nombre, u.apellido as profesor_apellido
+            FROM temas_diarios td
+            JOIN cursos c ON td.curso_id = c.id
+            JOIN materias m ON td.materia_id = m.id
+            JOIN usuarios u ON td.profesor_id = u.id
+            WHERE td.id = ?
+        """;
+        
+        int profesorId = 0;
+        String profesorNombre = "";
+        String materiaInfo = "";
+        String fechaClase = "";
+        
+        try (PreparedStatement psDatos = connection.prepareStatement(queryDatos)) {
+            psDatos.setInt(1, temaId);
+            ResultSet rs = psDatos.executeQuery();
+            
+            if (rs.next()) {
+                profesorId = rs.getInt("profesor_id");
+                profesorNombre = rs.getString("profesor_nombre") + " " + rs.getString("profesor_apellido");
+                materiaInfo = rs.getString("materia_nombre") + " - " + rs.getString("anio") + "° " + rs.getString("division");
+                fechaClase = rs.getString("fecha_clase");
+                
+                System.out.println("📊 Datos obtenidos para notificación:");
+                System.out.println("   - Profesor ID: " + profesorId + " (" + profesorNombre + ")");
+                System.out.println("   - Materia: " + materiaInfo);
+                System.out.println("   - Fecha clase: " + fechaClase);
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Error obteniendo datos del tema: " + e.getMessage());
+        }
+        
+        // Actualizar las observaciones
         String query = """
             UPDATE temas_diarios 
             SET observaciones = ?, 
@@ -962,12 +999,67 @@ public class TemaDiarioDAO {
             
             int filasAfectadas = ps.executeUpdate();
             System.out.println("✅ DAO: Filas afectadas: " + filasAfectadas);
+            
+            // Si la actualización fue exitosa y tenemos datos válidos, enviar notificación
+            if (filasAfectadas > 0 && profesorId > 0 && !observaciones.trim().isEmpty()) {
+                enviarNotificacionObservacion(profesorId, profesorNombre, materiaInfo, fechaClase, observaciones, validadoPor);
+            }
+            
             return filasAfectadas > 0;
             
         } catch (SQLException e) {
             System.err.println("❌ DAO: Error SQL: " + e.getMessage());
             logger.log(Level.SEVERE, "Error al actualizar observaciones del tema " + temaId, e);
             return false;
+        }
+    }
+    
+    /**
+     * Envía notificación automática al profesor cuando se agregan observaciones
+     */
+    private void enviarNotificacionObservacion(int profesorId, String profesorNombre, String materiaInfo, 
+                                             String fechaClase, String observaciones, int validadoPor) {
+        try {
+            NotificationService notificationService = NotificationService.getInstance();
+            
+            String titulo = "📝 Nueva Observación en Libro de Temas";
+            
+            String contenido = String.format("""
+                Estimado/a %s,
+                
+                Se ha registrado una nueva observación en el libro de temas:
+                
+                📚 Materia: %s
+                📅 Fecha de clase: %s
+                
+                💭 Observación registrada:
+                "%s"
+                
+                Por favor, revise la información registrada en el sistema.
+                
+                Saludos cordiales,
+                Sistema de Gestión Escolar ET20
+                """, 
+                profesorNombre, materiaInfo, fechaClase, observaciones);
+            
+            // Enviar notificación individual con prioridad NORMAL
+            notificationService.enviarNotificacionIndividual(
+                titulo, 
+                contenido, 
+                validadoPor,  // remitente (quien validó)
+                profesorId,   // destinatario (profesor)
+                "NORMAL"      // prioridad
+            ).thenAccept(exitoso -> {
+                if (exitoso) {
+                    System.out.println("📧 Notificación enviada exitosamente al profesor ID: " + profesorId);
+                } else {
+                    System.err.println("❌ Error enviando notificación al profesor ID: " + profesorId);
+                }
+            });
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error al enviar notificación de observación: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
