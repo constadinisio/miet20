@@ -488,7 +488,7 @@ public class UserService {
     public UserInfo obtenerInfoUsuario(int userId) {
         try {
             String query = """
-                SELECT u.id, u.nombre, u.apellido, u.email, u.rol, u.anio, u.division, u.activo,
+                SELECT u.id, u.nombre, u.apellido, u.mail, u.rol, u.anio, u.division, u.status,
                        r.nombre as rol_nombre,
                        CASE 
                            WHEN u.rol = 4 AND u.anio IS NOT NULL AND u.division IS NOT NULL 
@@ -509,13 +509,13 @@ public class UserService {
                 info.setId(rs.getInt("id"));
                 info.setNombre(rs.getString("nombre"));
                 info.setApellido(rs.getString("apellido"));
-                info.setEmail(rs.getString("email"));
+                info.setEmail(rs.getString("mail"));
                 info.setRol(rs.getInt("rol"));
                 info.setRolNombre(rs.getString("rol_nombre"));
                 info.setAnio(rs.getInt("anio"));
                 info.setDivision(rs.getString("division"));
                 info.setCurso(rs.getString("curso_completo"));
-                info.setActivo(rs.getBoolean("activo"));
+                info.setActivo(rs.getBoolean("status"));
                 return info;
             }
 

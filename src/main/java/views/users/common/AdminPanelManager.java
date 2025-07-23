@@ -27,6 +27,7 @@ import main.java.views.users.Admin.GestionCursosPanel;
 import main.java.views.users.Admin.GestionUsuariosPanel;
 import main.java.views.users.Admin.UsuariosPendientesPanel;
 import main.java.views.users.common.NotasVisualizationPanel;
+import main.java.views.users.common.LibroTemasSelector;
 
 /**
  * Gestor de paneles específico para el rol de Administrador.
@@ -66,6 +67,9 @@ public class AdminPanelManager implements RolPanelManager {
         JButton btnGestionUsuarios = createStyledButton("GESTIÓN USUARIOS", "gestionUsuarios");
         JButton btnGestionCursos = createStyledButton("GESTIÓN CURSOS", "gestionCursos");
         JButton btnVisualizarNotas = createStyledButton("VISUALIZAR NOTAS", "notas");
+        JButton btnLibroTemas = createStyledButton("LIBRO DE TEMAS", "libro_temas");
+        btnLibroTemas.setBackground(new Color(138, 43, 226)); // Violeta para libro de temas
+        btnLibroTemas.setToolTipText("Acceso completo al libro de temas con validación");
         JButton btnGestionBoletines = createStyledButton("GESTIÓN BOLETINES", "gestionBoletines");
         JButton btnEstructuraBoletines = createStyledButton("ESTRUCTURA BOLETINES", "estructuraBoletines");
         
@@ -79,6 +83,7 @@ public class AdminPanelManager implements RolPanelManager {
             btnGestionUsuarios,
             btnGestionCursos,
             btnVisualizarNotas,
+            btnLibroTemas,
             btnGestionBoletines,
             btnEstructuraBoletines,
             btnNotificaciones // NUEVO
@@ -119,6 +124,10 @@ public class AdminPanelManager implements RolPanelManager {
 
                 case "notas":
                     mostrarVisualizacionNotas();
+                    break;
+                    
+                case "libro_temas":
+                    mostrarLibroDeTemas();
                     break;
                     
                 case "gestionBoletines":
@@ -232,6 +241,31 @@ public class AdminPanelManager implements RolPanelManager {
             
         } catch (Exception ex) {
             System.err.println("❌ Error al mostrar NotasVisualizationPanel: " + ex.getMessage());
+            ex.printStackTrace();
+            throw ex;
+        }
+    }
+
+    /**
+     * Muestra el panel de Libro de Temas para Directivo/Admin
+     * Los Directivos tienen acceso completo con capacidades de validación
+     */
+    private void mostrarLibroDeTemas() {
+        try {
+            System.out.println("Creando LibroTemasSelector para Directivo...");
+            
+            LibroTemasSelector selector = new LibroTemasSelector(
+                userId, 1, // rol 1 = Directivo
+                (panel, titulo) -> ventana.mostrarPanelResponsive(panel, titulo),
+                () -> ventana.restaurarVistaPrincipal()
+            );
+            
+            ventana.mostrarPanelResponsive(selector, "Libro de Temas - Selector");
+            
+            System.out.println("✅ LibroTemasSelector mostrado exitosamente para Directivo");
+            
+        } catch (Exception ex) {
+            System.err.println("❌ Error al mostrar LibroTemasSelector: " + ex.getMessage());
             ex.printStackTrace();
             throw ex;
         }

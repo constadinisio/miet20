@@ -31,6 +31,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import main.java.database.Conexion;
 import main.java.views.users.Preceptor.AsistenciaPreceptorPanel;
+import main.java.views.users.common.LibroTemasSelector;
 import main.java.utils.ExcelExportUtility;
 import main.java.services.NotificationCore.NotificationIntegrationUtil;
 import main.java.views.notifications.NotificationUI.NotificationsWindow;
@@ -64,12 +65,13 @@ public class PreceptorPanelManager implements RolPanelManager {
     public JComponent[] createButtons() {
         JButton btnNotas = createStyledButton("NOTAS", "notas");
         JButton btnAsistencias = createStyledButton("ASISTENCIAS", "asistencias");
+        JButton btnLibroTemas = createStyledButton("LIBRO DE TEMAS", "libro_temas");
         JButton btnExportar = createStyledButton("EXPORTAR", "exportar");
         JButton btnBoletines = createStyledButton("BOLETINES", "boletines");
         JButton btnNotificaciones = createStyledButton("NOTIFICACIONES", "notificaciones");
         JButton btnEnviarAviso = createStyledButton("ENVIAR AVISO", "enviar_aviso");
 
-        return new JComponent[]{btnNotas, btnAsistencias, btnExportar, btnBoletines, btnNotificaciones, btnEnviarAviso};
+        return new JComponent[]{btnNotas, btnAsistencias, btnLibroTemas, btnExportar, btnBoletines, btnNotificaciones, btnEnviarAviso};
     }
 
     private JButton createStyledButton(String text, String actionCommand) {
@@ -80,6 +82,8 @@ public class PreceptorPanelManager implements RolPanelManager {
             button.setBackground(new Color(255, 193, 7)); // Amarillo
         } else if ("enviar_aviso".equals(actionCommand)) {
             button.setBackground(new Color(40, 167, 69)); // Verde
+        } else if ("libro_temas".equals(actionCommand)) {
+            button.setBackground(new Color(138, 43, 226)); // Violeta para libro de temas
         } else {
             button.setBackground(new Color(51, 153, 255)); // Azul estándar
         }
@@ -106,6 +110,9 @@ public class PreceptorPanelManager implements RolPanelManager {
                     break;
                 case "asistencias":
                     mostrarPanelAsistenciasSelector();
+                    break;
+                case "libro_temas":
+                    mostrarLibroDeTemas();
                     break;
                 case "exportar":
                     mostrarDialogoExportacion();
@@ -1679,6 +1686,34 @@ public class PreceptorPanelManager implements RolPanelManager {
 
     public VentanaInicio getVentana() {
         return ventana;
+    }
+
+    /**
+     * Muestra el panel de libro de temas para preceptores (solo lectura).
+     */
+    private void mostrarLibroDeTemas() {
+        try {
+            System.out.println("🔍 Preceptor accediendo al libro de temas (solo lectura)");
+            
+            LibroTemasSelector selector = new LibroTemasSelector(
+                preceptorId, 2, // rol 2 = Preceptor
+                (panel, titulo) -> ventana.mostrarPanelResponsive(panel, titulo),
+                () -> ventana.restaurarVistaPrincipal()
+            );
+            
+            // Cambiar al panel de libro de temas usando el método correcto
+            ventana.mostrarPanelResponsive(selector, "📚 Libro de Temas - Selector");
+            
+        } catch (Exception ex) {
+            System.err.println("❌ Error al abrir libro de temas para preceptor: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                null, // Usar null en lugar de getFrame()
+                "Error al abrir el libro de temas: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     /**

@@ -37,7 +37,7 @@ import main.java.database.Conexion;
 import main.java.views.users.Profesor.AsistenciaProfesorPanel;
 import main.java.views.users.Profesor.NotasBimestralesPanel;
 import main.java.views.users.Profesor.NotasProfesorPanel;
-import main.java.views.users.Profesor.libroTema;
+import main.java.views.users.Profesor.CargaTemasPanel;
 import main.java.views.users.common.VentanaInicio;
 import main.java.services.NotificationCore.NotificationIntegrationUtil;
 import main.java.views.notifications.NotificationUI.NotificationsWindow;
@@ -1394,18 +1394,14 @@ public class ProfesorPanelManager implements RolPanelManager {
      */
     private void mostrarPanelLibroTemas() {
         try {
-            System.out.println("Creando libroTema para profesor...");
+            System.out.println("Creando panel mejorado de libro de temas para profesor...");
 
-            // Crear un panel contenedor para el libro de temas
-            JPanel panelContenedor = new JPanel(new BorderLayout());
+            // Crear directamente el panel mejorado CargaTemasPanel
+            CargaTemasPanel panelCarga = new CargaTemasPanel(profesorId, ventana);
+            
+            ventana.mostrarPanelResponsive(panelCarga, "Libro de Temas - Sistema Mejorado");
 
-            // Crear el libro de temas (necesita adaptación si no es compatible)
-            libroTema libro = new libroTema(panelContenedor, profesorId, ventana);
-            panelContenedor.add(libro, BorderLayout.CENTER);
-
-            ventana.mostrarPanelResponsive(panelContenedor, "Libro de Temas");
-
-            System.out.println("✅ Libro de temas mostrado exitosamente");
+            System.out.println("✅ Panel mejorado de libro de temas mostrado exitosamente");
 
         } catch (Exception ex) {
             System.err.println("❌ Error al mostrar libro de temas: " + ex.getMessage());

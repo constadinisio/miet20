@@ -19,6 +19,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import main.java.database.Conexion;
 import main.java.views.users.common.VentanaInicio;
+import main.java.views.users.Profesor.CargaTemasPanel;
 
 /**
  * Panel para gestionar el libro de temas de un profesor.
@@ -68,6 +69,20 @@ public class libroTema extends javax.swing.JPanel {
         } catch (Exception e) {
             System.err.println("Error al cargar las imágenes: " + e.getMessage());
         }
+        
+        // ABRIR AUTOMÁTICAMENTE EL PANEL MEJORADO
+        // Como ya tienes las tablas instaladas, directamente abrimos el panel mejorado
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try {
+                Thread.sleep(100); // Pequeña pausa para que termine la inicialización
+                abrirContenidos(); // Abrir automáticamente el panel mejorado
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                System.err.println("Error durante la inicialización: " + e.getMessage());
+                // En caso de error, simplemente mantener el panel original visible
+            }
+        });
     }
 
     /**
@@ -156,7 +171,7 @@ public class libroTema extends javax.swing.JPanel {
     }
     
     /**
-     * Abre el panel de contenidos.
+     * Abre el panel de contenidos mejorado.
      * Adaptado para usar VentanaInicio en lugar de profesor.
      */
     private void abrirContenidos() {
@@ -164,9 +179,8 @@ public class libroTema extends javax.swing.JPanel {
             // Verificar la conexión a la base de datos
             Conexion.getInstancia().verificarConexion();
             
-            // Crear una nueva instancia de tablaContenidos
-            // 1. Usando la nueva arquitectura:
-            tablaContenidos tablaCont = new tablaContenidos(profesorId, ventanaPrincipal);
+            // Crear una nueva instancia de CargaTemasPanel (mejorado)
+            CargaTemasPanel panelCarga = new CargaTemasPanel(profesorId, ventanaPrincipal);
             
             // Obtener el panel padre (el que contiene a libroTema)
             Container parent = this.getParent();
@@ -180,7 +194,7 @@ public class libroTema extends javax.swing.JPanel {
                 parent.remove(this);
                 
                 // Agregar el nuevo panel al contenedor padre
-                parent.add(tablaCont, BorderLayout.CENTER);
+                parent.add(panelCarga, BorderLayout.CENTER);
                 
                 // Actualizar la interfaz
                 parent.revalidate();
@@ -188,7 +202,7 @@ public class libroTema extends javax.swing.JPanel {
             }
             
             // Hacer visible el nuevo panel
-            tablaCont.setVisible(true);
+            panelCarga.setVisible(true);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, 
@@ -231,7 +245,7 @@ public class libroTema extends javax.swing.JPanel {
         btnContenidos.setBackground(new java.awt.Color(51, 153, 255));
         btnContenidos.setFont(new java.awt.Font("Arial", 1, 14)); // NOI18N
         btnContenidos.setForeground(new java.awt.Color(255, 255, 255));
-        btnContenidos.setText("CONTENIDOS");
+        btnContenidos.setText("LIBRO DE TEMAS MEJORADO");
         btnContenidos.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnContenidosActionPerformed(evt);
