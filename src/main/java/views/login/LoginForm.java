@@ -13,6 +13,7 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import main.java.database.Conexion;
 import main.java.utils.GoogleEmailIntegration;
+import main.java.utils.PasswordUtils;
 import main.java.utils.ResourceManager;
 import main.java.utils.ResponsiveBannerPanel;
 import main.java.utils.uiUtils;
@@ -394,57 +395,22 @@ public class LoginForm extends javax.swing.JFrame {
                 return;
             }
 
-            // Hashear la contraseña antes de la consulta
-            String contrasenaHasheada = hashPassword(contrasena);
-
-            // Consulta para autenticación
-            String query = "SELECT id, nombre, apellido, rol, foto_url FROM usuarios "
-                    + "WHERE mail = ? AND contrasena = ?";
+            // Consulta para obtener el usuario y su contraseña hasheada
+            String query = "SELECT id, nombre, apellido, rol, foto_url, contrasena FROM usuarios "
+                    + "WHERE mail = ?";
 
             PreparedStatement ps = conect.prepareStatement(query);
             ps.setString(1, mail);
-            ps.setString(2, contrasenaHasheada); // Usar contraseña hasheada
 
             // Procesar resultado de autenticación
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                // Obtener datos del usuario
-                int userId = rs.getInt("id");
-                String nombre = rs.getString("nombre");
-                String apellido = rs.getString("apellido");
-                int rol = rs.getInt("rol");
-                String fotoUrl = rs.getString("foto_url");
-
-                // VERIFICAR SI EL USUARIO TIENE UN ROL ASIGNADO
-                if (rol == 0) {
-                    JOptionPane.showMessageDialog(this,
-                            "Tu cuenta está pendiente de asignación de rol.\n"
-                            + "Por favor contacta al administrador para que te asigne un rol.",
-                            "Cuenta Pendiente",
-                            JOptionPane.INFORMATION_MESSAGE);
-                    return; // Salir del método sin continuar
-                }
-
-                // Crear sesión de usuario con ID solo si tiene rol válido
-                UserSession session = new UserSession(userId, nombre, apellido, mail, rol, fotoUrl);
-
-                // Verificar datos complementarios
-                verificarDatosComplementarios(session);
-            } else {
-                // Si no encuentra resultados, podría ser que la contraseña no esté hasheada en la DB
-                // Intenta con la contraseña sin hashear (para compatibilidad con cuentas existentes)
-                query = "SELECT id, nombre, apellido, rol, foto_url FROM usuarios "
-                        + "WHERE mail = ? AND contrasena = ?";
-
-                ps = conect.prepareStatement(query);
-                ps.setString(1, mail);
-                ps.setString(2, contrasena); // Usar contraseña sin hashear
-
-                rs = ps.executeQuery();
-
-                if (rs.next()) {
-                    // Encontrado con contraseña sin hashear, actualizar a versión hasheada
+                String storedPassword = rs.getString("contrasena");
+                
+                // Verificar la contraseña usando bcrypt (con soporte para migración desde SHA-256)
+                if (verifyPassword(contrasena, storedPassword)) {
+                    // Obtener datos del usuario
                     int userId = rs.getInt("id");
                     String nombre = rs.getString("nombre");
                     String apellido = rs.getString("apellido");
@@ -461,14 +427,18 @@ public class LoginForm extends javax.swing.JFrame {
                         return; // Salir del método sin continuar
                     }
 
-                    // Actualizar la contraseña a la versión hasheada
-                    String updateQuery = "UPDATE usuarios SET contrasena = ? WHERE id = ?";
-                    PreparedStatement updatePs = conect.prepareStatement(updateQuery);
-                    updatePs.setString(1, contrasenaHasheada);
-                    updatePs.setInt(2, userId);
-                    updatePs.executeUpdate();
+                    // Si la contraseña estaba en SHA-256, actualizarla a bcrypt
+                    if (!PasswordUtils.isBcryptHash(storedPassword)) {
+                        String newHashedPassword = hashPassword(contrasena);
+                        String updateQuery = "UPDATE usuarios SET contrasena = ? WHERE id = ?";
+                        PreparedStatement updatePs = conect.prepareStatement(updateQuery);
+                        updatePs.setString(1, newHashedPassword);
+                        updatePs.setInt(2, userId);
+                        updatePs.executeUpdate();
+                        updatePs.close();
+                    }
 
-                    // Crear sesión de usuario
+                    // Crear sesión de usuario con ID solo si tiene rol válido
                     UserSession session = new UserSession(userId, nombre, apellido, mail, rol, fotoUrl);
 
                     // Verificar datos complementarios
@@ -479,6 +449,11 @@ public class LoginForm extends javax.swing.JFrame {
                             "Error de login",
                             JOptionPane.ERROR_MESSAGE);
                 }
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Usuario o contraseña incorrectos",
+                        "Error de login",
+                        JOptionPane.ERROR_MESSAGE);
             }
 
         } catch (SQLException ex) {
@@ -704,23 +679,11 @@ public class LoginForm extends javax.swing.JFrame {
     }
 
     private String hashPassword(String password) {
-        try {
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return PasswordUtils.hashPassword(password);
+    }
 
-            // Convertir byte array a string hexadecimal
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-            System.err.println("Error al hashear contraseña: " + e.getMessage());
-            // Si hay error en el hashing, retornar la contraseña sin hashear (no ideal)
-            return password;
-        }
-
-
+    private boolean verifyPassword(String password, String hashedPassword) {
+        return PasswordUtils.verifyPasswordWithMigration(password, hashedPassword);
     }//GEN-LAST:event_botonGoogleActionPerformed
 
     public static void main(String args[]) {

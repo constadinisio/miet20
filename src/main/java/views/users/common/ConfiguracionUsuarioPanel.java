@@ -29,6 +29,7 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import main.java.database.Conexion;
+import main.java.utils.PasswordUtils;
 
 /**
  * Panel de configuración completo para usuarios del sistema.
@@ -630,24 +631,10 @@ public class ConfiguracionUsuarioPanel extends JPanel {
     }
     
     /**
-     * Método para hashear contraseñas usando SHA-256 (mismo método que LoginForm)
+     * Método para hashear contraseñas usando bcrypt
      */
     private String hashPassword(String password) {
-        try {
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-
-            // Convertir byte array a string hexadecimal
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-            System.err.println("Error al hashear contraseña: " + e.getMessage());
-            // Si hay error en el hashing, retornar la contraseña sin hashear (no ideal para producción)
-            return password;
-        }
+        return PasswordUtils.hashPassword(password);
     }
     
     private boolean esAlumno() {

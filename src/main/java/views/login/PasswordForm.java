@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.*;
 import main.java.database.Conexion;
+import main.java.utils.PasswordUtils;
 
 public class PasswordForm extends JDialog {
 
@@ -141,27 +142,13 @@ public class PasswordForm extends JDialog {
     }
 
     /**
-     * Hashea la contraseña usando SHA-256.
+     * Hashea la contraseña usando bcrypt.
      *
      * @param password la contraseña a hashear
      * @return la contraseña hasheada
      */
     private String hashPassword(String password) {
-        try {
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-
-            // Convertir byte array a string hexadecimal
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-            System.err.println("Error al hashear contraseña: " + e.getMessage());
-            // Si hay error en el hashing, retornar la contraseña sin hashear (no ideal)
-            return password;
-        }
+        return PasswordUtils.hashPassword(password);
     }
 
     /**

@@ -3,9 +3,8 @@ package main.java.views.login;
 import javax.swing.*;
 import java.awt.*;
 import java.sql.*;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import main.java.database.Conexion;
+import main.java.utils.PasswordUtils;
 
 /**
  * Manager para manejar el primer ingreso de usuarios con Google.
@@ -537,22 +536,10 @@ public class PrimerIngresoManager {
     }
     
     /**
-     * Hash de contraseña (mismo método que LoginForm)
+     * Hash de contraseña usando bcrypt
      */
     private String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            System.err.println("Error al hashear contraseña: " + e.getMessage());
-            return password;
-        }
+        return PasswordUtils.hashPassword(password);
     }
     
     /**
