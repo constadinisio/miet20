@@ -1,0 +1,10 @@
+node_modules/
+.env
+api/node_modules/
+api/.env
+.DS_Store
+coverage/
+dist/
+var/cache/
+
+docs/migracion-modulos-checklist.xlsx

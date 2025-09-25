@@ -1,0 +1,736 @@
+openapi: 3.0.3
+info:
+  title: MIET20 Plataforma API
+  version: '1.0.0'
+  description: >-
+    Especificación parcial de la API MIET20 correspondiente a los dominios completados
+    en la Fase 2 (autenticación, usuarios, alumnos, cursos, calificaciones,
+    asistencias, noticias, contenidos públicos y archivos).
+servers:
+  - url: https://api.miet20.test/api/v1
+    description: Entorno de referencia
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success, error]
+        data:
+          nullable: true
+        errors:
+          nullable: true
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+        meta:
+          type: object
+          additionalProperties: true
+      required: [status, data, errors, meta]
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+      required: [email, password]
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            firstName:
+              type: string
+            lastName:
+              type: string
+            role:
+              type: string
+      required: [accessToken, refreshToken, user]
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required: [refreshToken]
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        status:
+          type: string
+    Student:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        documentNumber:
+          type: string
+        birthDate:
+          type: string
+          format: date
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        level:
+          type: string
+        division:
+          type: string
+        academicYear:
+          type: integer
+    Subject:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        courseId:
+          type: integer
+        weeklyHours:
+          type: integer
+    RequiredFieldsResponse:
+      type: object
+      properties:
+        roleId:
+          type: integer
+          nullable: true
+        common:
+          type: object
+          additionalProperties:
+            type: string
+        extra:
+          type: object
+          additionalProperties:
+            type: string
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+      required: [common, extra, fields]
+    MissingFieldsResponse:
+      allOf:
+        - $ref: '#/components/schemas/RequiredFieldsResponse'
+        - type: object
+          properties:
+            missing:
+              type: object
+              additionalProperties:
+                type: string
+          required: [missing]
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Autentica un usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResponse'
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Obtiene un nuevo access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token renovado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /users:
+    get:
+      tags: [Usuarios]
+      summary: Lista usuarios paginados
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+          required: false
+        - in: query
+          name: perPage
+          schema:
+            type: integer
+            default: 25
+          required: false
+      responses:
+        '200':
+          description: Listado de usuarios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [Usuarios]
+      summary: Crea un nuevo usuario administrativo o docente
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                password:
+                  type: string
+              required: [firstName, lastName, email, role]
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /users/required-fields:
+    get:
+      tags: [Usuarios]
+      summary: Obtiene los campos obligatorios de perfil según el rol activo
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: roleId
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Campos obligatorios configurados
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RequiredFieldsResponse'
+  /users/{id}/missing-fields:
+    get:
+      tags: [Usuarios]
+      summary: Devuelve los campos obligatorios que el usuario aún no completó
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: roleId
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Campos faltantes para completar el perfil
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MissingFieldsResponse'
+        '403':
+          description: El usuario autenticado no tiene permisos para consultar este recurso
+        '404':
+          description: Usuario no encontrado
+  /users/{id}/familia:
+    get:
+      tags: [Usuarios]
+      summary: Obtiene los datos familiares asociados a un usuario
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Datos familiares del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: El usuario autenticado no tiene permisos para consultar este recurso
+        '404':
+          description: Usuario no encontrado
+    put:
+      tags: [Usuarios]
+      summary: Actualiza los datos familiares asociados a un usuario
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                padre_nombre:
+                  type: string
+                  nullable: true
+                padre_tel:
+                  type: string
+                  nullable: true
+                padre_mail:
+                  type: string
+                  format: email
+                  nullable: true
+                madre_nombre:
+                  type: string
+                  nullable: true
+                madre_tel:
+                  type: string
+                  nullable: true
+                madre_mail:
+                  type: string
+                  format: email
+                  nullable: true
+                emergencia_nombre:
+                  type: string
+                  nullable: true
+                emergencia_tel:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Datos familiares actualizados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: El usuario autenticado no tiene permisos para actualizar este recurso
+        '404':
+          description: Usuario no encontrado
+  /students:
+    get:
+      tags: [Alumnos]
+      summary: Lista alumnos activos
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Listado de alumnos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /students/progresion:
+    post:
+      tags: [Alumnos]
+      summary: Ejecuta la progresión anual desde un curso de origen
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                curso_origen_id:
+                  type: integer
+                  minimum: 1
+                alumnos:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        minimum: 1
+                      destino:
+                        oneOf:
+                          - type: integer
+                            minimum: 1
+                          - type: string
+                            enum: [EGRESO]
+                    required: [id, destino]
+              required: [curso_origen_id, alumnos]
+      responses:
+        '200':
+          description: Resultado de la progresión, incluyendo advertencias si correspondiera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /registrations:
+    post:
+      tags: [Alumnos]
+      summary: Inscribe un alumno a un curso
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentId:
+                  type: integer
+                courseId:
+                  type: integer
+                academicYear:
+                  type: integer
+              required: [studentId, courseId, academicYear]
+      responses:
+        '201':
+          description: Inscripción creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /courses:
+    get:
+      tags: [Cursos]
+      summary: Lista cursos y divisiones
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cursos disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /subjects:
+    post:
+      tags: [Materias]
+      summary: Crea una materia asociada a un curso
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                courseId:
+                  type: integer
+                weeklyHours:
+                  type: integer
+                teacherId:
+                  type: integer
+              required: [name, courseId]
+      responses:
+        '201':
+          description: Materia creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /grades:
+    post:
+      tags: [Calificaciones]
+      summary: Registra una calificación individual
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentId:
+                  type: integer
+                subjectId:
+                  type: integer
+                term:
+                  type: string
+                value:
+                  type: number
+                comments:
+                  type: string
+              required: [studentId, subjectId, term, value]
+      responses:
+        '201':
+          description: Nota registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    get:
+      tags: [Calificaciones]
+      summary: Obtiene calificaciones filtradas
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: courseId
+          schema:
+            type: integer
+        - in: query
+          name: subjectId
+          schema:
+            type: integer
+        - in: query
+          name: term
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resultado de calificaciones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /attendance/bulk:
+    post:
+      tags: [Asistencias]
+      summary: Registra asistencias de una semana
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                courseId:
+                  type: integer
+                subjectId:
+                  type: integer
+                weekStart:
+                  type: string
+                  format: date
+                entries:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      studentId:
+                        type: integer
+                      status:
+                        type: string
+                        enum: [present, absent, late]
+              required: [courseId, subjectId, weekStart, entries]
+      responses:
+        '201':
+          description: Asistencias registradas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /attendance/summary:
+    get:
+      tags: [Asistencias]
+      summary: Obtiene métricas agregadas de asistencia
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: courseId
+          schema:
+            type: integer
+            required: true
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Resumen calculado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /news:
+    post:
+      tags: [Noticias]
+      summary: Publica una noticia institucional
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                status:
+                  type: string
+                  enum: [draft, scheduled, published]
+                audienceRoles:
+                  type: array
+                  items:
+                    type: string
+              required: [title, status]
+      responses:
+        '201':
+          description: Noticia creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /contacts:
+    post:
+      tags: [Contactos]
+      summary: Registra un formulario de contacto público
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                message:
+                  type: string
+              required: [name, email, message]
+      responses:
+        '202':
+          description: Mensaje aceptado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /public-pages:
+    get:
+      tags: [Páginas públicas]
+      summary: Obtiene contenido institucional publicado
+      responses:
+        '200':
+          description: Contenido público
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /files/presigned:
+    post:
+      tags: [Archivos]
+      summary: Solicita URL firmada para subir archivos adjuntos
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fileName:
+                  type: string
+                contentType:
+                  type: string
+                isPublic:
+                  type: boolean
+              required: [fileName, contentType]
+      responses:
+        '200':
+          description: URL lista para subir
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'

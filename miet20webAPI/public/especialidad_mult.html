@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi ET20 - Especialidad TICs</title>
+    <link rel="icon" type="image/x-icon" href="images/et20png.png">
+    <link href="output.css?v=<?= time() ?>" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            font-weight: 500;
+            font-size: 1rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+        }
+
+        .menu-item:hover {
+            background-color: #f3f4f6;
+            /* bg-gray-100 */
+        }
+
+        .menu-icon {
+            font-size: 1.5rem;
+        }
+
+        .menu-text {
+            margin-left: 0.5rem;
+            display: none;
+            white-space: nowrap;
+            animation: fadeSlide 0.5s ease forwards;
+        }
+
+        .menu-item:hover .menu-text {
+            display: inline;
+        }
+
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-lg fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="index.php" class="flex items-center">
+                        <i class="fas text-3xl text-blue-600 mr-4 -right-500"></i>
+                        <h1><img src="./images/et20png.png" alt="Icono personalizado" class="w-10 h-10"></h1>
+                        <span class="text-xl font-semibold text-gray-800 ml-2">Escuela Técnica 20 D.E. 20</span>
+                    </a>
+                </div>
+
+                <div class="hidden md:flex items-center gap-4">
+
+                    <a href="index.php" class="menu-item text-azulInstitucional text-xl">
+                        <span class="text-lg">🏠‎ ‎ Página Principal</span>
+                    </a>
+
+                    <a href="descargas.php" class="menu-item hover:text-gray-600 text-xl ">
+                        <span class="menu-icon">📁</span>
+                        <span class="menu-text">Descargas</span>
+                    </a>
+
+                    <a href="noticias.php" class="menu-item hover:text-gray-600 text-xl">
+                        <span class="menu-icon">📰</span>
+                        <span class="menu-text">Noticias</span>
+                    </a>
+
+                    <a href="galeria_home.php" class="menu-item hover:text-gray-600 text-xl">
+                        <span class="menu-icon">📷</span>
+                        <span class="menu-text">Galería</span>
+                    </a>
+
+                    <a href="contactos.php" class="menu-item hover:text-gray-600 text-xl">
+                        <span class="menu-icon">📩</span>
+                        <span class="menu-text">Contactos</span>
+                    </a>
+                </div>
+
+                <a href="login.php" class="ml-8 px-5 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 font-semibold shadow">
+                    Iniciar Sesión
+                </a>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button class="mobile-menu-button outline-none">
+                        <i class="fas fa-bars text-2xl text-gray-600"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="mobile-menu hidden md:hidden pb-4 flex flex-col space-y-1 transition-all duration-300 transform opacity-0 scale-95">
+                <a href="index.php" class="block text-azulInstitucional px-4 py-2 rounded-md font-medium">Página Principal</a>
+                <a href="descargas.php" class="block text-gray-600 hover:text-rojoDestacado px-4 py-2 rounded-md font-medium transition duration-300">Descargas</a>
+                <a href="noticias.php" class="block text-gray-600 hover:text-verdeEsperanza px-4 py-2 rounded-md font-medium transition duration-300">Noticias</a>
+                <a href="galeria_home.php" class="text-gray-600 hover:text-amarilloEnergia px-4 py-2 rounded-md font-medium transition duration-300">Galeria</a>
+                <a href="contactos.php" class="text-gray-600 hover:text-rosaMagico px-4 py-2 rounded-md font-medium transition duration-300">Contactos</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="heroSec" class="pt-24 pb-12 bg-gradient-to-r from-blue-500 to-blue-700 text-white">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <h1 class="text-4xl font-bold">Especialidad Multimedia</h1>
+            <p class="mt-4 max-w-2xl mx-auto">Creatividad, diseño y tecnología al servicio de la comunicación visual y digital.</p>
+            <div class="mt-8">
+                <a href="#presentacionSec" class="bg-purple-600 hover:bg-purple-800 text-white px-6 py-2 rounded-full shadow-lg transition">Conocé más sobre Multimedia</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Presentación Section -->
+    <section id="presentacionSec" class="max-w-screen-xl mx-auto py-16 px-4">
+        <h2 class="text-3xl font-bold text-center mb-8">¿Qué es la especialidad Multimedia?</h2>
+        <p class="text-center max-w-3xl mx-auto mb-10 text-gray-600">
+            La especialidad en Multimedia te prepara para diseñar, crear y comunicar a través de diferentes medios digitales. Desde la edición de imágenes y videos, hasta la producción de contenido interactivo, aprenderás a combinar creatividad y tecnología para generar experiencias visuales impactantes.
+        </p>
+        
+        <div class="grid md:grid-cols-4 gap-8 text-center mt-4 mb-12">
+            <div class="p-4 bg-white rounded-lg shadow-lg">
+                <i class="fas fa-photo-video text-4xl text-pink-600 mb-4"></i>
+                <h3 class="font-semibold text-lg mb-2">Edición Multimedia</h3>
+                <p class="text-gray-500 text-sm">Edición de imágenes, videos y sonido digital.</p>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg shadow-lg">
+                <i class="fas fa-palette text-4xl text-pink-600 mb-4"></i>
+                <h3 class="font-semibold text-lg mb-2">Diseño Gráfico</h3>
+                <p class="text-gray-500 text-sm">Creación de piezas visuales para medios digitales e impresos.</p>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg shadow-lg">
+                <i class="fas fa-film text-4xl text-pink-600 mb-4"></i>
+                <h3 class="font-semibold text-lg mb-2">Producción Audiovisual</h3>
+                <p class="text-gray-500 text-sm">Grabación, montaje y postproducción de video y audio.</p>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg shadow-lg">
+                <i class="fas fa-laptop-code text-4xl text-pink-600 mb-4"></i>
+                <h3 class="font-semibold text-lg mb-2">Interactividad Digital</h3>
+                <p class="text-gray-500 text-sm">Diseño de contenidos interactivos y animaciones para web y redes sociales.</p>
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 text-center mt-2 mb-8">
+            <div>
+                <h2 class="text-3xl font-bold text-center mb-8">Salidas laborales</h2>
+                <p class="text-center max-w-3xl mx-auto mb-10 text-gray-600">Los egresados de TICs cuentan con las habilidades necesarias para incorporarse al mundo laboral en áreas vinculadas a la tecnología o para continuar su formación académica en estudios superiores.</p>    
+                <div class="flex gap-8 text-center mt-4 mb-8 justify-center">
+                    <ul class="p-4 bg-white rounded-lg shadow-lg">
+                        <li class="mb-0.5">🎨 Diseñador Gráfico</li>
+                        <li class="mb-0.5">🎬 Productor Audiovisual</li>
+                        <li class="mb-0.5">🖥️ Diseñador Web</li>
+                        <li class="mb-0.5">🕹️ Desarrollador de Videojuegos 2D / 3D</li>
+                        <li class="mb-0.5">📱 Diseñador de Experiencia de Usuario (UX/UI)</li>
+                        <li class="mb-0.5">📸 Fotógrafo y Editor de Imágenes</li>
+                        <li class="mb-0.5">🎙️ Productor de Contenidos para Redes Sociales</li>
+                        <li class="mb-0.5">📢 Marketing Digital y Publicidad Visual</li>
+                        <li class="mb-0.5">🛠️ Técnico en Animación y Motion Graphics</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-3xl font-bold text-center mb-8">Continuación de estudios</h2>
+                <p class="text-center max-w-3xl mx-auto mb-10 text-gray-600">La especialidad TICs te brinda una base sólida en tecnología y comunicación que te permite seguir formándote en carreras universitarias y terciarias vinculadas al mundo digital. </p>
+                
+                <div class="flex gap-8 text-center mt-4 mb-8 justify-center">
+                    <ul class="p-4 bg-white rounded-lg shadow-lg">
+                        <li class="mb-0.5">🎨 Diseño Gráfico</li>
+                        <li class="mb-0.5">🎬 Producción y Realización Audiovisual</li>
+                        <li class="mb-0.5">🖥️ Diseño Web y Multimedia</li>
+                        <li class="mb-0.5">🎮 Diseño y Desarrollo de Videojuegos</li>
+                        <li class="mb-0.5">📱 Diseño UX/UI (Experiencia e Interfaz de Usuario)</li>
+                        <li class="mb-0.5">🛍️ Publicidad y Marketing Digital</li>
+                        <li class="mb-0.5">📊 Comunicación Visual y Diseño Publicitario</li>
+                        <li class="mb-0.5">📷 Fotografía Profesional y Retoque Digital</li>
+                        <li class="mb-0.5">🖌️ Ilustración y Animación 2D/3D</li>
+                        <li class="mb-0.5">🏫 Licenciatura en Artes Multimediales o Visuales</li>
+                        <li class="mb-0.5">🗣️ Comunicación Social y Medios Digitales</li>
+                        <li class="mb-0.5">📡 Tecnicatura en Medios Audiovisuales y Sonido</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+            <div class="content-center text-center">
+                <h2 class="text-3xl font-bold mb-8">Plan de Estudio</h2>
+                <p class="max-w-3xl mx-auto mb-10 text-gray-600">¿Queres conocer más sobre la carga horaria que vas a tener?¿De qué aprenderas en tus horarios curriculares? Acá tenes el plan de estudio oficializado por el Ministerio de Educación. </p>
+                <a href="./docs/curricula_mutimedia.pdf" target="_blank" class="mt-8 bg-purple-600 hover:bg-purple-800 text-white px-6 py-2 rounded-full shadow-lg transition">Plan de Estudio PDF</a>
+            </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 grid md:grid-cols-3 gap-8">
+            <div>
+                <h3 class="text-xl font-semibold mb-4">Escuela Técnica 20 D.E. 20<br>"Carolina Muzilli"</h3>
+                <p class="text-gray-400">Formando líderes del mañana con excelencia académica y valores.</p>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold mb-4">Contacto</h3>
+                <p class="text-gray-400">
+                    <i class="fas fa-map-marker-alt mr-2"></i> Murguiondo 2151, CABA<br>
+                    <i class="fas fa-phone mr-2"></i> (54) 113910-7733<br>
+                    <i class="fas fa-envelope mr-2"></i> det_20_de20@bue.edu.ar
+                </p>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold mb-4">Síguenos</h3>
+                <div class="flex space-x-4">
+                    <a href="https://www.youtube.com/@ETDEPoloMataderos-Verificacion/featured" class="text-gray-400 hover:text-white">
+                        <i class="fab fa-youtube text-2xl"></i>
+                    </a>
+                    <a href="https://www.instagram.com/et20polomataderos/" class="text-gray-400 hover:text-white">
+                        <i class="fab fa-instagram text-2xl"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2025 Escuela Técnica 20 D.E. 20 "Carolina Muzilli". Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

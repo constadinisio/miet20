@@ -1,0 +1,556 @@
+<?php
+session_start();
+if (
+    !isset($_SESSION['usuario']) ||
+    !is_array($_SESSION['usuario']) ||
+    (int)$_SESSION['usuario']['rol'] !== 4
+) {
+    header("Location: /login.php?error=rol");
+    exit;
+}
+
+if (!isset($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['csrf'];
+$usuario = $_SESSION['usuario'];
+
+// Guardar URL de origen
+if (isset($_GET['origen'])) {
+    // Mapear nombres a rutas reales
+    switch ($_GET['origen']) {
+        case 'usuarios':
+            $prev_url = '/users/admin/usuarios.php';
+            break;
+        case 'asistencias':
+            $prev_url = '/users/alumno/asistencias.php';
+            break;
+        default:
+            $prev_url = '/users/admin/admin.php';
+    }
+    $_SESSION['config_prev_url'] = $prev_url;
+} elseif (isset($_SERVER['HTTP_REFERER'])) {
+    $_SESSION['config_prev_url'] = $_SERVER['HTTP_REFERER'];
+}
+
+$prev_url = $_SESSION['config_prev_url'] ?? '/users/alumno/alumno.php';
+
+require_once __DIR__ . '/../../../backend/includes/db.php';
+
+// Traer datos familiares si existen
+$datos_familiares = [
+    'padre_nombre' => '',
+    'padre_tel' => '',
+    'padre_mail' => '',
+    'madre_nombre' => '',
+    'madre_tel' => '',
+    'madre_mail' => '',
+    'emergencia_nombre' => '',
+    'emergencia_tel' => ''
+];
+
+$stmtFam = $conexion->prepare("SELECT * FROM datos_familiares WHERE usuario_id=? LIMIT 1");
+$stmtFam->bind_param("i", $usuario['id']);
+$stmtFam->execute();
+$resFam = $stmtFam->get_result();
+if ($rowFam = $resFam->fetch_assoc()) {
+    $datos_familiares = $rowFam;
+}
+$stmtFam->close();
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Configuración de Usuario</title>
+    <link href="/output.css?v=<?= time() ?>" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .sidebar-item {
+            min-height: 3.5rem;
+            width: 100%;
+        }
+
+        .input-text {
+            @apply w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-400 focus:outline-none shadow-sm;
+        }
+    </style>
+        <!-- DRAWER:CSS START -->
+    <style>
+:root {
+    --drawer-th: 780px;
+}
+
+/* Sidebar fijo (modo normal) */
+#sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 15rem; /* ~ w-60 */
+    transform: translateX(0);
+    transition: transform .2s ease-in-out;
+    z-index: 40;
+    background: #fff;
+}
+
+#sidebar .scroll-area {
+    height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Contenido con espacio lateral en modo normal */
+main#content {
+    padding-left: 15rem;
+    margin-left: 20px;
+}
+
+/* Botón burger y overlay ocultos por defecto */
+#drawerToggle {
+    display: none;
+}
+
+.drawer-overlay {
+    display: none;
+}
+
+/* ===== Drawer responsive ===== */
+@media screen and (max-width: 1800px) {
+    #sidebar {
+        transform: translateX(-100%);
+    }
+
+    body.drawer-open #sidebar {
+        transform: translateX(0);
+    }
+
+    main#content {
+        padding-left: 0 !important;
+    }
+
+    #drawerToggle {
+        display: inline-flex;
+    }
+
+    body.drawer-open .drawer-overlay {
+        display: block;
+    }
+}
+
+/* Estética mínima del botón */
+#drawerToggle {
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
+}
+    </style>
+    <!-- DRAWER:CSS END -->
+
+</head>
+
+<body class="bg-gray-100 min-h-screen flex">
+    <!-- DRAWER:HTML START -->
+<div class="drawer-overlay fixed inset-0 bg-black/40 z-30"></div>
+<button id="drawerToggle" class="fixed top-4 left-4 z-50 text-2xl hover:text-indigo-600 transition" aria-label="Abrir menú">☰</button>
+<!-- DRAWER:HTML END -->
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="w-60 transition-all duration-300 bg-white shadow-lg border-r">
+        <div class="scroll-area px-4 py-4 flex flex-col gap-2">
+            <div class="flex justify-center items-center p-2 mb-4 border-b border-gray-400 h-28">
+                <img src="/images/et20ico.ico" class="h-full w-auto object-contain">
+            </div>
+            <a href="alumno.php" class="sidebar-item flex gap-3 items-center py-2 px-3 rounded-xl text-gray-700 hover:bg-indigo-100 transition"><span class="text-xl">🏠</span><span class="sidebar-label">Inicio</span></a>
+            <a href="asistencias.php" class="sidebar-item flex gap-3 items-center py-2 px-3 rounded-xl text-gray-700 hover:bg-indigo-100 transition"><span class="text-xl">📆</span><span class="sidebar-label">Asistencias</span></a>
+            <a href="notas.php" class="sidebar-item flex gap-3 items-center py-2 px-3 rounded-xl text-gray-700 hover:bg-indigo-100 transition"><span class="text-xl">📝</span><span class="sidebar-label">Notas</span></a>
+            <button onclick="window.location='/includes/logout.php'" class="sidebar-item flex items-center justify-center gap-2 mt-auto py-2 px-3 rounded-xl text-white bg-red-500 hover:bg-red-600"><span class="text-xl">🚪</span><span class="sidebar-label">Salir</span></button>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <main id="content" class="flex-1 p-10">
+        <!-- BLOQUE DE USUARIO, ROL, CONFIGURACIÓN Y NOTIFICACIONES -->
+        <div class="w-full flex justify-end mb-6">
+            <div class="flex items-center gap-3 bg-white rounded-xl px-5 py-2 shadow border">
+
+                <!-- Avatar -->
+                <img src="<?php echo $usuario['foto_url'] ?? 'https://ui-avatars.com/api/?name=' . $usuario['nombre']; ?>"
+                    class="rounded-full w-12 h-12 object-cover">
+
+                <!-- Nombre y rol -->
+                <div class="flex flex-col pr-2 text-right">
+                    <div class="font-bold text-base leading-tight"><?php echo $usuario['nombre']; ?></div>
+                    <div class="font-bold text-base leading-tight"><?php echo $usuario['apellido']; ?></div>
+                    <div class="mt-1 text-xs text-gray-500">Alumno/a</div>
+                </div>
+
+                <!-- Selector de rol (si corresponde) -->
+                <?php if (isset($_SESSION['roles_disponibles']) && count($_SESSION['roles_disponibles']) > 1): ?>
+                    <form method="post" action="/includes/cambiar_rol.php" class="ml-4">
+                        <input type="hidden" name="csrf" value="<?= $csrf ?>">
+                        <select name="rol" onchange="this.form.submit()"
+                            class="px-2 py-1 border text-sm rounded-xl text-gray-700 bg-white">
+                            <?php foreach ($_SESSION['roles_disponibles'] as $r): ?>
+                                <option value="<?php echo $r['id']; ?>"
+                                    <?php if ($_SESSION['usuario']['rol'] == $r['id']) echo 'selected'; ?>>
+                                    Cambiar a: <?php echo ucfirst($r['nombre']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </form>
+                <?php endif; ?>
+
+                <!-- Botón de Configuración -->
+                <a href="configuracion.php"
+                    class="relative focus:outline-none group ml-2">
+                    <i class="fa-solid fa-gear text-2xl text-gray-500 group-hover:text-gray-700 transition-colors"></i>
+                </a>
+
+                <!-- Notificaciones -->
+                <button id="btn-notificaciones" class="relative focus:outline-none group ml-2">
+                    <i id="icono-campana" class="fa-regular fa-bell text-2xl text-gray-400 group-hover:text-gray-700 transition-colors"></i>
+                    <span id="badge-notificaciones"
+                        class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1 hidden border border-white font-bold"
+                        style="min-width:1.2em; text-align:center;"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- POPUP DE NOTIFICACIONES -->
+        <div id="popup-notificaciones" class="hidden fixed right-4 top-16 w-80 max-h-[70vh] bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 flex flex-col">
+            <div class="flex items-center justify-between px-4 py-3 border-b">
+                <span class="font-bold text-gray-800 text-lg">Notificaciones</span>
+                <button onclick="cerrarPopup()" class="text-gray-400 hover:text-red-400 text-xl">&times;</button>
+            </div>
+            <div id="lista-notificaciones" class="overflow-y-auto p-2">
+                <!-- Notificaciones aquí -->
+            </div>
+        </div>
+
+        <div class="max-w-5xl mx-auto">
+            <!-- Panel Configuración -->
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <div class="text-center mb-6">
+                    <h1 class="text-3xl font-bold text-blue-500">⚙️ Configuración de Usuario</h1>
+                    <p class="text-gray-500">Gestione sus datos personales y configuraciones</p>
+                </div>
+
+                <div x-data="{ tab: 'personales' }">
+                    <!-- Tabs -->
+                    <div class="flex justify-center space-x-2 mb-6">
+                        <button
+                            @click="tab='personales'"
+                            :class="tab==='personales' ? 'tab-btn active' : 'tab-btn inactive'">
+                            👤 Datos Personales
+                        </button>
+
+                        <button
+                            @click="tab='familiares'"
+                            :class="tab==='familiares' ? 'tab-btn active' : 'tab-btn inactive'">
+                            👨‍👩‍👦 Datos Familiares
+                        </button>
+
+                        <button
+                            @click="tab='fisica'"
+                            :class="tab==='fisica' ? 'tab-btn active' : 'tab-btn inactive'">
+                            🏃‍♂️ Ficha Ed. Física
+                        </button>
+                    </div>
+
+                    <form id="form-configuracion" class="space-y-6">
+                        <input type="hidden" name="csrf" value="<?= $csrf ?>">
+
+                        <!-- Datos Personales -->
+                        <div x-show="tab==='personales'" class="space-y-6">
+                            <h2 class="text-lg font-semibold text-blue-600 border-b pb-1">📋 Información Personal</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label class="input-text">Nombre: <?= htmlspecialchars($usuario['nombre']) ?></label>
+                                <label class="input-text">Apellido: <?= htmlspecialchars($usuario['apellido']) ?></label>
+                                <label class="input-text">DNI: <?= htmlspecialchars($usuario['dni'] ?? '') ?></label>
+                                <label class="input-text">Fecha de nacimiento: <?= htmlspecialchars($usuario['fecha_nacimiento'] ?? '') ?></label>
+                            </div>
+
+                            <h2 class="text-lg font-semibold text-blue-600 border-b pb-1">📞 Información de Contacto</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label class="input-text">Email: <?= htmlspecialchars($usuario['mail'] ?? '') ?></label>
+                                <label class="input-text">Teléfono: <?= htmlspecialchars($usuario['telefono'] ?? '') ?></label>
+                                <label class="input-text md:col-span-2">Dirección: <?= htmlspecialchars($usuario['direccion'] ?? '') ?></label>
+                            </div>
+
+                            <h2 class="text-lg font-semibold text-blue-600 border-b pb-1">🔒 Cambio de Contraseña</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Contraseña Actual</label>
+                                    <input type="password" name="contrasena_actual"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
+                                    <input type="password" name="contrasena_nueva"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700">Confirmar Contraseña</label>
+                                    <input type="password" name="confirmar_contrasena"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Datos Familiares -->
+                        <div x-show="tab==='familiares'" class="space-y-6">
+                            <!-- Padre -->
+                            <h2 class="text-lg font-semibold text-blue-600 border-b pb-1">👨 Datos del Padre</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                                    <input type="text" name="padre_nombre" value="<?= htmlspecialchars($datos_familiares['padre_nombre']) ?>"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Teléfono</label>
+                                    <input type="text" name="padre_tel" value="<?= htmlspecialchars($datos_familiares['padre_tel']) ?>"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                                    <input type="email" name="padre_mail" value="<?= htmlspecialchars($datos_familiares['padre_mail']) ?>"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                            </div>
+
+                            <!-- Madre -->
+                            <h2 class="text-lg font-semibold text-blue-600 border-b pb-1">👩 Datos de la Madre</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                                    <input type="text" name="madre_nombre" value="<?= htmlspecialchars($datos_familiares['madre_nombre']) ?>"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Teléfono</label>
+                                    <input type="text" name="madre_tel" value="<?= htmlspecialchars($datos_familiares['madre_tel']) ?>"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                                    <input type="email" name="madre_mail" value="<?= htmlspecialchars($datos_familiares['madre_mail']) ?>"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                            </div>
+
+                            <!-- Emergencia -->
+                            <h2 class="text-lg font-semibold text-blue-600 border-b pb-1">🚨 Contacto de Emergencia</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                                    <input type="text" name="emergencia_nombre" value="<?= htmlspecialchars($datos_familiares['emergencia_nombre']) ?>"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Teléfono</label>
+                                    <input type="text" name="emergencia_tel" value="<?= htmlspecialchars($datos_familiares['emergencia_tel']) ?>"
+                                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ficha Ed. Física -->
+                        <div x-show="tab==='fisica'" class="text-center text-gray-500">
+                            <p class="italic">Sección en desarrollo 🚧</p>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="mt-8 flex justify-center space-x-4">
+                            <button type="submit" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow transition">💾 Guardar Cambios</button>
+                            <a href="<?php echo htmlspecialchars($prev_url); ?>"
+                                class="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl shadow transition">
+                                ❌ Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow font-semibold z-50"></div>
+
+    <script>
+        document.getElementById('btn-notificaciones').addEventListener('click', function() {
+            const popup = document.getElementById('popup-notificaciones');
+            popup.classList.toggle('hidden');
+            cargarNotificaciones();
+        });
+
+        function cerrarPopup() {
+            document.getElementById('popup-notificaciones').classList.add('hidden');
+        }
+
+        function marcarLeida(destinatarioId) {
+            fetch('/../../../includes/notificaciones/marcar_leida.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'id=' + encodeURIComponent(destinatarioId)
+                }).then(res => res.json())
+                .then(data => {
+                    if (data.ok) cargarNotificaciones();
+                });
+        }
+
+        function confirmar(destinatarioId) {
+            fetch('/../../../includes/notificaciones/confirmar.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'id=' + encodeURIComponent(destinatarioId)
+                }).then(res => res.json())
+                .then(data => {
+                    if (data.ok) cargarNotificaciones();
+                });
+        }
+
+        function cargarNotificaciones() {
+            fetch('/../../../includes/notificaciones/listar.php')
+                .then(res => res.json())
+                .then(data => {
+                    const lista = document.getElementById('lista-notificaciones');
+                    const badge = document.getElementById('badge-notificaciones');
+                    const campana = document.getElementById('icono-campana');
+                    lista.innerHTML = '';
+                    let sinLeer = 0;
+                    if (data.length === 0) {
+                        lista.innerHTML = '<div class="text-center text-gray-400 p-4">Sin notificaciones nuevas.</div>';
+                        badge.classList.add('hidden');
+                        // Ícono gris claro, sin detalles rojos
+                        campana.classList.remove('text-red-500');
+                        campana.classList.add('text-gray-400');
+                        campana.classList.remove('fa-shake');
+                    } else {
+                        data.forEach(n => {
+                            if (n.estado_lectura === 'NO_LEIDA') sinLeer++;
+                            lista.innerHTML += `
+                                <div class="rounded-xl px-3 py-2 mb-2 bg-gray-100 shadow hover:bg-gray-50 flex flex-col">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-base font-semibold">${n.titulo}</span>
+                                    <span class="ml-auto text-xs">${n.fecha_creacion}</span>
+                                </div>
+                                <div class="text-sm text-gray-700 mb-2">${n.contenido}</div>
+                                <div class="flex gap-2">
+                                    ${n.estado_lectura === 'NO_LEIDA' ? `<button class="text-blue-600 text-xs" onclick="marcarLeida(${n.destinatario_row_id})">Marcar como leída</button>` : ''}
+                                    ${(n.requiere_confirmacion == 1 && n.estado_lectura !== 'CONFIRMADA') ? `<button class="text-green-600 text-xs" onclick="confirmar(${n.destinatario_row_id})">Confirmar</button>` : ''}
+                                    ${n.estado_lectura === 'LEIDA' ? '<span class="text-green-700 text-xs">Leída</span>' : ''}
+                                    ${n.estado_lectura === 'CONFIRMADA' ? '<span class="text-green-700 text-xs">Confirmada</span>' : ''}
+                                </div>
+                                </div>`;
+                        });
+
+                        if (sinLeer > 0) {
+                            badge.textContent = sinLeer;
+                            badge.classList.remove('hidden');
+                            // Ícono gris pero con detalle rojo (y/o animación, opcional)
+                            campana.classList.remove('text-gray-400');
+                            campana.classList.add('text-red-500');
+                            campana.classList.add('fa-shake'); // animación de FA, opcional
+                        } else {
+                            badge.classList.add('hidden');
+                            campana.classList.remove('text-red-500');
+                            campana.classList.add('text-gray-400');
+                            campana.classList.remove('fa-shake');
+                        }
+                    }
+                });
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarNotificaciones(); // Esto chequea notificaciones ni bien se carga la página
+            setInterval(cargarNotificaciones, 15000);
+        });
+    </script>
+
+    <script>
+        document.getElementById('form-configuracion').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            fetch('guardar_configuracion.php', {
+                    method: 'POST',
+                    body: formData
+                }).then(res => res.json())
+                .then(data => {
+                    if (data.ok) {
+                        showToast("✅ " + data.mensaje, 'success');
+                        this.querySelector('[name=contrasena_actual]').value = '';
+                        this.querySelector('[name=contrasena_nueva]').value = '';
+                        this.querySelector('[name=confirmar_contrasena]').value = '';
+                    } else {
+                        showToast("⚠️ " + data.mensaje, 'error');
+                    }
+                }).catch(err => {
+                    showToast("❌ Error en la conexión", 'error');
+                    console.error(err);
+                });
+        });
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow font-semibold z-50 ' +
+                (type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white');
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+    </script>
+    <!-- DRAWER:JS START -->
+    <script>
+        (function() {
+            const body = document.body;
+            const toggle = document.getElementById('drawerToggle');
+            const overlay = document.querySelector('.drawer-overlay');
+            if (!toggle || !overlay) return;
+
+            function setOpen(open) {
+                body.classList.toggle('drawer-open', open);
+                body.classList.toggle('overflow-hidden', open); // bloquea scroll del fondo
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+
+            function toggleDrawer() {
+                setOpen(!body.classList.contains('drawer-open'));
+            }
+
+            toggle.addEventListener('click', toggleDrawer);
+            overlay.addEventListener('click', () => setOpen(false));
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') setOpen(false);
+            });
+
+            // Si la altura vuelve a > umbral, cerrar drawer
+            function onResize() {
+                const th = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--drawer-th'));
+                if (window.innerHeight > th) setOpen(false);
+            }
+            window.addEventListener('resize', onResize);
+        })();
+    </script>
+    <!-- DRAWER:JS END -->
+</body>
+
+</html>

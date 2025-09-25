@@ -1,0 +1,11 @@
+parameters:
+    level: 4
+    paths:
+        - public/includes/api
+    bootstrapFiles:
+        - public/includes/api/bootstrap.php
+    scanFiles:
+        - public/includes/apiClient.php
+    tmpDir: var/cache/phpstan
+    ignoreErrors:
+        - '#Call to function api_[a-z_]+\(\)#'
