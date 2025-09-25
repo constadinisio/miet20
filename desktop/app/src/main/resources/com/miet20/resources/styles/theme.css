@@ -1,0 +1,20 @@
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    -fx-background-color: linear-gradient(to bottom right, #0f172a, #1e293b);
+    -fx-text-fill: #f8fafc;
+}
+
+.label {
+    -fx-text-fill: #f8fafc;
+}
+
+.label.headline {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.label.body-text {
+    -fx-font-size: 14px;
+    -fx-opacity: 0.85;
+    -fx-text-alignment: center;
+}

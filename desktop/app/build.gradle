@@ -1,0 +1,53 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'org.beryx.jlink' version '3.1.1'
+}
+
+group = 'com.miet20'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation libs.jackson.databind
+    implementation libs.jackson.datatype.jsr310
+    implementation libs.controlsfx
+
+    testImplementation libs.junit.jupiter
+    testImplementation libs.testfx.junit5
+    testImplementation libs.mockwebserver
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+application {
+    mainClass = 'com.miet20.app.MainApp'
+    applicationDefaultJvmArgs = [
+            '-Dprism.order=sw',
+            '-Djavafx.animation.framerate=60'
+    ]
+}
+
+javafx {
+    version = providers.gradleProperty('javafx.version').get()
+    modules = ['javafx.controls', 'javafx.fxml']
+}
+
+jlink {
+    launcher {
+        name = 'miet20-desktop'
+    }
+    addExtraDependencies('javafx')
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
