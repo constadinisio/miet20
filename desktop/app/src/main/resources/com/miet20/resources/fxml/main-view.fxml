@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.miet20.ui.MainViewController">
+    <center>
+        <VBox alignment="CENTER" spacing="16.0">
+            <padding>
+                <Insets top="48.0" right="32.0" bottom="48.0" left="32.0" />
+            </padding>
+            <Label fx:id="statusLabel" styleClass="headline" />
+            <Label text="Esta ventana es el punto de partida para la nueva experiencia JavaFX." wrapText="true"
+                   maxWidth="420" styleClass="body-text" />
+        </VBox>
+    </center>
+</BorderPane>

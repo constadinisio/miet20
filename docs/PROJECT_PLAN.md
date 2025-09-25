@@ -15,8 +15,8 @@
 **Objetivo:** Crear la base del proyecto de escritorio moderno usando JavaFX.
 
 ### Tareas
-- [ ] Inicializar proyecto Gradle/Maven para JavaFX (JDK 21 recomendado).
-- [ ] Crear estructura de paquetes:
+- [x] Inicializar proyecto Gradle/Maven para JavaFX (JDK 21 recomendado).
+- [x] Crear estructura de paquetes:
   - `com.miet20.app` (entry point JavaFX, `MainApp`).
   - `com.miet20.config` (configuraciones, carga de archivos externos).
   - `com.miet20.services` (consumo de API, clientes HTTP).
@@ -24,9 +24,9 @@
   - `com.miet20.ui` (controladores JavaFX).
   - `com.miet20.ui.components` (componentes reutilizables).
   - `com.miet20.resources` (FXML, CSS, imágenes).
-- [ ] Configurar dependencias: JavaFX (Controls, FXML), Jackson, HTTP Client (JDK), ControlsFX, TestFX (test), JUnit 5, MockWebServer.
-- [ ] Añadir configuración `gradle.properties` para JavaFX modular y `build.gradle` con tasks `run`, `test`, `jpackage`.
-- [ ] Definir plantilla de recursos (`resources/application.json`, `resources/styles/theme.css`).
+- [x] Configurar dependencias: JavaFX (Controls, FXML), Jackson, HTTP Client (JDK), ControlsFX, TestFX (test), JUnit 5, MockWebServer.
+- [x] Añadir configuración `gradle.properties` para JavaFX modular y `build.gradle` con tasks `run`, `test`, `jpackage`.
+- [x] Definir plantilla de recursos (`resources/application.json`, `resources/styles/theme.css`).
 
 ### Entregables de la etapa
 - Proyecto compilable con `gradle run` que abre ventana base vacía.
